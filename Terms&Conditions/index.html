@@ -1,0 +1,256 @@
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>KeebForge.in — Electronics Engineer &amp; Custom Keyboard Specialist</title>
+
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="db504642-e075-4a18-9da3-02f971af33c5"></script>
+
+  <meta name="description" content="Professional switch lubing, custom keyboard builds, PCB design, troubleshooting, and micro-soldering repairs. Based in Jammu &amp; Kashmir. Pan-India mail-in service." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://keebforge.in/" />
+
+  <meta name="geo.region" content="IN-JK" />
+  <meta name="geo.placename" content="Jammu &amp; Kashmir" />
+  <meta name="theme-color" content="#080a0c" />
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/img/favicon.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/img/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/img/favicon.png" />
+
+  <meta property="og:title" content="KeebForge.in — Electronics Engineer &amp; Custom Keyboard Specialist" />
+  <meta property="og:description" content="Professional custom mechanical keyboard building, switch lubing, custom PCB design, and component-level electronics repair across India." />
+  <meta property="og:url" content="https://keebforge.in/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="KeebForge.in" />
+  <meta property="og:locale" content="en_IN" />
+  
+  <meta property="og:image" content="https://keebforge.in/assets/img/Banner.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:alt" content="KeebForge.in — Engineering-grade Custom Keyboards &amp; Hardware Repairs" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="KeebForge.in — Electronics Engineer &amp; Custom Keyboard Specialist" />
+  <meta name="twitter:description" content="Engineering-grade workshop handling custom mechanical keyboard builds, switch mods, and board-level micro-soldering diagnostics across India." />
+  <meta name="twitter:image" content="https://keebforge.in/assets/img/Banner.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&amp;family=Outfit:wght@300;400;500;600&amp;display=swap" rel="stylesheet" />
+  <style>
+/* ══════════════════════════════════════════════
+   ROOT & RESET (Identical to main architecture)
+══════════════════════════════════════════════ */
+:root {
+  --black:      #060608;
+  --bg:         #080a0c;
+  --bg1:        #0d0f12;
+  --bg2:        #12151a;
+  --bg3:        #191d24;
+  --surf:       rgba(255,255,255,0.038);
+  --bdr:        rgba(255,255,255,0.07);
+  --bdr-h:      rgba(255,255,255,0.14);
+  --t1:         #f0f0f5;
+  --t2:         #9a9aa8;
+  --t3:         #5a5a68;
+  --acc:        #d4f700;
+  --acc-glow:   rgba(212,247,0,0.22);
+  --ff-display: 'Syne', sans-serif;
+  --ff-body:    'Outfit', sans-serif;
+  --nav-h:      56px;
+  --max-w:      800px; /* Narrower for readability */
+  --pad-x:      clamp(20px, 5vw, 48px);
+  --r-md: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: var(--ff-body);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: var(--acc); transition: opacity 0.2s; }
+a:hover { opacity: 0.8; }
+
+/* ══════════════════════════════════════════════
+   HEADER & STRUCTURE
+══════════════════════════════════════════════ */
+.terms-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: calc(var(--nav-h) + 60px) var(--pad-x) 120px;
+}
+.back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ff-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 40px;
+}
+.page-title {
+  font-family: var(--ff-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.last-updated {
+  font-size: 0.8rem;
+  color: var(--t3);
+  font-family: var(--ff-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 60px;
+}
+
+/* ══════════════════════════════════════════════
+   LEGAL TEXT STYLING
+══════════════════════════════════════════════ */
+.legal-section {
+  margin-bottom: 44px;
+}
+.legal-section h2 {
+  font-family: var(--ff-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-num {
+  color: var(--acc);
+  font-size: 0.85rem;
+}
+.legal-section p {
+  color: var(--t2);
+  font-size: 0.92rem;
+  margin-bottom: 16px;
+}
+.legal-section ul {
+  list-style: none;
+  margin-bottom: 16px;
+  padding-left: 4px;
+}
+.legal-section li {
+  color: var(--t2);
+  font-size: 0.92rem;
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 8px;
+}
+.legal-section li::before {
+  content: "•";
+  position: absolute;
+  left: 4px;
+  color: var(--acc);
+}
+.notice-box {
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-md);
+  padding: 20px;
+  margin-top: 24px;
+}
+.notice-box p {
+  margin-bottom: 0;
+  font-size: 0.86rem;
+  color: var(--t2);
+}
+
+/* Simple minimal footer */
+.terms-footer {
+  border-top: 1px solid var(--bdr);
+  padding-top: 30px;
+  margin-top: 80px;
+  font-size: 0.75rem;
+  color: var(--t3);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+  </style>
+</head>
+<body>
+
+  <div class="terms-container">
+    <!-- Back Navigation -->
+    <a href="/" class="back-home">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="transform: scaleX(-1);">
+        <path d="M2 10L10 2M10 2H4.5M10 2V7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Back to Forge
+    </a>
+
+    <header>
+      <h1 class="page-title">Terms &amp; Conditions</h1>
+      <p class="last-updated">Last Updated: June 2026</p>
+    </header>
+
+    <main>
+      <section class="legal-section">
+        <h2><span class="section-num">01.</span> Service Overview</h2>
+        <p>KeebForge.in offers mechanical keyboard assembly, component soldering/desoldering, stabilizer structural balancing, layout testing, custom PCB hardware design, and general component-level electronics troubleshooting diagnostics.</p>
+        <p>By scheduling or submitting an execution service ticket order, you officially establish intent and agree to abide comprehensively by these active guidelines.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2><span class="section-num">02.</span> Logistics &amp; Shipping Responsibility</h2>
+        <p>The client retains complete ownership and financial liability for all logistical routing operations:</p>
+        <ul>
+          <li>You are responsible for safely processing inbound parcel tracking to our designated workshop setup location.</li>
+          <li>Return distribution shipping labels or equivalent freight funding metrics must be entirely settled before completed hardware is returned to you.</li>
+          <li>KeebForge.in is not liable for parcel loss, transit delays, or physical container damage introduced during sorting or handling by external logistics networks.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2><span class="section-num">03.</span> Component Compatibility &amp; Diagnostics</h2>
+        <p>It is the customer's sole responsibility to ensure all supplied parts (including switches, plates, keycaps, stabilization brackets, stabs, and case shells) are layout-compatible before dispatching them to our workshop.</p>
+        <p>If parts are discovered to be incompatible mid-build, we will halt production and consult you immediately. However, baseline engineering hours already invested up to that point will be calculated into your final balance sheet.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2><span class="section-num">04.</span> Turnaround Expectations &amp; Queue Logic</h2>
+        <p>Standard engineering processing speed is estimated at 5–7 business days from the moment components are checked into our workshop queue. This baseline execution target is subject to change based on order queue length, complex circuit diagnostic requirements, or parts validation holdups.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2><span class="section-num">05.</span> Invoicing &amp; Final Payment Protocols</h2>
+        <p>KeebForge.in operates on a completion-verified payout workflow model:</p>
+        <ul>
+          <li>Invoices are generated upon successful functional validation testing of your complete assembly build.</li>
+          <li>Optional visual check samples or trace output plots are available via Discord/Email on request before processing your transaction.</li>
+          <li>Hardware properties are only packed and cleared for outbound shipping once your invoice payment has cleared.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2><span class="section-num">06.</span> Liability Limitations &amp; Warranties</h2>
+        <p>Mechanical modification procedures naturally void factory supplier warranties. KeebForge.in operates with engineering precision, but cannot be held liable for manufacturing structural faults inherent to customer-supplied parts.</p>
+        <div class="notice-box">
+          <p><strong>PCB / Hardware Repair Clause:</strong> Circuit component troubleshooting attempts carry an intrinsic risk, as underlying structural defects or heat stresses can impact worn components. While we maintain precise thermal control protocols, we cannot guarantee survival rates for heavily oxidized or previously compromised traces and controllers.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="terms-footer">
+      <span>© 2026 KeebForge.in — Jammu &amp; Kashmir, India.</span>
+      <span>Designed by shadow269</span>
+    </footer>
+  </div>
+
+</body>
+</html>
