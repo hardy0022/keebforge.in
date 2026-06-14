@@ -1172,6 +1172,10 @@ section[id] { scroll-margin-top: calc(var(--nav-h) + 12px); }
                 <input type="text" id="fi-name" name="name" placeholder="Your full name" required autocomplete="name" />
               </div>
               <div class="form-row">
+                <label for="fi-phone">WhatsApp / Phone Number</label>
+                <input type="tel" id="fi-phone" name="phone" placeholder="+91 9998888000" required autocomplete="tel" pattern="[0-9+\-\s()]{10,20}" />
+              </div>
+              <div class="form-row">
                 <label for="fi-email">Email</label>
                 <input type="email" id="fi-email" name="email" placeholder="your@email.com" required autocomplete="email" />
               </div>
