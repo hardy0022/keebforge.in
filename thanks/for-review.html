@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thank You for Your Review — KeebForge.in</title>
+
+  <meta name="description" content="Thank you for sharing your experience with the KeebForge custom keyboard workshop." />
+  <meta name="robots" content="noindex, follow" />
+  <meta name="theme-color" content="#080a0c" />
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/img/favicon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+:root {
+  --black:      #060608;
+  --bg:         #080a0c;
+  --bg1:        #0d0f12;
+  --surf:       rgba(255,255,255,0.038);
+  --bdr:        rgba(255,255,255,0.07);
+  --bdr-h:      rgba(255,255,255,0.14);
+  --t1:         #f0f0f5;
+  --t2:         #9a9aa8;
+  --t3:         #5a5a68;
+  --acc:        #d4f700;
+  --acc-glow:   rgba(212,247,0,0.22);
+  --acc-dim:    rgba(212,247,0,0.10);
+  --ff-display: 'Syne', sans-serif;
+  --ff-body:    'Outfit', sans-serif;
+  --nav-h:      56px;
+  --pad-x:      clamp(20px, 5vw, 48px);
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+  --r-lg: 24px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: var(--ff-body);
+  font-weight: 400;
+  line-height: 1.6;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0 var(--pad-x);
+}
+
+/* NAV */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--nav-h);
+  z-index: 500;
+  background: rgba(6,6,8,0.75);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--bdr);
+}
+.nav-inner {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 var(--pad-x);
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.nav-logo {
+  font-family: var(--ff-display);
+  font-size: 0.97rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--t1);
+}
+.logo-dot { color: var(--acc); }
+
+/* THANK YOU CARD */
+.thanks-card {
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-lg);
+  padding: 48px 40px;
+  max-width: 540px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  animation: fadeUp 0.8s var(--ease-out) both;
+}
+.thanks-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.035) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+/* NEON SUCCESS MARK */
+.icon-container {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--acc-dim);
+  border: 1px solid rgba(212,247,0,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: var(--acc);
+  box-shadow: 0 0 30px var(--acc-glow);
+}
+
+.thanks-title {
+  font-family: var(--ff-display);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--t1);
+  line-height: 1.1;
+  margin-bottom: 14px;
+}
+.thanks-desc {
+  font-size: 0.92rem;
+  color: var(--t2);
+  line-height: 1.65;
+  margin-bottom: 32px;
+}
+
+/* BUTTONS */
+.btn-home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--ff-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #000;
+  background: var(--acc);
+  padding: 12px 28px;
+  border-radius: 99px;
+  transition: transform 0.22s var(--ease-out), box-shadow 0.22s;
+}
+.btn-home:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 24px var(--acc-glow);
+}
+
+.redirect-countdown {
+  font-size: 0.72rem;
+  color: var(--t3);
+  margin-top: 24px;
+  letter-spacing: 0.02em;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+  </style>
+</head>
+<body>
+
+  <!-- BACKGROUND FIXED NAV -->
+  <nav class="nav" role="navigation">
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <span>KeebForge</span><span class="logo-dot">.</span><span>in</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- CONFIRMATION FRAME -->
+  <main class="thanks-card">
+    <div class="icon-container" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
+    </div>
+    
+    <h1 class="thanks-title">Review Submitted</h1>
+    <p class="thanks-desc">
+      Your experience has been logged securely. Thank you for taking the time to share feedback with the mechanical keyboard community!
+    </p>
+
+    <a href="/" class="btn-home">
+      Return to Home
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M2 12L12 2M12 2H5M12 2V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+
+    <p class="redirect-countdown" id="countdown-label">Redirecting automatically in 5 seconds...</p>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      
+      var timeLeft = 5;
+      var countdownEl = document.getElementById('countdown-label');
+      
+      var interval = setInterval(function () {
+        timeLeft--;
+        if (countdownEl) {
+          countdownEl.textContent = 'Redirecting automatically in ' + timeLeft + ' second' + (timeLeft !== 1 ? 's' : '') + '...';
+        }
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          window.location.href = '/';
+        }
+      }, 1000);
+    })();
+  </script>
+
+</body>
+</html>
