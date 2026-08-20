@@ -1,0 +1,790 @@
+// KeebForge.in — Prisma schema (source of truth for database structure)
+// Money is stored as integer paise (₹12 = 1200) to avoid float drift.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+enum Device {
+  KEYBOARD
+  MOUSE
+  OTHER
+}
+
+enum ServiceUnit {
+  PER_SWITCH
+  PER_STABILIZER
+  FLAT
+  QUOTE
+}
+
+enum OrderType {
+  PRODUCT
+  SERVICE
+  REPAIR
+  COMBINED
+}
+
+enum OrderStatus {
+  ORDER_RECEIVED
+  ORDER_CONFIRMED
+  PAYMENT_PENDING
+  PAYMENT_RECEIVED
+  PARTS_BOOKED
+  PARTS_SHIPPED
+  PARTS_RECEIVED
+  IN_QUEUE
+  WORK_STARTED
+  TESTING
+  COMPLETED
+  PACKING
+  SHIPMENT_BOOKED
+  SHIPMENT_PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  TESTING_WARRANTY_ACTIVE
+  ORDER_COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum ShippingStatus {
+  NOT_DISPATCHED
+  DISPATCHED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RETURNED
+}
+
+enum ProductType {
+  KEYBOARD
+  MOUSE
+  SWITCH
+  KEYCAP
+  STABILIZER
+  PCB
+  CASE
+  CABLE
+  ACCESSORY
+  BAREBONES
+  PLATE
+  SPRING
+  SWITCH_FILM
+  LUBRICANT
+  DESK_MAT
+  MOUSE_SWITCH
+  MOUSE_SKATE
+  ENCODER
+  TOOL
+  FOAM
+  MOD_ACCESSORY
+  DIY_KIT
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  OUT_OF_STOCK
+  ARCHIVED
+}
+
+enum ReviewType {
+  PRODUCT
+  SERVICE
+  REPAIR
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WorkCategory {
+  CUSTOM_BUILD
+  REPAIR
+  MOD
+  PCB
+  MOUSE
+  OTHER
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+enum MessageAuthor {
+  CUSTOMER
+  ADMIN
+}
+
+// ─── Authentication (Better Auth 1.7.1 — generated schema) ─────────────────
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  profile       Profile?
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issuer                String?
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ─── Identity & accounts ─────────────────────────────────────────────────────
+
+/// KeebForge business data for a Better Auth user. `userId` = the auth identity.
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  role      Role     @default(CUSTOMER)
+  name      String?
+  email     String   @unique
+  phone     String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer CustomerProfile?
+  addresses Address[]
+  orders    Order[]
+  reviews   Review[]
+  cart      Cart?
+  inventoryMovements InventoryMovement[]
+
+  @@index([role])
+}
+
+/// Customer-specific identity data (social handle, preferences).
+model CustomerProfile {
+  profileId     String  @id
+  discordHandle String?
+  newsletterOpt Boolean @default(false)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Address {
+  id            String   @id @default(cuid())
+  profileId     String
+  label         String   @default("Home")
+  streetAddress String
+  city          String
+  state         String
+  postalCode    String
+  country       String   @default("India")
+  phone         String?
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([isDefault])
+}
+
+// ─── Catalog ────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  image       String?
+  parentId    String?
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@index([active, sortOrder])
+  @@index([parentId])
+}
+
+model Brand {
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  logoUrl        String?
+  description    String?
+  website        String?
+  seoTitle       String?
+  seoDescription String?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  products Product[]
+
+  @@index([active])
+}
+
+model Product {
+  id                String        @id @default(cuid())
+  name              String
+  slug              String        @unique
+  type              ProductType
+  status            ProductStatus @default(ACTIVE)
+  categoryId        String
+  brandId           String?
+  shortDescription  String?
+  description       String?
+  features          Json? // list of strings
+  whatsIncluded     Json? // list of strings
+  warrantyInfo      String?
+  shippingInfo      String?
+  specifications    Json? // flexible key/value specs, e.g. {"Layout": "60%"}
+  price             Int // paise (selling price)
+  compareAtPrice    Int? // paise
+  costPrice         Int? // paise — NEVER exposed to customers
+  gstRate           Int         @default(0) // percent 0..100
+  sku               String?
+  barcode           String?
+  stock             Int         @default(0)
+  reservedQuantity  Int         @default(0)
+  lowStockThreshold Int         @default(5)
+  allowBackorders   Boolean     @default(false)
+  inventoryTracking Boolean     @default(true)
+  weight            Int? // grams
+  lengthCm          Float?
+  widthCm           Float?
+  heightCm          Float?
+  shippingClass     String?
+  freeShipping      Boolean     @default(false)
+  shippingRestrictions String?
+  seoTitle          String?
+  seoDescription    String?
+  seoKeywords       String?
+  canonicalUrl      String?
+  ogImageUrl        String?
+  active            Boolean     @default(false)
+  featured          Boolean     @default(false)
+  popular           Boolean     @default(false)
+  isNew             Boolean     @default(false)
+  ratingAverage     Float?
+  ratingCount       Int         @default(0)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  category           Category            @relation(fields: [categoryId], references: [id])
+  brand              Brand?              @relation(fields: [brandId], references: [id])
+  variants           ProductVariant[]
+  images             ProductImage[]
+  inventoryMovements InventoryMovement[]
+  orderItems         OrderItem[]
+  cartItems          CartItem[]
+  reviews            Review[]
+
+  @@index([categoryId, active])
+  @@index([active, featured])
+  @@index([price])
+  @@index([sku])
+  @@index([status, active])
+  @@index([createdAt])
+}
+
+model ProductVariant {
+  id             String   @id @default(cuid())
+  productId      String
+  name           String
+  sku            String?
+  barcode        String?
+  price          Int? // paise; falls back to product price when null
+  compareAtPrice Int? // paise
+  stock          Int      @default(0)
+  reservedQuantity Int    @default(0)
+  weight         Int? // grams
+  active         Boolean  @default(true)
+  options        Json? // e.g. {"color": "Black", "layout": "ISO"}
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images    ProductImage[]
+  cartItems CartItem[]
+  movements InventoryMovement[]
+
+  @@index([productId])
+  @@index([sku])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  variantId String?
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  primary   Boolean @default(false)
+  active    Boolean @default(true)
+
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@index([productId, variantId])
+}
+
+/// Stock movement ledger (admin inventory adjustments, sales decrements).
+model InventoryMovement {
+  id        String   @id @default(cuid())
+  productId String
+  variantId String?
+  profileId String? // admin who made the adjustment
+  delta     Int // positive = restock, negative = sale/adjustment
+  reason    String
+  createdAt DateTime @default(now())
+
+  product Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  profile Profile?      @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+  @@index([productId, variantId, createdAt])
+}
+
+// ─── Service catalog ─────────────────────────────────────────────────────────
+
+model ServiceGroup {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  device    Device
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  services Service[]
+
+  @@index([device, active, sortOrder])
+}
+
+model Service {
+  id            String      @id @default(cuid())
+  slug          String      @unique
+  name          String
+  description   String?
+  groupId       String
+  device        Device
+  unit          ServiceUnit
+  price         Int? // paise; null for QUOTE / range
+  priceMin      Int? // paise (ranges)
+  priceMax      Int? // paise
+  priceLabel    String? // e.g. "₹18/SK" when it differs from unit label
+  combo         Boolean     @default(false)
+  replaces      Json? // service slugs this combo auto-deselects
+  exclusiveWith Json? // service slugs mutually exclusive with this one
+  popular       Boolean     @default(false)
+  highlight     Boolean     @default(false)
+  active        Boolean     @default(true)
+  featured      Boolean     @default(false)
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  group         ServiceGroup   @relation(fields: [groupId], references: [id])
+  orderServices OrderService[]
+  reviews       Review[]
+
+  @@index([groupId, active, sortOrder])
+  @@index([device, active])
+}
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  type          OrderType
+  status        OrderStatus   @default(ORDER_RECEIVED)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Snapshot of the customer at order time (guest checkout supported).
+  profileId     String?
+  customerName  String
+  customerEmail String
+  customerPhone String?
+
+  subtotal Int    @default(0) // paise
+  discount Int    @default(0)
+  shipping Int    @default(0)
+  tax      Int    @default(0)
+  total    Int    @default(0)
+  currency String @default("INR")
+
+  billingDetails Json?
+  summary        Json?
+  isDeleted      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  profile         Profile?       @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  shippingAddress OrderAddress?
+  items           OrderItem[]
+  services        OrderService[]
+  repairs         OrderRepair[]
+  payments        Payment[]
+  shipment        Shipment?
+  timeline        OrderTimeline[]
+  messages        OrderMessage[]
+  warranty        WarrantyRecord?
+  tracking        Tracking?
+  review          Review?
+
+  @@index([profileId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([orderNumber, isDeleted])
+}
+
+/// Shipping-address snapshot for an order (guest checkout has no Profile/Address).
+model OrderAddress {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  label         String?
+  streetAddress String
+  city          String
+  state         String
+  postalCode    String
+  country       String   @default("India")
+  phone         String?
+  createdAt     DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  name        String // snapshot
+  sku         String?
+  unitPrice   Int // paise snapshot
+  quantity    Int
+  discount    Int         @default(0) // paise snapshot
+  tax         Int         @default(0) // paise snapshot
+  lineTotal   Int
+  variantInfo Json?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model OrderService {
+  id        String      @id @default(cuid())
+  orderId   String
+  serviceId String?
+  name      String // snapshot
+  slug      String
+  unit      ServiceUnit
+  unitPrice Int // paise snapshot — quote prices ARE persisted
+  quantity  Int         @default(1)
+  lineTotal Int
+  createdAt DateTime    @default(now())
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model OrderRepair {
+  id          String   @id @default(cuid())
+  orderId     String
+  deviceType  Device
+  deviceModel String
+  issue       String
+  diagnosis   String?
+  quotePrice  Int? // paise — set once agreed
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  amount            Int // paise
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  method            String?
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([razorpayOrderId])
+}
+
+model Shipment {
+  id                    String         @id @default(cuid())
+  orderId               String         @unique
+  courier               String?
+  trackingNumber        String?
+  trackingUrl           String?
+  status                ShippingStatus @default(NOT_DISPATCHED)
+  shippingCost          Int            @default(0)
+  estimatedDispatchDate DateTime?
+  estimatedDeliveryDate DateTime?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model OrderTimeline {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model OrderMessage {
+  id                String        @id @default(cuid())
+  orderId           String
+  author            MessageAuthor
+  message           String
+  visibleToCustomer Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model WarrantyRecord {
+  id        String    @id @default(cuid())
+  orderId   String    @unique
+  status    String    @default("ACTIVE")
+  startDate DateTime
+  endDate   DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+/// Public-safe denormalized cache for /track/[orderNumber]. No PII.
+model Tracking {
+  orderId       String        @id
+  orderNumber   String        @unique
+  type          OrderType
+  status        OrderStatus
+  paymentStatus PaymentStatus
+  items         Json?
+  services      Json?
+  repairs       Json?
+  timeline      Json?
+  shipment      Json?
+  warranty      Json?
+  total         Int
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderNumber])
+}
+
+// ─── Cart ────────────────────────────────────────────────────────────────────
+
+model Cart {
+  id         String   @id @default(cuid())
+  profileId  String?  @unique
+  guestToken String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  profile Profile?   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  items   CartItem[]
+
+  @@index([guestToken])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  variantId String?
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  cart    Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([cartId])
+}
+
+// ─── Reviews & coupons ───────────────────────────────────────────────────────
+
+model Review {
+  id             String       @id @default(cuid())
+  profileId      String?
+  orderId        String?      @unique
+  productId      String?
+  serviceId      String?
+  type           ReviewType
+  rating         Int // 1..5
+  title          String?
+  body           String
+  authorName     String?
+  authorLocation String?
+  serviceLabel   String?
+  date           DateTime?
+  verified       Boolean      @default(false)
+  status         ReviewStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([status, type])
+  @@index([productId, status])
+  @@index([serviceId, status])
+}
+
+model Coupon {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  type        CouponType
+  value       Int // percent (0-100) or paise
+  minOrder    Int? // paise
+  maxDiscount Int?
+  active      Boolean    @default(true)
+  usageLimit  Int?
+  usedCount   Int        @default(0)
+  expiresAt   DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@index([active])
+}
+
+// ─── Content ─────────────────────────────────────────────────────────────────
+
+model WorkProject {
+  id            String       @id @default(cuid())
+  title         String
+  slug          String       @unique
+  description   String
+  category      WorkCategory
+  workPerformed String?
+  partsUsed     Json? // list of parts/parts with links
+  images        Json? // list of {url, alt}
+  date          DateTime?
+  featured      Boolean      @default(false)
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([active, featured])
+}
+
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
