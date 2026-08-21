@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 const REDIRECTS: { source: string; destination: string; permanent: boolean }[] = [
   // Old static site → new routes
-  { source: "/keyboard-repair", destination: "/repair/keyboard", permanent: true },
-  { source: "/mouse-repair", destination: "/repair/mouse", permanent: true },
+  { source: "/keyboard-repair", destination: "/repair", permanent: true },
+  { source: "/mouse-repair", destination: "/repair", permanent: true },
   { source: "/pricing", destination: "/services", permanent: true },
   { source: "/order", destination: "/checkout", permanent: true },
   { source: "/Terms&Conditions", destination: "/terms", permanent: true },
@@ -28,6 +28,11 @@ const REDIRECTS: { source: string; destination: string; permanent: boolean }[] =
 const nextConfig: NextConfig = {
   reactCompiler: true,
   devIndicators: false,
+  // Repair inquiry photos can be up to 5 MB each (max 5) — the default 1 MB
+  // server-action body limit would reject them.
+  experimental: {
+    serverActions: { bodySizeLimit: "30mb" },
+  },
   // @better-auth/infra dynamic-imports @better-auth/sso for SAML SSO, which we
   // don't use; externalize so Next doesn't try to bundle a missing module.
   serverExternalPackages: ["@better-auth/sso"],

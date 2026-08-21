@@ -21,10 +21,14 @@ Admin management (Phase 1+2) is done; the customer-facing side remains:
 
 ## Dash ownership verification
 
-**BLOCKED on production deployment.** After deploying to https://keebforge.in:
-- Confirm `https://keebforge.in/api/auth/*` responds.
-- Complete the Dash ownership verification flow against the deployed site.
-- Do **not** claim "Dash verified" until this is actually done locally in production.
+**BLOCKED on a Vercel domain-level redirect, not on code.** `https://keebforge.in/api/auth` 308-redirects to www (set in the Vercel dashboard Domains settings); the repo has no redirect logic for this. Unblock by (in order):
+
+1. Vercel → Project → Settings → Domains: set `keebforge.in` as the serving (primary) domain with **no "Redirect to www"** (point www → keebforge.in if you want www canonicalized).
+2. Vercel → Settings → Environment Variables → **Production**: `BETTER_AUTH_URL=https://keebforge.in`, `NEXT_PUBLIC_APP_URL=https://keebforge.in`.
+3. Redeploy (required — `NEXT_PUBLIC_*` is inlined at build).
+4. Register `https://keebforge.in/api/auth/callback/google` and `.../callback/discord` in Google Cloud Console + Discord dev portal.
+
+Then verify: `curl -I https://keebforge.in/api/auth/dash/validate` → **401 (not 308)**; re-run the dash connect check; test sign-up/sign-in/sign-out, `/api/auth/me`, Google OAuth, and admin login. Do **not** claim "Dash verified" until that's green in production.
 
 ## Accounts (remaining auth surface)
 

@@ -13,8 +13,8 @@ export type CartOwner = { kind: "profile"; profileId: string } | { kind: "guest"
  * cookie (created on first add-to-cart). Server-side only.
  */
 export async function resolveCartOwner(): Promise<CartOwner | null> {
-  const { user } = await getCurrentAuth();
-  if (user) return { kind: "profile", profileId: user.id };
+  const { user, profile } = await getCurrentAuth();
+  if (user && profile) return { kind: "profile", profileId: profile.id };
   const token = (await cookies()).get(CART_COOKIE)?.value;
   return token ? { kind: "guest", guestToken: token } : null;
 }

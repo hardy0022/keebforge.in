@@ -10,9 +10,13 @@ On 2026-08-19 Supabase Auth was **fully replaced** by Better Auth 1.7.1. Supabas
   - `prismaAdapter(prisma, { provider: "postgresql" })`
   - `emailAndPassword: { enabled: true }` — core option (NOT a plugin in 1.7.x)
   - `dash({ apiKey: process.env.BETTER_AUTH_API_KEY })` from `@better-auth/infra`
+  - `socialProviders`: google + discord, activated only when `GOOGLE_CLIENT_ID/SECRET`, `DISCORD_CLIENT_ID/SECRET` are set (blank values omitted).
+  - `trustedOrigins`: `[NEXT_PUBLIC_APP_URL ?? localhost, BETTER_AUTH_URL ?? https://keebforge.in]`
   - `baseURL`: production → `BETTER_AUTH_URL` (https://keebforge.in); dev → `http://localhost:3000`
   - `secret`: `BETTER_AUTH_SECRET`
-- `src/app/api/auth/[...all]/route.ts` — `toNextJsHandler(auth)` from `better-auth/next-js`; serves `/api/auth/*`.
+- `src/app/api/auth/[...all]/route.ts` — `toNextJsHandler(auth)` from `better-auth/next-js`; serves `/api/auth/*`. A bare `GET /api/auth` returns 404 (the `[...all]` catch-all needs ≥1 segment) — expected, not a failure.
+- `src/app/api/auth/me/route.ts` — lightweight role endpoint: returns `{ user, role }` (401 when signed out); used by `SignInForm` for role-based redirect.
+- `src/app/auth/callback/page.tsx` — OAuth return page: ADMIN/STAFF → `/admin`, everyone else → `/`.
 - `src/lib/auth.ts` — app-facing helpers:
   - `getCurrentAuth()` → `{ user, profile }` or `{ user: null, profile: null }`. **Auto-creates the `Profile` on first access** with role `CUSTOMER`, and links the seeded ADMIN profile by email (claim-by-email): if the signed-in user's email matches an existing admin profile, the profile is linked to the user and role `ADMIN`. NEVER auto-provisions a *new* ADMIN.
   - `requireUser()` / `requireAdmin()` — server-side guards (redirect to `/login` / `/`).
@@ -21,6 +25,7 @@ On 2026-08-19 Supabase Auth was **fully replaced** by Better Auth 1.7.1. Supabas
 ## Admin login (live credentials)
 
 - Owner account: `shadow@keebforge.in` / `K33bForg3@6969` (user-provided). Sign up is available via the **create-account toggle** on `/login` (`SignInForm`). The seed admin profile uses email `shadow@keebforge.in` (was `owner@keebforge.in`) so the claim-by-email link works on sign-in.
+- `/login` is customer-facing ("Sign in | KeebForge"): Google/Discord buttons + email sign-in/sign-up toggle. Admin enters via the same route; `/api/auth/me` role check redirects admins to `/admin`.
 
 ## Database
 
@@ -32,9 +37,14 @@ The CLI's generated schema was **missing the `Account.issuer` column** that the 
 
 ## Dash (@better-auth/infra 0.4.0)
 
-- `dash()` plugin; `apiKey` defaults to `BETTER_AUTH_API_KEY` env (set in `.env`).
+- `dash()` plugin; `apiKey` from `BETTER_AUTH_API_KEY` env (set in `.env`).
 - Connection is to the hosted service (`https://dash.better-auth.com`).
-- **Ownership verification is NOT yet confirmed** — it must be verified against the production deployment at https://keebforge.in (locally `dash()` reports whatever the hosted API says). Do not claim it's working until verified in production.
+- **Ownership verification is NOT yet confirmed** — blocked on a Vercel domain-level redirect, not on code. Diagnosis (2026-08-20):
+  - `https://keebforge.in/api/auth` returned **308 → `https://www.keebforge.in/api/auth`** → dash reported "server returned a redirect". The bare path then 404s (see above).
+  - The redirect is a **Vercel dashboard Domains setting** (apex → www). The repo has **no** www/apex redirect logic: `src/proxy.ts` matcher excludes `api/`, there is no `vercel.json`/middleware, and `next.config.ts` redirects are static old-slug mappings only.
+  - The deployed build itself is current and correct: `https://www.keebforge.in/api/auth/dash/validate` → 401, `/api/auth/me` → 401, `/` → 200.
+  - **Unblock:** in Vercel, set `keebforge.in` as the serving (primary) domain with NO "redirect to www"; set Production env `BETTER_AUTH_URL=https://keebforge.in` + `NEXT_PUBLIC_APP_URL=https://keebforge.in`; redeploy; register `https://keebforge.in/api/auth/callback/google` (+ `/discord`) in the OAuth providers. Then re-run the dash connect check — expect 401 (not 308) on `/api/auth/dash/validate`.
+- **Social login status:** buttons render but Google/Discord flows are untested until the apex callback URIs are registered in the provider consoles and the Vercel redirect is removed.
 
 ## Optional packages installed (why)
 

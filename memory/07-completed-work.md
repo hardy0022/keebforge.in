@@ -1,6 +1,18 @@
 # 07 — Completed Work (what was done & why)
 
-All work below is complete and verified as of 2026-08-19. Phase descriptions include the "why" — the reasoning that shaped each stage.
+All work below is complete and verified as of 2026-08-20.
+
+## Service configurator + admin pricing (2026-08-20)
+
+`/services` is now an interactive configurator matching the old `shop.keebforge.in/order/` page (no order form): device tabs (Keyboard/Mouse with selected counts), component quantity steppers (switches 65 / stabilizers 4 / mouse switch units 2), checkbox service matrix grouped by `ServiceGroup` with live combo/exclusive de-selection (`replaces`/`exclusiveWith` slugs), per-unit price labels (`+₹12/SW`, ranges `₹500–550`, `Quote` badges), and a sticky subtotal estimate (per-switch/per-stab × qty; ranges + quotes listed as "Pending Review"). Data is DB-driven (D-005) — `src/components/services/ServiceConfigurator.tsx` (client) renders from `getServiceCatalog()`.
+
+New `/admin/services` page (sidebar link already existed, previously the stub): a per-service price editor (`ServicePriceForm` + `saveService` action in `src/app/admin/actions/services.ts`) — unit select, price/min/max (rupee input → paise, matching the product-form convention), price label, sort order, combo/popular/highlight/active toggles. Reference CSS ported into `globals.css` (`.panel`, `.device-tabs`, `.service-row`, `.qty-*`, `.total-*`, `.summary-box`). Verified: typecheck/lint/build green; `/services` 200 with full matrix; `/admin/services` 307→`/login` unauthed. Client component count is now 5 (see `02-architecture.md`).
+
+## Homepage restore (2026-08-20) — D-018 superseded
+
+The maintenance page was removed and the full homepage rebuilt (see D-018 in `06-decisions.md`): `Hero`, text marquee strip, DB reviews marquee (`getApprovedReviews()` added to `src/lib/data.ts`, reusing the surviving `.review-card`/`.reviews-*` CSS), all `ServiceSection` groups, `GENERAL_FAQ` via `FaqList`, and `CtaSection`. Fixed the `Hero` "View Services" link which pointed at the non-existent `/services/keyboard` (now `/services`). Verified: typecheck/lint/build green; production server `/` returns 200 with hero + reviews + FAQ rendered.
+
+All earlier work below is complete and verified as of 2026-08-19. Phase descriptions include the "why" — the reasoning that shaped each stage.
 
 ## Phase 3 — Foundation
 **Why:** before any content, the skeleton had to hold real data and real traffic.
@@ -17,7 +29,7 @@ All work below is complete and verified as of 2026-08-19. Phase descriptions inc
 **Why:** the site had to present the full business before commerce; each page is DB-driven.
 
 - `/services` + `/services/[device]/[slug]` — catalog from `ServiceGroup`/`Service`, JSON-LD.
-- `/repair/keyboard`, `/repair/mouse` — pricing tables rendered from DB.
+- `/repair` — Electronics Repair + photo-enabled inquiry form (replaced the per-device `/repair/keyboard` + `/repair/mouse` pricing pages, removed 2026-08-20).
 - `/reviews` — approved reviews from DB.
 - `/work`, `/work/[slug]` — portfolio from `WorkProject`.
 - `/about`, `/faq` (DB FAQs), `/terms`, `/contact` (Resend form — verified 200), `/thanks`, `/not-found`.
@@ -82,3 +94,13 @@ All work below is complete and verified as of 2026-08-19. Phase descriptions inc
 - Pages: `/admin/products` (list w/ filters, stock badges, sales), `/admin/products/new`, `/admin/products/[id]`, `/admin/products/[id]/edit` (9-section `ProductForm`), `/admin/products/categories` (nested), `/admin/products/inventory` (rows + inline adjust + movement ledger), `/admin/brands`, `/admin/products/import`, `/admin/products/export` (CSV route). Shared `ActionForm` (toast + spinner) and `ProductDetailClient` (`ProductStatusBar`, `VariantsManager`, `InventoryForm`).
 - Seed now includes 8 brands + 11 demo products (D-014).
 - Verified: typecheck/lint/build green; all admin routes 200 authed + 307 unauthed; shop lists seeded products; product detail renders all sections; export CSV complete; out-of-stock product hidden from shop (404).
+
+## Phase "Auth hardening" — social login + deployment diagnosis (2026-08-20)
+**Why:** customer accounts needed OAuth, and the Better Auth Dash onboarding could not connect to the deployed site.
+
+- `better-auth.ts`: added `socialProviders` (google + discord, active only when env is set) and `trustedOrigins`.
+- New endpoints: `/api/auth/me` (returns user + role; 401 signed-out) and `/auth/callback` (admin→`/admin`, else→`/`).
+- Rewrote `SignInForm` (social buttons + email sign-in/sign-up toggle, role-based redirect) and `/login` as customer-facing; "Sign in" nav link (desktop + mobile, hidden when signed in); `.btn-social`/`.or-divider` CSS.
+- `.env` / `.env.example`: `GOOGLE_CLIENT_ID/SECRET`, `DISCORD_CLIENT_ID/SECRET`, `BETTER_AUTH_API_KEY`.
+- **Dash deployment diagnosis:** `https://keebforge.in/api/auth` 308→www is a **Vercel domain-level redirect**, not app code. Repo verified clean: `src/proxy.ts` excludes `api/`, no `vercel.json`/middleware, `next.config.ts` redirects are static slug maps. Deployed build is current (`www/api/auth/dash/validate` → 401). `.env` `BETTER_AUTH_URL` reverted to dev-localhost; prod apex values documented in `.env.example`.
+- Verified locally: `/api/auth/me` 401, `/api/auth/dash/validate` 401 (plugin live), email sign-in against live DB.

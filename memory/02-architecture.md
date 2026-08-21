@@ -59,7 +59,7 @@ public/                     static assets incl. legacy work images (Cloudinary m
 
 ## Key architectural rules
 
-1. **Server-first.** Only 4 client components exist: `SiteHeader`, `InquiryForm`, `AddToCart`, `CartQty`. Everything else is a server component.
+1. **Server-first.** Only 5 client components exist: `SiteHeader`, `InquiryForm`, `AddToCart`, `CartQty`, `ServiceConfigurator`. Everything else is a server component.
 2. **All data fetchers use `React.cache()`** (`src/lib/data.ts`) to dedupe within a request.
 3. **Parallel queries** with `Promise.all`; never sequential awaits for independent reads.
 4. **Server-only imports.** Prisma and env secrets never reach the client bundle (verified — no Prisma in client bundles).

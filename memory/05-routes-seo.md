@@ -6,10 +6,9 @@
 |---|---|---|---|
 | `/` | static | `src/app/page.tsx` | homepage: hero, services, marquee, FAQ |
 | `/about` | static | `src/app/about/page.tsx` | |
-| `/services` | static | `src/app/services/page.tsx` | service catalog index |
+| `/services` | static | `src/app/services/page.tsx` | interactive configurator (device tabs, checkbox service matrix, live subtotal) |
 | `/services/[device]/[slug]` | dynamic | `src/app/services/[device]/[slug]/page.tsx` | device in `{keyboard, mouse, other}`; 404 on invalid |
-| `/repair/keyboard` | static | `src/app/repair/keyboard/page.tsx` | prices from DB via `formatServicePriceText()` |
-| `/repair/mouse` | static | `src/app/repair/mouse/page.tsx` | |
+| `/repair` | static | `src/app/repair/page.tsx` | Electronics Repair + inquiry form with photo upload |
 | `/reviews` | static | `src/app/reviews/page.tsx` | DB-backed, approved only |
 | `/work` | static | `src/app/work/page.tsx` | portfolio; images still local/JSON — Cloudinary pending |
 | `/work/[slug]` | dynamic | `src/app/work/[slug]/page.tsx` | |
@@ -39,6 +38,7 @@
 | `/admin/brands` | brand CRUD (`?edit=<id>`) |
 | `/admin/products/inventory` | stock rows + inline adjust + movement ledger |
 | `/admin/products/import`, `/admin/products/export` | CSV import page + CSV download route |
+| `/admin/services` | per-service pricing editor (unit/price/min/max/label/flags → feeds the public configurator) |
 | `/admin/[...slug]` | stub for unbuilt sections |
 | `/api/admin/upload` | gated Cloudinary upload (501 without creds) |
 
@@ -47,8 +47,8 @@ Admin chrome is hidden from the public site by `ShowOnSite` in the root layout.
 ## Redirects (two layers)
 
 **`next.config.ts` → `redirects()` (all 308):**
-- `/keyboard-repair` → `/repair/keyboard`
-- `/mouse-repair` → `/repair/mouse`
+- `/keyboard-repair` → `/repair`
+- `/mouse-repair` → `/repair`
 - `/pricing` → `/services`
 - `/order` → `/checkout`
 - `/Terms&Conditions` → `/terms` (note: URL-encoded `%26` does NOT match — only literal `&`)

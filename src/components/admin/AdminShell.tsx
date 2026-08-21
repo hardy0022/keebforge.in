@@ -196,34 +196,6 @@ export function AdminShell({
         </header>
         <main style={{ padding: "24px var(--pad-x) 64px", maxWidth: 1400, margin: "0 auto" }}>{children}</main>
       </div>
-
-      <style jsx>{`
-        .kf-sidebar-desktop {
-          @media (max-width: 900px) {
-            display: none !important;
-          }
-        }
-        .kf-mobile-sidebar {
-          @media (min-width: 901px) {
-            display: none !important;
-          }
-        }
-        .kf-drawer-open {
-          @media (min-width: 901px) {
-            display: none !important;
-          }
-        }
-        .kf-sidebar-toggle {
-          @media (max-width: 900px) {
-            display: none !important;
-          }
-        }
-        .kf-admin-main {
-          @media (max-width: 900px) {
-            margin-left: 0 !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

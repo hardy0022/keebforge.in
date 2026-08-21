@@ -4,8 +4,7 @@ import { prisma } from "@/lib/prisma";
 const SERVICES = [
   { href: "/services/keyboard", label: "Keyboard Services" },
   { href: "/services/mouse", label: "Mouse Services" },
-  { href: "/repair/keyboard", label: "Keyboard Repair" },
-  { href: "/repair/mouse", label: "Mouse Repair" },
+  { href: "/repair", label: "Repair" },
   { href: "/services/keyboard/custom-keyboard-build", label: "Custom Builds" },
 ];
 

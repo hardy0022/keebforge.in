@@ -17,6 +17,14 @@ export const getServiceCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
   })
 );
 
+export const getApprovedReviews = cache((take = 12) =>
+  prisma.review.findMany({
+    where: { status: "APPROVED" },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    take,
+  })
+);
+
 export const getFeaturedWork = cache(() =>
   prisma.workProject.findMany({
     where: { active: true, featured: true },

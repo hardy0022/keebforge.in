@@ -34,11 +34,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${spaceGrotesk.variable} ${inter.variable} antialiased`}>
+      <body className={`${spaceGrotesk.variable} ${inter.variable} antialiased page-layout`}>
         <ShowOnSite>
           <SiteHeader />
         </ShowOnSite>
-        {children}
+        <main className="page-main">{children}</main>
         <ShowOnSite>
           <SiteFooter />
         </ShowOnSite>

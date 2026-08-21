@@ -19,7 +19,7 @@ Chronological record of significant decisions and the reasoning behind them. New
 **Why:** the shadow-database flow (`migrate dev`) fails in this setup (the `auth` schema interferes). The manual pattern has been proven 6 times.
 
 ## D-005 — Database-driven pricing, never hardcoded
-**What:** all prices and pricing prose render from DB. Hardcoded ₹ values were removed from `src/app/page.tsx`, `src/app/repair/keyboard/page.tsx`, and `src/lib/faq.ts`. Helpers: `formatServicePriceText()` (`src/lib/orders.ts`) and `buildKeyboardFaq(priceText)` (`src/lib/faq.ts`).
+**What:** all prices and pricing prose render from DB. Hardcoded ₹ values were removed from `src/app/page.tsx`, `src/app/repair/keyboard/page.tsx` (file since removed — D-019), and `src/lib/faq.ts`. Helpers: `formatServicePriceText()` (`src/lib/orders.ts`) and `buildKeyboardFaq(priceText)` (`src/lib/faq.ts`).
 **Why:** the audit found hardcoded prices drifting from the DB (e.g. FAQ said ₹12/SK while DB said ₹13). One source of truth prevents drift.
 
 ## D-006 — Order snapshots instead of live references
@@ -66,3 +66,16 @@ Chronological record of significant decisions and the reasoning behind them. New
 ## D-016 — Product labels live in a client-safe module
 **What:** `PRODUCT_TYPE_LABELS` / `PRODUCT_STATUS_LABELS` and the `ProductType`/`ProductStatus` re-exports moved to `src/lib/product-labels.ts` (no `server-only`, no Prisma).
 **Why:** `admin-catalog.ts` starts with `import "server-only"` and is pulled into the admin client forms; the build fails with "server-only cannot be imported from a Client Component module" otherwise.
+
+## D-017 — Canonical domain is apex `https://keebforge.in`; `/api/*` must never redirect
+**What:** the canonical production origin is the apex domain (NOT www). Local `.env` stays dev-scoped (`http://localhost:3000`); the prod values (`BETTER_AUTH_URL=https://keebforge.in`, `NEXT_PUBLIC_APP_URL=https://keebforge.in`) live in the Vercel Production environment. The repo contains no www/apex redirect logic and must not gain any — in particular `/api/*` (Better Auth) must serve directly on the canonical domain.
+**Why:** the Better Auth Dash connection test hit `https://keebforge.in/api/auth` and got a **308 to www** (a Vercel dashboard domain redirect, not app code), so dash reported "server returned a redirect". Canonical-domain redirects are acceptable for pages, but never for `/api/*` — auth endpoints break behind them.
+
+## D-018 — Homepage is currently a maintenance page — SUPERSEDED
+**What (original):** `src/app/page.tsx` rendered a "Website under maintenance" notice with a meta-refresh + button to `https://shop.keebforge.in/` (user-applied).
+**Status:** superseded on 2026-08-20 — the maintenance page was removed and the full homepage rebuilt from the existing components (the original page.tsx was never committed — the repo's single commit already contained the maintenance page, and the `ReviewsMarquee`/`ReviewCard`/`/reviews` route had been pruned with it). The rebuilt homepage: `Hero` (with the broken `/services/keyboard` link fixed to `/services`), text marquee strip, DB reviews marquee (new `getApprovedReviews()` in `src/lib/data.ts`, using the surviving `.review-card`/`.reviews-*` CSS), all `ServiceSection` groups, `GENERAL_FAQ`, `CtaSection`. Verified typecheck/lint/build green + HTTP 200 with hero/reviews/FAQ rendered.
+
+## D-019 — Single `/repair` page replaces `/repair/keyboard` + `/repair/mouse`; repair inquiry accepts photos
+**What:** the two per-device repair pricing pages were removed; `/repair` is now the only repair route — an "Electronics Repair" card + the shared `InquiryForm`. The form and `sendInquiry` action gained optional photo upload (max 5, ≤5 MB, JPG/PNG/WEBP, client + server validation incl. magic-byte sniffing) uploaded to Cloudinary (`keebforge/repairs`) with URLs embedded in the Resend email. `next.config.ts` `/keyboard-repair`/`/mouse-repair` redirects now point at `/repair`; footer/header/sitemap updated. `serverActions.bodySizeLimit` raised to `30mb` (default 1 MB would reject 5 MB photos).
+**Why:** the business's repair entry point is a single quote-based inquiry (repair is priced per-inspection, not per-service). Photos help assessment before the device ships. The email-only inquiry flow was kept (no DB tables) — Cloudinary URLs travel in the email until orders/persistence land (Phase 4).
+**Note:** actual Cloudinary upload is untested — creds absent (`G-012`); the gated path returns a graceful "upload temporarily unavailable" error rather than blocking the inquiry.

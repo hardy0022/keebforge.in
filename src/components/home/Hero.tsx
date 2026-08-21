@@ -37,7 +37,7 @@ export function Hero() {
             Place an Order
             <span aria-hidden="true">→</span>
           </Link>
-          <Link href="/services/keyboard" className="btn-ghost">
+          <Link href="/services" className="btn-ghost">
             View Services
           </Link>
         </div>

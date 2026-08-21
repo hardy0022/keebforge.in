@@ -22,11 +22,11 @@ const qtySchema = z.object({
 export type CartActionState = { ok?: boolean; error?: string; count?: number };
 
 async function cartForCurrentUser() {
-  const { user } = await getCurrentAuth();
+  const { user, profile } = await getCurrentAuth();
   const cookieStore = await cookies();
 
-  if (user) {
-    return prisma.cart.upsert({ where: { profileId: user.id }, update: {}, create: { profileId: user.id } });
+  if (user && profile) {
+    return prisma.cart.upsert({ where: { profileId: profile.id }, update: {}, create: { profileId: profile.id } });
   }
 
   let token = cookieStore.get(CART_COOKIE)?.value;
@@ -107,8 +107,8 @@ export async function updateCartItem(_prev: CartActionState | null, formData: Fo
   });
   if (!parsed.success) return { error: "Invalid request." };
 
-  const { user } = await getCurrentAuth();
-  if (!user) {
+  const { user, profile } = await getCurrentAuth();
+  if (!user || !profile) {
     const owner = (await cookies()).get(CART_COOKIE)?.value;
     if (!owner) return { error: "Your cart is empty." };
   }
@@ -131,10 +131,10 @@ export async function removeCartItem(formData: FormData): Promise<void> {
   const itemId = formData.get("itemId");
   if (typeof itemId !== "string") return;
 
-  const { user } = await getCurrentAuth();
+  const { user, profile } = await getCurrentAuth();
   let ownerWhere: { profileId: string } | { guestToken: string } | null = null;
-  if (user) {
-    ownerWhere = { profileId: user.id };
+  if (user && profile) {
+    ownerWhere = { profileId: profile.id };
   } else {
     const token = (await cookies()).get(CART_COOKIE)?.value;
     if (token) ownerWhere = { guestToken: token };
