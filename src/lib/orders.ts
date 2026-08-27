@@ -46,6 +46,28 @@ export const ORDER_STATUS_STAGES: Record<OrderStatus, number> = {
   ORDER_COMPLETED: 100,
 };
 
+/** Badge color class (info/warning/success) per status. Single definition. */
+export const ORDER_STATUS_CHIP: Record<OrderStatus, string> = {
+  ORDER_RECEIVED: "status-info",
+  ORDER_CONFIRMED: "status-info",
+  PAYMENT_PENDING: "status-warning",
+  PAYMENT_RECEIVED: "status-info",
+  PARTS_BOOKED: "status-info",
+  PARTS_SHIPPED: "status-info",
+  PARTS_RECEIVED: "status-info",
+  IN_QUEUE: "status-info",
+  WORK_STARTED: "status-info",
+  TESTING: "status-info",
+  COMPLETED: "status-success",
+  PACKING: "status-info",
+  SHIPMENT_BOOKED: "status-info",
+  SHIPMENT_PICKED_UP: "status-info",
+  IN_TRANSIT: "status-info",
+  DELIVERED: "status-success",
+  TESTING_WARRANTY_ACTIVE: "status-success",
+  ORDER_COMPLETED: "status-success",
+};
+
 export const SERVICE_UNIT_LABELS: Record<ServiceUnit, string> = {
   PER_SWITCH: "per switch",
   PER_STABILIZER: "per stabilizer",

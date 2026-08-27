@@ -5,8 +5,8 @@ export function CtaSection({
   title,
   desc,
   note,
-  primaryLabel = "Place an Order",
-  primaryHref = "/checkout",
+  primaryLabel = "Shop Now",
+  primaryHref = "/shop",
 }: {
   title: ReactNode;
   desc?: string;
@@ -33,12 +33,6 @@ export function CtaSection({
           <Link href={primaryHref} className="btn-prime btn-prime-lg">
             {primaryLabel}
           </Link>
-          <Link href="/services" className="btn-ghost">
-            View Pricing
-          </Link>
-          <a href="https://discord.com/users/843113968734437376" target="_blank" rel="noopener" className="btn-ghost">
-            Discord
-          </a>
         </div>
       </div>
     </section>

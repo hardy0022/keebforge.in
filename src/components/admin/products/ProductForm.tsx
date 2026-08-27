@@ -5,10 +5,21 @@ import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { saveProduct, type CatalogActionState } from "@/app/admin/actions/catalog";
 import { PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS, type ProductType } from "@/lib/product-labels";
+import { CARD_ICONS, CARD_ICON_NAMES } from "@/lib/card-icons";
+import { MAX_CARD_FEATURES, CONDITION_LABELS } from "@/lib/shop";
+
+const SECTION_TYPE_OPTIONS = [
+  { value: "NEW", label: "New / In Stock" },
+  { value: "CUSTOM", label: "Custom Order" },
+  { value: "CLEARANCE", label: "Clearance / Used" },
+] as const;
 
 type CategoryProp = { id: string; name: string; parentId: string | null };
 type BrandProp = { id: string; name: string };
-type ImageProp = { url: string; alt: string | null; sortOrder: number; primary: boolean };
+type ImageProp = { url: string; alt: string | null; sortOrder: number; primary: boolean; publicId?: string | null };
+type UploadedAsset = { publicId: string; url: string; width: number; height: number };
+type CardFeature = { icon: string; label: string; value: string };
+type OptionGroupState = { id?: string; name: string; required: boolean; options: { id?: string; name: string; addon: string }[] };
 
 type ProductProp = {
   id: string;
@@ -17,13 +28,13 @@ type ProductProp = {
   type: ProductType;
   categoryId: string;
   brandId: string | null;
-  shortDescription: string | null;
   description: string | null;
   features: { list?: string[] } | null;
   whatsIncluded: { list?: string[] } | null;
   warrantyInfo: string | null;
   shippingInfo: string | null;
   specifications: Record<string, string> | null;
+  cardFeatures: { icon: string; label: string; value: string }[] | null;
   price: number;
   compareAtPrice: number | null;
   costPrice: number | null;
@@ -50,6 +61,8 @@ type ProductProp = {
   popular: boolean;
   isNew: boolean;
   status: "DRAFT" | "ACTIVE" | "OUT_OF_STOCK" | "ARCHIVED";
+  productType: "CUSTOM" | "NEW" | "CLEARANCE";
+  condition: string | null;
   images: ImageProp[];
 };
 
@@ -71,18 +84,120 @@ const Field = ({ label, hint, children }: { label: string; hint?: string; childr
   </label>
 );
 
-export function ProductForm({ product, categories, brands }: { product: ProductProp | null; categories: CategoryProp[]; brands: BrandProp[] }) {
+export function ProductForm({ product, optionGroups = [], categories, brands }: { product: ProductProp | null; optionGroups?: OptionGroupState[]; categories: CategoryProp[]; brands: BrandProp[] }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(saveProduct, {});
   const [images, setImages] = useState<ImageProp[]>(product?.images ?? []);
   const [primaryIdx, setPrimaryIdx] = useState(product?.images.findIndex((i) => i.primary) ?? 0);
+  // Fresh Cloudinary uploads (not yet persisted) + their draft folder token.
+  const [uploadedAssets, setUploadedAssets] = useState<UploadedAsset[]>([]);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  // Stable per-form token for staging draft uploads (useState init runs once).
+  const [draftToken] = useState(() => Math.random().toString(36).slice(2, 10) + Date.now().toString(36));
+  const [cardFeats, setCardFeats] = useState<CardFeature[]>(() =>
+    (product?.cardFeatures ?? []).slice(0, MAX_CARD_FEATURES).map((f) => ({ icon: f.icon, label: f.label, value: f.value })),
+  );
+  const [optGroups, setOptGroups] = useState<OptionGroupState[]>(optionGroups);
+
+  const setFeat = (idx: number, patch: Partial<CardFeature>) =>
+    setCardFeats((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const moveFeat = (idx: number, dir: -1 | 1) =>
+    setCardFeats((rows) => {
+      const next = [...rows];
+      const j = idx + dir;
+      if (j < 0 || j >= next.length) return rows;
+      [next[idx], next[j]] = [next[j], next[idx]];
+      return next;
+    });
 
   const specsLines = product?.specifications ? Object.entries(product.specifications).map(([k, v]) => `${k}: ${v}`) : [];
   const featuresLines = product?.features?.list ?? [];
 
+  // Serialize the configurator editor: rupee inputs → paise addons; incomplete
+  // rows are dropped so the server only sees complete data.
+  const optionConfig = JSON.stringify(
+    optGroups
+      .map((g) => ({
+        id: g.id,
+        name: g.name.trim(),
+        required: g.required,
+        options: g.options
+          .filter((o) => o.name.trim())
+          .map((o) => ({ id: o.id, name: o.name.trim(), addon: Math.round((parseFloat(o.addon) || 0) * 100) })),
+      }))
+      .filter((g) => g.name && g.options.length > 0),
+  );
+
+  const setGroup = (idx: number, patch: Partial<OptionGroupState>) =>
+    setOptGroups((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const setOption = (gi: number, oi: number, patch: Partial<OptionGroupState["options"][number]>) =>
+    setOptGroups((rows) => rows.map((g, i) => (i === gi ? { ...g, options: g.options.map((o, j) => (j === oi ? { ...o, ...patch } : o)) } : g)));
+
   const addImage = () => setImages((imgs) => [...imgs, { url: "", alt: "", sortOrder: imgs.length, primary: false }]);
-  const removeImage = (idx: number) => setImages((imgs) => imgs.filter((_, i) => i !== idx));
+  const moveImage = (idx: number, dir: -1 | 1) =>
+    setImages((imgs) => {
+      const next = [...imgs];
+      const j = idx + dir;
+      if (j < 0 || j >= next.length) return imgs;
+      [next[idx], next[j]] = [next[j], next[idx]];
+      return next;
+    });
   const setImage = (idx: number, patch: Partial<ImageProp>) => setImages((imgs) => imgs.map((im, i) => (i === idx ? { ...im, ...patch } : im)));
+
+  async function removeImage(idx: number) {
+    const img = images[idx];
+    setPrimaryIdx((p) => (idx === p ? 0 : idx < p ? p - 1 : p));
+    setImages((imgs) => imgs.filter((_, i) => i !== idx));
+    // Freshly uploaded assets exist nowhere yet — destroy them right away so
+    // abandoned forms don't orphan files. Saved rows are cleaned up by the
+    // server action after save (diff by URL).
+    if (img?.publicId && uploadedAssets.some((a) => a.publicId === img.publicId)) {
+      setUploadedAssets((rows) => rows.filter((a) => a.publicId !== img.publicId));
+      await fetch("/api/uploads?publicId=" + encodeURIComponent(img.publicId), { method: "DELETE" }).catch(() => {});
+    }
+  }
+
+  function uploadFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+    const entityId = product?.id ?? draftToken;
+    const role = product ? "GALLERY" : "DRAFT";
+    let done = 0;
+    for (const file of Array.from(files)) {
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("entityType", "PRODUCT");
+      fd.set("entityId", entityId);
+      fd.set("role", role);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/uploads");
+      xhr.upload.onprogress = (e) => e.lengthComputable && setUploadPct(Math.round(((done + e.loaded / e.total) / files.length) * 100));
+      xhr.onload = () => {
+        done += 1;
+        try {
+          const data = JSON.parse(xhr.responseText) as { ok?: boolean; url?: string; publicId?: string; width?: number; height?: number; error?: string };
+          const statusOk = xhr.status >= 200 && xhr.status < 300;
+          if (!statusOk || !data.ok || !data.url || !data.publicId) {
+            setUploadError(data.error ?? "Unable to upload image. Please try again.");
+          } else {
+            const asset: UploadedAsset = { publicId: data.publicId, url: data.url, width: data.width ?? 0, height: data.height ?? 0 };
+            setUploadedAssets((rows) => [...rows, asset]);
+            setImages((imgs) => [...imgs, { url: data.url!, alt: "", sortOrder: imgs.length, primary: false, publicId: data.publicId }]);
+          }
+        } catch {
+          setUploadError("Unable to upload image. Please try again.");
+        }
+        setUploadPct(done >= files.length ? null : Math.round((done / files.length) * 100));
+      };
+      xhr.onerror = () => {
+        done += 1;
+        setUploadError("Unable to upload image. Please try again.");
+        setUploadPct(null);
+      };
+      xhr.send(fd);
+    }
+  }
 
   return (
     <form action={action} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -120,27 +235,35 @@ export function ProductForm({ product, categories, brands }: { product: ProductP
               {TYPE_GROUPS.map((t) => <option key={t} value={t}>{PRODUCT_TYPE_LABELS[t]}</option>)}
             </select>
           </Field>
-          <Field label="Short description" hint="One line shown on product cards (max 400 chars).">
-            <input className="input" name="shortDescription" defaultValue={product?.shortDescription ?? ""} maxLength={400} disabled={pending} />
-          </Field>
           <div style={{ gridColumn: "1 / -1" }}>
             <Field label="Full description">
               <textarea className="textarea" name="description" defaultValue={product?.description ?? ""} disabled={pending} />
             </Field>
           </div>
+          <Field label="Product type" hint="Where it lives in the shop: custom, in-stock or clearance.">
+            <select className="select" name="productType" defaultValue={product?.productType ?? "NEW"} disabled={pending}>
+              {SECTION_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Condition" hint="For clearance / used items only.">
+            <select className="select" name="condition" defaultValue={product?.condition ?? ""} disabled={pending}>
+              <option value="">—</option>
+              {Object.entries(CONDITION_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </Field>
         </div>
       </Section>
 
       <Section title="2 · Pricing">
         <div className="admin-grid cols-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
           <Field label="Selling price (₹)" hint="What customers pay. Stored in paise.">
-            <input className="input" type="number" name="price" defaultValue={product ? product.price / 100 : ""} min={0} step="0.01" required disabled={pending} />
+            <input className="input" type="number" name="price" defaultValue={product ? product.price / 100 : ""} min={0} step="1" required disabled={pending} />
           </Field>
           <Field label="Compare-at price (₹)" hint="Shown struck-through. Leave 0 for no sale.">
-            <input className="input" type="number" name="compareAtPrice" defaultValue={product ? (product.compareAtPrice ?? 0) / 100 : ""} min={0} step="0.01" disabled={pending} />
+            <input className="input" type="number" name="compareAtPrice" defaultValue={product ? (product.compareAtPrice ?? 0) / 100 : ""} min={0} step="1" disabled={pending} />
           </Field>
           <Field label="Cost price (₹)" hint="Internal only — never shown to customers.">
-            <input className="input" type="number" name="costPrice" defaultValue={product ? (product.costPrice ?? 0) / 100 : ""} min={0} step="0.01" disabled={pending} />
+            <input className="input" type="number" name="costPrice" defaultValue={product ? (product.costPrice ?? 0) / 100 : ""} min={0} step="1" disabled={pending} />
           </Field>
           <Field label="GST rate (%)" hint="Applied at checkout for taxable goods.">
             <input className="input" type="number" name="gstRate" defaultValue={product?.gstRate ?? 0} min={0} max={100} step="0.01" disabled={pending} />
@@ -171,31 +294,55 @@ export function ProductForm({ product, categories, brands }: { product: ProductP
         </div>
       </Section>
 
-      <Section title="4 · Images" >
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div className="admin-actions" style={{ gap: 8 }}>
-            <button type="button" className="btn-admin" onClick={addImage} disabled={pending}>+ Add image URL</button>
-            <span className="muted">Uploads are handled on the product page when Cloudinary is configured.</span>
-          </div>
-          {images.length === 0 ? (
-            <div className="empty"><b>No images yet</b>Add an image URL or upload to Cloudinary.</div>
-          ) : (
-            images.map((img, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", background: "var(--surf)", border: "1px solid var(--bdr)", borderRadius: "var(--r-sm)", padding: 10 }}>
-                <label className="flex items-center gap-2" style={{ fontSize: "0.78rem" }}>
-                  <input type="radio" name="imagePrimary" value={i} checked={i === primaryIdx} onChange={() => setPrimaryIdx(i)} disabled={pending} /> Primary
-                </label>
-                <input type="hidden" name="imageOrder" value={img.sortOrder} />
-                <input className="input" value={img.url} placeholder="Image URL" style={{ flex: "1 1 220px" }} onChange={(e) => setImage(i, { url: e.target.value })} name="imageUrl" />
-                <input className="input" value={img.alt ?? ""} placeholder="Alt text" style={{ flex: "1 1 160px" }} onChange={(e) => setImage(i, { alt: e.target.value })} name="imageAlt" />
-                <button type="button" className="btn-admin sm danger" onClick={() => removeImage(i)} disabled={pending}>Remove</button>
-              </div>
-            ))
-          )}
-          <div className="muted" style={{ fontSize: "0.7rem" }}>
-            Preview: {images.filter((i) => i.url).length} image{images.filter((i) => i.url).length === 1 ? "" : "s"}.
-          </div>
+      <Section title="4 · Images">
+        <p className="muted" style={{ fontSize: "0.75rem", marginBottom: 8 }}>
+          Uploaded images are stored in Cloudinary under this product&apos;s own folder. The main image is the shop card &amp; OG image.
+        </p>
+        <div className="admin-actions" style={{ flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+          <label className="btn-admin" style={{ cursor: "pointer" }}>
+            + Upload images
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              multiple
+              hidden
+              onChange={(e) => {
+                uploadFiles(e.target.files);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+          <button type="button" className="btn-admin sm" onClick={addImage} disabled={pending}>+ Add by URL</button>
         </div>
+        {uploadPct !== null && <p className="muted" style={{ fontSize: "0.8rem" }}>Uploading… {uploadPct}%</p>}
+        {uploadError && <p style={{ fontSize: "0.8rem", color: "#e5484d" }} role="alert">{uploadError}</p>}
+        {images.length === 0 ? (
+          <div className="empty"><b>No images yet</b>Upload files or add an image URL.</div>
+        ) : (
+          images.map((img, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", background: "var(--surf)", border: "1px solid var(--bdr)", borderRadius: "var(--r-sm)", padding: 10 }}>
+              <label title="Set as main image" className="flex items-center gap-2" style={{ fontSize: "0.78rem" }}>
+                <input type="radio" name="imagePrimary" value={i} checked={i === primaryIdx} onChange={() => setPrimaryIdx(i)} disabled={pending} /> Main
+              </label>
+              {img.url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- admin preview thumbnail
+                <img src={img.url} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid var(--bdr)" }} />
+              ) : (
+                <span style={{ width: 44, height: 44, borderRadius: 6, border: "1px dashed var(--bdr)" }} />
+              )}
+              <input type="hidden" name="imageOrder" value={i} />
+              <input className="input" value={img.url} placeholder="Image URL" style={{ flex: "1 1 200px" }} onChange={(e) => setImage(i, { url: e.target.value })} name="imageUrl" />
+              <input className="input" value={img.alt ?? ""} placeholder="Alt text" style={{ flex: "1 1 140px" }} onChange={(e) => setImage(i, { alt: e.target.value })} name="imageAlt" />
+              <button type="button" className="btn-admin sm" onClick={() => moveImage(i, -1)} disabled={pending || i === 0} aria-label={`Move image ${i + 1} earlier`}>↑</button>
+              <button type="button" className="btn-admin sm" onClick={() => moveImage(i, 1)} disabled={pending || i === images.length - 1} aria-label={`Move image ${i + 1} later`}>↓</button>
+              <button type="button" className="btn-admin sm danger" onClick={() => void removeImage(i)} disabled={pending}>Remove</button>
+            </div>
+          ))
+        )}
+        {/* Fresh uploads travel to the server action so rows get their publicId
+            (drafts are renamed into the product folder on create). */}
+        <input type="hidden" name="uploadedAssets" value={JSON.stringify(uploadedAssets)} />
+        <input type="hidden" name="draftToken" value={draftToken} />
       </Section>
 
       <Section title="5 · Description extras">
@@ -221,7 +368,89 @@ export function ProductForm({ product, categories, brands }: { product: ProductP
         </Field>
       </Section>
 
-      <Section title="7 · Shipping">
+      <Section title="7 · Key features">
+        <input type="hidden" name="cardFeatures" value={JSON.stringify(cardFeats)} />
+        <p className="muted" style={{ fontSize: "0.72rem", margin: 0 }}>
+          Add up to {MAX_CARD_FEATURES} key features shown on the shop product card (icon + label + value).
+        </p>
+        {cardFeats.map((f, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", background: "var(--surf)", border: "1px solid var(--bdr)", borderRadius: "var(--r-sm)", padding: 10 }}>
+            <span className="muted" style={{ fontSize: "0.7rem", width: 58 }}>Feature {i + 1}</span>
+            <select className="select" value={f.icon} onChange={(e) => setFeat(i, { icon: e.target.value })} disabled={pending} style={{ width: 130 }} aria-label={`Feature ${i + 1} icon`}>
+              {CARD_ICON_NAMES.map((name) => (
+                <option key={name} value={name}>{CARD_ICONS[name].label}</option>
+              ))}
+            </select>
+            <input className="input" value={f.label} maxLength={40} placeholder="Label (e.g. Sensor)" onChange={(e) => setFeat(i, { label: e.target.value })} disabled={pending} style={{ flex: "1 1 140px" }} aria-label={`Feature ${i + 1} label`} />
+            <input className="input" value={f.value} maxLength={60} placeholder="Value (e.g. Focus Pro 30K)" onChange={(e) => setFeat(i, { value: e.target.value })} disabled={pending} style={{ flex: "1 1 160px" }} aria-label={`Feature ${i + 1} value`} />
+            <button type="button" className="btn-admin sm" onClick={() => moveFeat(i, -1)} disabled={pending || i === 0} aria-label="Move up">↑</button>
+            <button type="button" className="btn-admin sm" onClick={() => moveFeat(i, 1)} disabled={pending || i === cardFeats.length - 1} aria-label="Move down">↓</button>
+            <button type="button" className="btn-admin sm danger" onClick={() => setCardFeats((rows) => rows.filter((_, j) => j !== i))} disabled={pending} aria-label="Remove feature">✕</button>
+          </div>
+        ))}
+        <div className="admin-actions" style={{ gap: 8 }}>
+          <button
+            type="button"
+            className="btn-admin"
+            onClick={() => setCardFeats((rows) => [...rows, { icon: "zap", label: "", value: "" }])}
+            disabled={pending || cardFeats.length >= MAX_CARD_FEATURES}
+          >
+            + Add feature
+          </button>
+          <span className="muted" style={{ fontSize: "0.7rem" }}>
+            {cardFeats.length >= MAX_CARD_FEATURES
+              ? `Maximum ${MAX_CARD_FEATURES} features reached`
+              : `${cardFeats.length}/${MAX_CARD_FEATURES} used — rows with an empty label or value are ignored.`}
+          </span>
+        </div>
+      </Section>
+
+      <Section title="8 · Product configuration">
+        <input type="hidden" name="optionConfig" value={optionConfig} />
+        <p className="muted" style={{ fontSize: "0.72rem", margin: 0 }}>
+          Up to 3 option groups (e.g. Case Color, Switch Choice). Customer price = base price + add-ons.
+          Leave empty for a simple product.
+        </p>
+        {optGroups.map((g, gi) => (
+          <div key={gi} style={{ display: "flex", flexDirection: "column", gap: 8, background: "var(--surf)", border: "1px solid var(--bdr)", borderRadius: "var(--r-sm)", padding: 10 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span className="muted" style={{ fontSize: "0.7rem", width: 58 }}>Group {gi + 1}</span>
+              <input className="input" value={g.name} maxLength={60} placeholder="Group name (e.g. Case Color)" onChange={(e) => setGroup(gi, { name: e.target.value })} disabled={pending} style={{ flex: "1 1 180px" }} aria-label={`Group ${gi + 1} name`} />
+              <label className="flex items-center gap-2" style={{ fontSize: "0.78rem" }}>
+                <input type="checkbox" checked={g.required} onChange={(e) => setGroup(gi, { required: e.target.checked })} disabled={pending} /> Required
+              </label>
+              <button type="button" className="btn-admin sm danger" onClick={() => setOptGroups((rows) => rows.filter((_, j) => j !== gi))} disabled={pending}>Remove group</button>
+            </div>
+            {g.options.map((o, oi) => (
+              <div key={oi} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", paddingLeft: 66 }}>
+                <input className="input" value={o.name} maxLength={60} placeholder="Option (e.g. Brass)" onChange={(e) => setOption(gi, oi, { name: e.target.value })} disabled={pending} style={{ flex: "1 1 140px" }} aria-label={`Group ${gi + 1} option ${oi + 1} name`} />
+                <input className="input" type="number" value={o.addon} min={0} step="1" placeholder="0" onChange={(e) => setOption(gi, oi, { addon: e.target.value })} disabled={pending} style={{ width: 120 }} aria-label={`Group ${gi + 1} option ${oi + 1} add-on price in rupees`} />
+                <span className="muted" style={{ fontSize: "0.7rem" }}>₹ add-on</span>
+                <button type="button" className="btn-admin sm danger" onClick={() => setGroup(gi, { options: g.options.filter((_, j) => j !== oi) })} disabled={pending} aria-label="Remove option">✕</button>
+              </div>
+            ))}
+            <div style={{ paddingLeft: 66 }}>
+              <button type="button" className="btn-admin sm" onClick={() => setGroup(gi, { options: [...g.options, { name: "", addon: "" }] })} disabled={pending}>+ Add option</button>
+            </div>
+          </div>
+        ))}
+        <div className="admin-actions" style={{ gap: 8 }}>
+          <button
+            type="button"
+            className="btn-admin"
+            onClick={() => setOptGroups((rows) => [...rows, { name: "", required: true, options: [{ name: "", addon: "" }] }])}
+            disabled={pending || optGroups.length >= 3}
+          >
+            + Add option group
+          </button>
+          <span className="muted" style={{ fontSize: "0.7rem" }}>{optGroups.length}/3 groups — incomplete rows are ignored.</span>
+        </div>
+      </Section>
+
+      <Section title="9 · Shipping">
+        <p className="muted" style={{ fontSize: "0.75rem", marginBottom: 8 }}>
+          Used to calculate Delhivery shipping rates. Weight is required for paid-shipping products; dimensions enable volumetric-weight pricing.
+        </p>
         <div className="admin-grid cols-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
           <Field label="Weight (g)">
             <input className="input" type="number" name="weight" defaultValue={product?.weight ?? ""} min={0} step="1" disabled={pending} />
@@ -247,7 +476,7 @@ export function ProductForm({ product, categories, brands }: { product: ProductP
         </div>
       </Section>
 
-      <Section title="8 · SEO" >
+      <Section title="10 · SEO" >
         <div className="admin-grid cols-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
           <Field label="SEO title" hint="Defaults to the product name.">
             <input className="input" name="seoTitle" defaultValue={product?.seoTitle ?? ""} disabled={pending} />
@@ -267,7 +496,7 @@ export function ProductForm({ product, categories, brands }: { product: ProductP
         </div>
       </Section>
 
-      <Section title="9 · Publishing">
+      <Section title="11 · Publishing">
         <div className="admin-grid cols-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
           <Field label="Status">
             <select className="select" name="status" defaultValue={product?.status ?? "ACTIVE"} disabled={pending}>
@@ -275,9 +504,6 @@ export function ProductForm({ product, categories, brands }: { product: ProductP
             </select>
           </Field>
           <div className="flex flex-col gap-2" style={{ justifyContent: "center" }}>
-            <label className="flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
-              <input type="checkbox" name="featured" defaultChecked={product?.featured ?? false} disabled={pending} /> Featured
-            </label>
             <label className="flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
               <input type="checkbox" name="popular" defaultChecked={product?.popular ?? false} disabled={pending} /> Popular
             </label>

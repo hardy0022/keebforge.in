@@ -14,7 +14,7 @@ export const metadata: Metadata = buildMetadata({
 });
 
 const CHANNELS = [
-  { icon: "🛒", title: "Order Page", desc: "The fastest path — select services, get an estimate, and start your order.", href: "/checkout", label: "Place an Order" },
+  { icon: "🛒", title: "Order Page", desc: "The fastest path — select services, get an estimate, and start your order.", href: "/shop/checkout", label: "Place an Order" },
   { icon: "💬", title: "Discord", desc: "Questions, quotes and order confirmations. Reach Hardy on Discord.", href: "https://discord.com/users/843113968734437376", label: "Chat on Discord" },
   { icon: "✉️", title: "Email", desc: "Repair inquiries can be sent to contact@keebforge.in via the form below.", href: "mailto:contact@keebforge.in", label: "contact@keebforge.in" },
 ];

@@ -1,18 +1,19 @@
 "use client";
 
+import { authClient } from "@/lib/auth/auth-client";
+
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createAuthClient } from "better-auth/react";
+import type { Role } from "@prisma/client";
 
-const authClient = createAuthClient();
 
 const NAV: { href: string; label: string; icon: string }[] = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/orders", label: "Orders", icon: "🧾" },
-  { href: "/admin/repairs", label: "Repairs", icon: "🔧" },
+  { href: "/admin/repairs", label: "Workshop", icon: "🔧" },
   { href: "/admin/products", label: "Products", icon: "⌨️" },
-  { href: "/admin/services", label: "Services", icon: "🛠️" },
+  { href: "/admin/services", label: "Mods", icon: "🛠️" },
   { href: "/admin/customers", label: "Customers", icon: "👥" },
   { href: "/admin/payments", label: "Payments", icon: "💳" },
   { href: "/admin/shipments", label: "Shipments", icon: "📦" },
@@ -21,7 +22,6 @@ const NAV: { href: string; label: string; icon: string }[] = [
   { href: "/admin/coupons", label: "Coupons", icon: "🏷️" },
   { href: "/admin/analytics", label: "Analytics", icon: "📈" },
   { href: "/admin/activity", label: "Activity", icon: "🕘" },
-  { href: "/admin/admins", label: "Admin users", icon: "🛡️" },
   { href: "/admin/settings", label: "Settings", icon: "⚙️" },
 ];
 
@@ -29,11 +29,13 @@ export function AdminShell({
   name,
   email,
   role,
+  allowedNav,
   children,
 }: {
   name: string;
   email: string;
-  role: string;
+  role: Role;
+  allowedNav: string[];
   children: React.ReactNode;
 }) {
   const path = usePathname();
@@ -45,7 +47,7 @@ export function AdminShell({
 
   async function signOut() {
     await authClient.signOut();
-    router.push("/login");
+    router.push("/auth/login");
     router.refresh();
   }
 
@@ -77,7 +79,7 @@ export function AdminShell({
         )}
       </div>
       <nav style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: "2px" }}>
-        {NAV.map((item) => (
+        {NAV.filter((item) => item.href === "/admin" || allowedNav.includes(item.href)).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -196,34 +198,6 @@ export function AdminShell({
         </header>
         <main style={{ padding: "24px var(--pad-x) 64px", maxWidth: 1400, margin: "0 auto" }}>{children}</main>
       </div>
-
-      <style jsx>{`
-        .kf-sidebar-desktop {
-          @media (max-width: 900px) {
-            display: none !important;
-          }
-        }
-        .kf-mobile-sidebar {
-          @media (min-width: 901px) {
-            display: none !important;
-          }
-        }
-        .kf-drawer-open {
-          @media (min-width: 901px) {
-            display: none !important;
-          }
-        }
-        .kf-sidebar-toggle {
-          @media (max-width: 900px) {
-            display: none !important;
-          }
-        }
-        .kf-admin-main {
-          @media (max-width: 900px) {
-            margin-left: 0 !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

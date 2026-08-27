@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { getAdminProduct, PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS, availableStock } from "@/lib/admin-catalog";
 import { ProductStatusBar, VariantsManager, InventoryForm } from "@/components/admin/products/ProductDetailClient";
@@ -10,7 +10,7 @@ import { ProductStatusBar, VariantsManager, InventoryForm } from "@/components/a
 export const metadata: Metadata = { title: "Product | KeebForge Admin", robots: { index: false, follow: false } };
 
 export default async function AdminProductDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requirePermission("product", "view");
   const { id } = await params;
   const product = await getAdminProduct(id);
   if (!product) notFound();
@@ -50,7 +50,6 @@ export default async function AdminProductDetail({ params }: { params: Promise<{
             <div className="kv"><dt>Slug</dt><dd><Link href={`/product/${product.slug}`} style={{ color: "var(--acc)" }}>/product/{product.slug}</Link></dd></div>
             <div className="kv"><dt>SKU</dt><dd className="num">{product.sku ?? "—"}</dd></div>
             <div className="kv"><dt>Barcode</dt><dd className="num">{product.barcode ?? "—"}</dd></div>
-            {product.shortDescription && <p style={{ fontSize: "0.84rem", color: "var(--t2)", marginTop: 8 }}>{product.shortDescription}</p>}
             {product.description && <p style={{ fontSize: "0.82rem", color: "var(--t2)" }}>{product.description}</p>}
           </div>
 

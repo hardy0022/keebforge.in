@@ -19,7 +19,7 @@ async function main() {
 
   const groups = [
     {
-      name: "Switch Services",
+      name: "Switch Mods",
       slug: "switch-services",
       device: Device.KEYBOARD,
       sortOrder: 1,
@@ -75,7 +75,7 @@ async function main() {
       ],
     },
     {
-      name: "Stabilizer Services",
+      name: "Stabilizer Mods",
       slug: "stabilizer-services",
       device: Device.KEYBOARD,
       sortOrder: 2,
@@ -108,7 +108,7 @@ async function main() {
       ],
     },
     {
-      name: "Build & Soldering Services",
+      name: "Soldering & Switch Work",
       slug: "build-soldering",
       device: Device.KEYBOARD,
       sortOrder: 3,
@@ -182,7 +182,7 @@ async function main() {
       ],
     },
     {
-      name: "Custom PCB & Keyboard Design",
+      name: "Custom PCB & Keyboard Work",
       slug: "custom-pcb-design",
       device: Device.KEYBOARD,
       sortOrder: 4,
@@ -220,7 +220,7 @@ async function main() {
       ],
     },
     {
-      name: "Mouse Switch Services",
+      name: "Mouse Switch Mods",
       slug: "mouse-switch-services",
       device: Device.MOUSE,
       sortOrder: 1,
@@ -281,12 +281,12 @@ async function main() {
 
   for (const group of groups) {
     const { services, ...groupData } = group;
-    await prisma.serviceGroup.upsert({
+    await prisma.mods.upsert({
       where: { slug: groupData.slug },
       update: groupData,
       create: groupData,
     });
-    const dbGroup = await prisma.serviceGroup.findUniqueOrThrow({ where: { slug: groupData.slug } });
+    const dbGroup = await prisma.mods.findUniqueOrThrow({ where: { slug: groupData.slug } });
     for (const svc of services) {
       await prisma.service.upsert({
         where: { slug: svc.slug },
@@ -307,6 +307,7 @@ async function main() {
     { name: "Cases", slug: "cases", description: "Cases and plates.", sortOrder: 7 },
     { name: "Cables", slug: "cables", description: "Coiled and custom cables.", sortOrder: 8 },
     { name: "Accessories", slug: "accessories", description: "Tools, films, lube and more.", sortOrder: 9 },
+    { name: "Lubricants", slug: "lubricants", description: "Switch lubricants, oils and grease.", sortOrder: 10 },
   ];
   for (const c of categories) {
     await prisma.category.upsert({ where: { slug: c.slug }, update: c, create: c });
@@ -335,7 +336,6 @@ async function main() {
     type: ProductType;
     categorySlug: string;
     brandSlug: string;
-    shortDescription: string;
     price: number;
     compareAtPrice?: number;
     costPrice?: number;
@@ -355,7 +355,6 @@ async function main() {
       type: ProductType.KEYBOARD,
       categorySlug: "keyboards",
       brandSlug: "keychron",
-      shortDescription: "Premium aluminium gasket-mount 75% board with Hall-effect switches and QMK support.",
       price: p(23999),
       compareAtPrice: p(26999),
       costPrice: p(19500),
@@ -375,7 +374,6 @@ async function main() {
       type: ProductType.KEYBOARD,
       categorySlug: "keyboards",
       brandSlug: "varmilo",
-      shortDescription: "Full-size keyboard with Varmilo's signature electrostatic-capacitive switches and dye-sub keycaps.",
       price: p(18999),
       costPrice: p(15200),
       stock: 4,
@@ -391,7 +389,6 @@ async function main() {
       type: ProductType.SWITCH,
       categorySlug: "switches",
       brandSlug: "gateron",
-      shortDescription: "Smooth linear switches with a satisfying 50gf bottom-out — a budget favourite for thocky builds.",
       price: p(2100),
       compareAtPrice: p(2600),
       costPrice: p(1600),
@@ -410,7 +407,6 @@ async function main() {
       type: ProductType.SWITCH,
       categorySlug: "switches",
       brandSlug: "durock",
-      shortDescription: "All-POM linear switches with an ultra-smooth upstroke, perfect for lubing.",
       price: p(3200),
       costPrice: p(2500),
       stock: 25,
@@ -427,7 +423,6 @@ async function main() {
       type: ProductType.KEYCAP,
       categorySlug: "keycaps",
       brandSlug: "gmk",
-      shortDescription: "Double-shot ABS keycaps in the iconic synthwave colourway. Full TKL + numpad coverage.",
       price: p(14999),
       costPrice: p(12500),
       stock: 3,
@@ -444,7 +439,6 @@ async function main() {
       type: ProductType.KEYCAP,
       categorySlug: "keycaps",
       brandSlug: "akko",
-      shortDescription: "Soft pastel PBT keycaps in Akko's sculpted ASA profile with full 1800 layout coverage.",
       price: p(4999),
       costPrice: p(3800),
       stock: 18,
@@ -461,7 +455,6 @@ async function main() {
       type: ProductType.STABILIZER,
       categorySlug: "stabilizers",
       brandSlug: "durock",
-      shortDescription: "Precision screw-in stabilizers with gold-plated wires — the staple of quiet, rattle-free spacebars.",
       price: p(899),
       costPrice: p(620),
       stock: 30,
@@ -477,7 +470,6 @@ async function main() {
       type: ProductType.MOUSE,
       categorySlug: "mice",
       brandSlug: "razer",
-      shortDescription: "Ultra-light 54g esports mouse with the 30K optical sensor and 90h battery life.",
       price: p(13499),
       compareAtPrice: p(15999),
       costPrice: p(11000),
@@ -496,7 +488,6 @@ async function main() {
       type: ProductType.MOUSE,
       categorySlug: "mice",
       brandSlug: "logitech",
-      shortDescription: "The legendary G502 with lighter weight, LIGHTFORCE hybrid switches and a 25K HERO sensor.",
       price: p(8999),
       compareAtPrice: p(10999),
       costPrice: p(7200),
@@ -513,7 +504,6 @@ async function main() {
       type: ProductType.LUBRICANT,
       categorySlug: "accessories",
       brandSlug: null as unknown as string,
-      shortDescription: "The community-standard switch lubricant for smooth, buttery linear travel.",
       price: p(650),
       costPrice: p(420),
       stock: 60,
@@ -530,7 +520,6 @@ async function main() {
       type: ProductType.CABLE,
       categorySlug: "cables",
       brandSlug: null as unknown as string,
-      shortDescription: "Hand-made coiled cable with a detachable aviator connector, custom length and colour.",
       price: p(1799),
       costPrice: p(1100),
       stock: 0,
@@ -551,7 +540,6 @@ async function main() {
       type: pr.type,
       categoryId: category.id,
       brandId: brand?.id ?? null,
-      shortDescription: pr.shortDescription,
       features: { list: pr.features } as Prisma.InputJsonValue,
       whatsIncluded: { list: pr.whatsIncluded } as Prisma.InputJsonValue,
       specifications: pr.specifications as Prisma.InputJsonValue,
@@ -569,7 +557,6 @@ async function main() {
       status: pr.stock > 0 ? ProductStatus.ACTIVE : ProductStatus.OUT_OF_STOCK,
       active: pr.stock > 0,
       seoTitle: `${pr.name} | KeebForge Shop`,
-      seoDescription: pr.shortDescription,
       canonicalUrl: `https://keebforge.in/product/${pr.slug}`,
     };
     await prisma.product.upsert({ where: { slug: pr.slug }, update: data, create: data });
@@ -628,9 +615,9 @@ async function main() {
   ];
 
   const admin = await prisma.profile.upsert({
-    where: { email: "shadow@keebforge.in" },
+    where: { email: "shadow269@keebforge.in" },
     update: { role: Role.ADMIN },
-    create: { id: "seed-admin", email: "shadow@keebforge.in", name: "KeebForge Owner", role: Role.ADMIN },
+    create: { id: "seed-admin", email: "shadow269@keebforge.in", name: "KeebForge Owner", role: Role.ADMIN },
   });
 
   const MONTHS: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };

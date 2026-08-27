@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { getInventoryRows, getInventoryMovements, availableStock } from "@/lib/admin-catalog";
 import { InventoryForm } from "@/components/admin/products/ProductDetailClient";
 
 export const metadata: Metadata = { title: "Inventory | KeebForge Admin", robots: { index: false, follow: false } };
 
 export default async function AdminInventoryPage() {
-  await requireAdmin();
+  await requirePermission("product", "update");
   const [rows, movements] = await Promise.all([getInventoryRows(), getInventoryMovements(60)]);
 
   const statusOf = (stock: number, reserved: number, threshold: number) => {

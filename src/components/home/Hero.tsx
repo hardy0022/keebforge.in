@@ -13,34 +13,38 @@ export function Hero() {
           priority
           sizes="100vw"
           className="object-cover"
-          style={{ filter: "brightness(0.5) saturate(0.8)" }}
+          style={{ filter: "brightness(0.58) saturate(0.8)" }}
         />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(8,7,12,0.55)_70%,var(--black)_100%)]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--black)]/60 via-transparent to-[var(--bg)]" />
+        {/* Layered scrims: dark core behind the text, soft vignette at the edges,
+            fade into the page background at the bottom. Keyboard stays visible. */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_52%_at_50%_46%,rgba(5,5,9,0.8)_0%,rgba(6,6,10,0.45)_48%,transparent_78%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(8,7,12,0.5)_80%,var(--black)_100%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[var(--black)]/70 via-transparent to-[var(--bg)]" />
       </div>
 
-      <div className="wrap relative z-10 text-center pt-[var(--nav-h)]">
-        <span className="inline-flex items-center gap-2 text-[0.62rem] font-bold tracking-[0.22em] uppercase text-[var(--acc)] border border-[var(--bdr)] rounded-full px-4 py-1.5 bg-[var(--bg1)]/80 backdrop-blur-sm">
-          India-Wide Mail-In Service
-        </span>
-        <h1 className="mt-6 font-display font-bold tracking-[-0.03em] text-[var(--t1)] text-[clamp(2.2rem,7vw,4.5rem)] leading-[1.05]">
+      <div className="wrap relative z-10 text-center pt-[var(--nav-h)] pb-[9vh]">
+        <h1 className="font-display font-bold tracking-[-0.03em] text-[var(--t1)] text-[clamp(2rem,5.5vw,3.6rem)] leading-[1.05]">
           Precision Keyboard
           <br />
-          <span className="text-[var(--acc)] drop-shadow-[0_0_30px_var(--acc-glow)]">Builds &amp; Repairs</span>
+          <span className="text-[var(--acc)] drop-shadow-[0_0_30px_var(--acc-glow)]">Builds, Tuning &amp; Repairs</span>
         </h1>
-        <p className="mx-auto mt-5 max-w-[520px] text-[0.95rem] leading-relaxed text-[var(--t2)]">
-          Mechanical keyboard and mouse repair, soldering, and custom builds — handled by a dedicated electronics
-          engineer in Jammu &amp; Kashmir, shipped anywhere in India.
+        <p className="mx-auto mt-4 max-w-[500px] text-[0.92rem] leading-relaxed text-[var(--t2)]">
+          Custom builds, keyboard tuning, soldering, and mouse repairs — professionally handled and available across
+          India.
         </p>
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/checkout" className="btn-prime btn-prime-lg">
-            Place an Order
+        <div className="hero-cta mt-7 flex flex-wrap items-center justify-center gap-2.5">
+          <Link href="/shop" className="btn-prime btn-prime-lg">
+            Shop Builds
             <span aria-hidden="true">→</span>
           </Link>
-          <Link href="/services/keyboard" className="btn-ghost">
-            View Services
+          <Link href="/mods" className="btn-ghost">
+            Explore Mods
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
+        <p className="mt-6 text-[0.68rem] tracking-[0.08em] text-[var(--t3)]">
+          Mail-in Service &nbsp;•&nbsp; Custom Builds &nbsp;•&nbsp; Keyboard &amp; Mouse &nbsp;•&nbsp; India-wide
+        </p>
       </div>
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[var(--t3)] text-[0.62rem] tracking-[0.22em] uppercase">

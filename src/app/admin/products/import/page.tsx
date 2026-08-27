@@ -1,12 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { ImportForm } from "@/components/admin/catalog/ImportForm";
 
 export const metadata: Metadata = { title: "Import Products | KeebForge Admin", robots: { index: false, follow: false } };
 
 export default async function AdminImportPage() {
-  await requireAdmin();
+  await requirePermission("product", "create");
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>

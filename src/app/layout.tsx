@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
-import { SiteHeader } from "@/components/layout/SiteHeader";
-import { SiteFooter } from "@/components/layout/Footer";
-import { ShowOnSite } from "@/components/layout/ShowOnSite";
 import { buildMetadata } from "@/lib/seo";
+import { SiteChrome } from "@/components/layout/SiteChrome";
+import { SiteFooter } from "@/components/layout/Footer";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -34,14 +33,8 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${spaceGrotesk.variable} ${inter.variable} antialiased`}>
-        <ShowOnSite>
-          <SiteHeader />
-        </ShowOnSite>
-        {children}
-        <ShowOnSite>
-          <SiteFooter />
-        </ShowOnSite>
+      <body className={`${spaceGrotesk.variable} ${inter.variable} antialiased page-layout`}>
+        <SiteChrome footer={<SiteFooter />}>{children}</SiteChrome>
       </body>
     </html>
   );

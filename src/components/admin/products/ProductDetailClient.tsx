@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 import { setProductStatus, duplicateProduct, saveVariant, deleteVariant, adjustInventory } from "@/app/admin/actions/catalog";
 import { PRODUCT_STATUS_LABELS } from "@/lib/product-labels";
+import { formatINR } from "@/lib/money";
 
 type VariantProp = {
   id: string;
@@ -77,7 +78,7 @@ export function VariantsManager({ productId, variants }: { productId: string; va
               <tr key={v.id}>
                 <td>{v.name}{!v.active && <span className="badge badge-err" style={{ marginLeft: 6 }}>Disabled</span>}</td>
                 <td className="num muted">{v.sku ?? "—"}</td>
-                <td className="num">{v.price != null ? `₹${(v.price / 100).toFixed(2)}` : "Inherit"}</td>
+                <td className="num">{v.price != null ? formatINR(v.price) : "Inherit"}</td>
                 <td className="num">{v.stock}</td>
                 <td className="num">{Math.max(0, v.stock - v.reservedQuantity)}</td>
                 <td>
@@ -110,8 +111,8 @@ export function VariantsManager({ productId, variants }: { productId: string; va
               {editing && <input type="hidden" name="id" value={editing.id} />}
               <input className="input" name="name" placeholder="Name (e.g. Black linear)" defaultValue={editing?.name ?? ""} required disabled={pending} />
               <input className="input" name="sku" placeholder="SKU" defaultValue={editing?.sku ?? ""} disabled={pending} />
-              <input className="input" type="number" step="0.01" name="price" placeholder="Price ₹ (blank = inherit)" defaultValue={editing?.price != null ? editing.price / 100 : ""} min={0} disabled={pending} />
-              <input className="input" type="number" step="0.01" name="compareAtPrice" placeholder="Compare-at ₹" defaultValue={editing?.compareAtPrice != null ? editing.compareAtPrice / 100 : ""} min={0} disabled={pending} />
+              <input className="input" type="number" step="1" name="price" placeholder="Price ₹ (blank = inherit)" defaultValue={editing?.price != null ? editing.price / 100 : ""} min={0} disabled={pending} />
+              <input className="input" type="number" step="1" name="compareAtPrice" placeholder="Compare-at ₹" defaultValue={editing?.compareAtPrice != null ? editing.compareAtPrice / 100 : ""} min={0} disabled={pending} />
               <input className="input" type="number" name="stock" placeholder="Stock" defaultValue={editing?.stock ?? 0} min={0} disabled={pending} />
               <input className="input" type="number" name="weight" placeholder="Weight (g)" defaultValue={editing?.weight ?? ""} min={0} disabled={pending} />
               <input className="input" name="options" placeholder="Options (Color: Black)" defaultValue={editing ? "" : ""} disabled={pending} />

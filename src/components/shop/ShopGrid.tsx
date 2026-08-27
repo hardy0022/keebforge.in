@@ -1,45 +1,45 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/shop/ProductCard";
+import { ShopEmptyState, DEFAULT_EMPTY_STATE, type EmptyStateConfig } from "@/components/shop/ShopEmptyState";
 import type { ShopProduct } from "@/lib/data";
+
+/* 1 … around current … last, with ellipsis gaps; short ranges shown whole. */
+function pageItems(page: number, pages: number): (number | "…")[] {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+  const nums = [...new Set([1, page - 1, page, page + 1, pages])]
+    .filter((n) => n >= 1 && n <= pages)
+    .sort((a, b) => a - b);
+  const out: (number | "…")[] = [];
+  let prev = 0;
+  for (const n of nums) {
+    if (n - prev > 1) out.push("…");
+    out.push(n);
+    prev = n;
+  }
+  return out;
+}
 
 export function ShopGrid({
   items,
   page,
   pages,
   baseQuery,
-  total,
-  search,
+  empty,
 }: {
   items: ShopProduct[];
   page: number;
   pages: number;
   baseQuery: string;
-  total: number;
-  search?: string;
+  empty?: EmptyStateConfig;
 }) {
   if (items.length === 0) {
-    return (
-      <div className="card qcard p-10 text-center">
-        <p className="ct mb-2">No products found</p>
-        <p className="cd">
-          {search ? `Nothing matched "${search}". ` : "No products in this category yet. "}
-          Try a different search or filter.
-        </p>
-        <Link href="/shop" className="btn-ghost" style={{ width: "auto", paddingInline: 24, marginTop: 16 }}>
-          Clear filters
-        </Link>
-      </div>
-    );
+    return <ShopEmptyState config={empty ?? DEFAULT_EMPTY_STATE} />;
   }
 
   const pageHref = (p: number) => `?${baseQuery ? `${baseQuery}&` : ""}page=${p}`;
 
   return (
     <>
-      <p className="text-sm text-[var(--t3)] mb-4">
-        {total} product{total === 1 ? "" : "s"}
-        {pages > 1 ? ` · page ${page} of ${pages}` : ""}
-      </p>
       <div className="shop-grid">
         {items.map((p) => (
           <ProductCard key={p.id} product={p} />
@@ -49,15 +49,27 @@ export function ShopGrid({
       {pages > 1 && (
         <nav className="shop-pager" aria-label="Pagination">
           {page > 1 && (
-            <Link href={pageHref(page - 1)} className="btn-ghost" prefetch={false}>
+            <Link href={pageHref(page - 1)} className="shop-pager-num" prefetch={false}>
               ← Prev
             </Link>
           )}
-          <span className="text-sm text-[var(--t3)]">
-            Page {page} of {pages}
-          </span>
+          {pageItems(page, pages).map((it, i) =>
+            it === "…" ? (
+              <span key={`dots-${i}`} className="shop-pager-dots" aria-hidden="true">
+                …
+              </span>
+            ) : it === page ? (
+              <span key={it} className="shop-pager-num" aria-current="page">
+                {it}
+              </span>
+            ) : (
+              <Link key={it} href={pageHref(it)} className="shop-pager-num" prefetch={false}>
+                {it}
+              </Link>
+            )
+          )}
           {page < pages && (
-            <Link href={pageHref(page + 1)} className="btn-ghost" prefetch={false}>
+            <Link href={pageHref(page + 1)} className="shop-pager-num" prefetch={false}>
               Next →
             </Link>
           )}

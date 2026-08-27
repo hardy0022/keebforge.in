@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  await requireAdmin();
+  await requirePermission("product", "view");
   const products = await prisma.product.findMany({
     orderBy: { name: "asc" },
     select: {

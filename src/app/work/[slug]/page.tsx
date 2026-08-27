@@ -75,7 +75,7 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
       <div className="svc-section">
         <div className="wrap">
           <div className="flex flex-wrap gap-3">
-            <Link href="/checkout" className="btn-prime">
+            <Link href="/shop/checkout" className="btn-prime">
               Start a Project Like This
             </Link>
             <Link href="/work" className="btn-ghost">

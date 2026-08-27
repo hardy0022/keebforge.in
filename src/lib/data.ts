@@ -1,11 +1,11 @@
 import "server-only";
 import { cache } from "react";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, ShopSectionType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 /** Service groups with their active services, for a device. */
 export const getServiceCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
-  prisma.serviceGroup.findMany({
+  prisma.mods.findMany({
     where: { active: true, ...(device ? { device } : {}) },
     orderBy: { sortOrder: "asc" },
     include: {
@@ -14,6 +14,14 @@ export const getServiceCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
         orderBy: { sortOrder: "asc" },
       },
     },
+  })
+);
+
+export const getApprovedReviews = cache((take = 12) =>
+  prisma.review.findMany({
+    where: { status: "APPROVED" },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    take,
   })
 );
 
@@ -27,13 +35,6 @@ export const getFeaturedWork = cache(() =>
 
 export const getWorkProjectBySlug = cache((slug: string) =>
   prisma.workProject.findUnique({ where: { slug } })
-);
-
-export const getServiceBySlug = cache((device: "KEYBOARD" | "MOUSE", slug: string) =>
-  prisma.service.findFirst({
-    where: { slug, device, active: true },
-    include: { group: true },
-  })
 );
 
 export const getSiteSetting = cache((key: string) =>
@@ -54,10 +55,11 @@ export const getShopBrands = cache(() =>
   prisma.brand.findMany({ where: { active: true }, orderBy: { name: "asc" } })
 );
 
-export type ShopSort = "featured" | "newest" | "price-asc" | "price-desc" | "name-asc";
+export type ShopSort = "newest" | "price-asc" | "price-desc" | "name-asc" | "name-desc";
 
 export type ShopParams = {
   categorySlug?: string;
+  productType?: ShopSectionType;
   search?: string;
   brandSlug?: string;
   minPrice?: number; // paise
@@ -72,11 +74,16 @@ const PRODUCT_LIST = {
   id: true,
   name: true,
   slug: true,
-  shortDescription: true,
   price: true,
   compareAtPrice: true,
   stock: true,
   reservedQuantity: true,
+  active: true,
+  status: true,
+  productType: true,
+  condition: true,
+  specifications: true,
+  cardFeatures: true,
   featured: true,
   createdAt: true,
   category: { select: { slug: true, name: true } },
@@ -84,10 +91,20 @@ const PRODUCT_LIST = {
   images: {
     where: { active: true },
     orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
-    take: 1,
     select: { url: true, alt: true },
   },
-  variants: { where: { active: true }, select: { price: true }, orderBy: { price: "asc" } },
+  variants: {
+    where: { active: true },
+    select: { price: true, active: true, stock: true, reservedQuantity: true },
+    orderBy: { price: "asc" },
+  },
+  optionGroups: {
+    where: { enabled: true },
+    select: {
+      enabled: true,
+      options: { where: { enabled: true }, select: { enabled: true, priceAddon: true } },
+    },
+  },
 } satisfies Prisma.ProductSelect;
 
 export type ShopProduct = Prisma.ProductGetPayload<{ select: typeof PRODUCT_LIST }>;
@@ -95,20 +112,23 @@ export type ShopProduct = Prisma.ProductGetPayload<{ select: typeof PRODUCT_LIST
 export const getShopProducts = cache((params: ShopParams) => {
   const {
     categorySlug,
+    productType,
     search,
     brandSlug,
     minPrice,
     maxPrice,
     inStock,
-    sort = "featured",
+    sort = "newest",
     page = 1,
-    pageSize = 12,
+    pageSize = 24,
   } = params;
 
+  // ponytail: no product.active filter — shop shows all products incl. out-of-stock;
+  // re-add if drafts/unlisted products ever need hiding from the storefront
   const where: Prisma.ProductWhereInput = {
-    active: true,
     category: { active: true, ...(categorySlug ? { slug: categorySlug } : {}) },
-    ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { shortDescription: { contains: search, mode: "insensitive" } }] } : {}),
+    ...(productType ? { productType } : {}),
+    ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { description: { contains: search, mode: "insensitive" } }] } : {}),
     ...(brandSlug ? { brand: { slug: brandSlug } } : {}),
     ...(minPrice != null || maxPrice != null ? { price: { gte: minPrice ?? undefined, lte: maxPrice ?? undefined } } : {}),
     // ponytail: availability uses stock > 0 on product OR any active variant;
@@ -123,9 +143,9 @@ export const getShopProducts = cache((params: ShopParams) => {
         ? [{ price: "desc" }]
         : sort === "name-asc"
           ? [{ name: "asc" }]
-          : sort === "newest"
-            ? [{ createdAt: "desc" }]
-            : [{ featured: "desc" }, { createdAt: "desc" }];
+          : sort === "name-desc"
+            ? [{ name: "desc" }]
+            : [{ createdAt: "desc" }];
 
   return Promise.all([
     prisma.product.count({ where }),
@@ -145,16 +165,32 @@ export const getProductBySlug = cache((slug: string) =>
       category: true,
       brand: { where: { active: true } },
       variants: { where: { active: true }, orderBy: { price: "asc" } },
+      optionGroups: {
+        where: { enabled: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        include: {
+          options: { where: { enabled: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+        },
+      },
       images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }] },
     },
   })
 );
 
-export const getRelatedProducts = cache((productId: string, categoryId: string, take = 4) =>
-  prisma.product.findMany({
+export const getRelatedProducts = cache(async (productId: string, categoryId: string, take = 4) => {
+  const sameCategory = await prisma.product.findMany({
     where: { active: true, id: { not: productId }, categoryId },
     orderBy: { createdAt: "desc" },
     take,
     select: PRODUCT_LIST,
-  })
-);
+  });
+  if (sameCategory.length >= take) return sameCategory;
+  // ponytail: top up thin categories with other active products so the grid never shows 1 lonely card
+  const fill = await prisma.product.findMany({
+    where: { active: true, id: { notIn: [productId, ...sameCategory.map((p) => p.id)] } },
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+    take: take - sameCategory.length,
+    select: PRODUCT_LIST,
+  });
+  return [...sameCategory, ...fill];
+});

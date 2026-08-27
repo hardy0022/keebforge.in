@@ -1,14 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { getAdminBrands } from "@/lib/admin-catalog";
 import { BrandForm } from "@/components/admin/catalog/BrandForm";
 
 export const metadata: Metadata = { title: "Brands | KeebForge Admin", robots: { index: false, follow: false } };
 
 export default async function AdminBrandsPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
-  await requireAdmin();
+  await requirePermission("product", "view");
   const { edit } = await searchParams;
   const brands = await getAdminBrands();
   const editing = edit ? brands.find((b) => b.id === edit) ?? null : null;

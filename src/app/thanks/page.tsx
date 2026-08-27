@@ -19,7 +19,7 @@ export default function ThanksPage() {
             <Link href="/" className="btn-prime btn-prime-lg">
               Back to Home
             </Link>
-            <Link href="/checkout" className="btn-ghost">
+            <Link href="/shop/checkout" className="btn-ghost">
               Place an Order
             </Link>
           </div>

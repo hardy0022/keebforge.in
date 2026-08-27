@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
-import { ShopFilters } from "@/components/shop/ShopFilters";
+import { WhyForge } from "@/components/home/WhyForge";
+import { ShopSortBar } from "@/components/shop/ShopSortBar";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import { buildMetadata } from "@/lib/seo";
-import { getCategoryBySlug, getShopBrands, getShopProducts, type ShopSort } from "@/lib/data";
+import { getCategoryBySlug, getShopProducts, type ShopSort } from "@/lib/data";
 
-const SORTS: ShopSort[] = ["featured", "newest", "price-asc", "price-desc", "name-asc"];
+const SORTS: ShopSort[] = ["newest", "price-asc", "price-desc", "name-asc", "name-desc"];
 const toPaise = (v?: string) => {
   const n = parseInt(v ?? "", 10);
   return Number.isFinite(n) && n > 0 ? n * 100 : undefined;
@@ -44,25 +45,22 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const sp = await searchParams;
   const search = sp.q?.trim() || undefined;
   const brandSlug = sp.brand?.trim() || undefined;
-  const sort: ShopSort = SORTS.includes(sp.sort as ShopSort) ? (sp.sort as ShopSort) : "featured";
+  const sort: ShopSort = SORTS.includes(sp.sort as ShopSort) ? (sp.sort as ShopSort) : "newest";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
   const inStock = sp.inStock === "on" || sp.inStock === "true" || sp.inStock === "1";
   const minPrice = toPaise(sp.min);
   const maxPrice = toPaise(sp.max);
 
-  const [brands, result] = await Promise.all([
-    getShopBrands(),
-    getShopProducts({
-      categorySlug: cat.slug,
-      search,
-      brandSlug,
-      minPrice,
-      maxPrice,
-      inStock: inStock || undefined,
-      sort,
-      page,
-    }),
-  ]);
+  const result = await getShopProducts({
+    categorySlug: cat.slug,
+    search,
+    brandSlug,
+    minPrice,
+    maxPrice,
+    inStock: inStock || undefined,
+    sort,
+    page,
+  });
 
   const baseParams = new URLSearchParams();
   if (search) baseParams.set("q", search);
@@ -70,10 +68,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   if (sp.min) baseParams.set("min", sp.min);
   if (sp.max) baseParams.set("max", sp.max);
   if (inStock) baseParams.set("inStock", "on");
-  if (sort !== "featured") baseParams.set("sort", sort);
+  if (sort !== "newest") baseParams.set("sort", sort);
 
   return (
-    <main>
+    <main className="shop-page">
       <PageHero
         tag="Shop"
         title={cat.name}
@@ -82,27 +80,16 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       />
       <section className="svc-section">
         <div className="wrap">
-          <ShopFilters
-            categories={[]}
-            brands={brands}
-            category={cat.slug}
-            brandSlug={brandSlug}
-            search={search}
-            min={sp.min}
-            max={sp.max}
-            inStock={inStock}
-            sort={sort}
-          />
+          <ShopSortBar total={result.total} page={page} pages={result.pages} sort={sort} />
           <ShopGrid
             items={result.items}
             page={page}
             pages={result.pages}
-            total={result.total}
             baseQuery={baseParams.toString()}
-            search={search}
           />
         </div>
       </section>
+      <WhyForge num="// Why Forge" />
     </main>
   );
 }

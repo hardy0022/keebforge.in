@@ -114,6 +114,10 @@ export const getAdminProduct = cache((id: string) =>
       category: true,
       brand: true,
       variants: { orderBy: { createdAt: "asc" }, include: { images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }] } } },
+      optionGroups: {
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        include: { options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
+      },
       images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }] },
       inventoryMovements: { orderBy: { createdAt: "desc" }, take: 30, include: { profile: { select: { name: true, email: true } } } },
       reviews: { orderBy: { createdAt: "desc" } },

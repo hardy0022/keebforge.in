@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
 import { getAdminOrders } from "@/lib/admin";
@@ -18,7 +18,7 @@ export default async function AdminOrdersPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; payment?: string; from?: string; to?: string; sort?: string; page?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission("order", "view");
   const sp = await searchParams;
   const result = await getAdminOrders({
     q: sp.q,

@@ -2,7 +2,7 @@
 
 ## The business
 
-KeebForge is a solo, Bangalore-based workshop that:
+KeebForge is a solo, Jammu & Kashmir-based workshop that:
 - repairs mechanical keyboards (and some mice),
 - performs soldering/desoldering, switch lubing, stabilizer tuning, firmware,
 - builds fully custom keyboards (the main revenue driver),

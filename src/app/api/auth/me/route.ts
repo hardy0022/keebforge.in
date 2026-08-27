@@ -7,5 +7,9 @@ export const runtime = "nodejs";
 export async function GET() {
   const { user, profile } = await getCurrentAuth();
   if (!user) return NextResponse.json({ user: null }, { status: 401 });
-  return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email, image: user.image }, role: profile?.role ?? "CUSTOMER" });
+  return NextResponse.json({
+    user: { id: user.id, name: user.name, email: user.email, image: user.image },
+    role: profile?.role ?? "CUSTOMER",
+    profile: { name: profile?.name ?? null, phone: profile?.phone ?? null },
+  });
 }

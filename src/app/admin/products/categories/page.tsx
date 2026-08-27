@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { getAdminCategories } from "@/lib/admin-catalog";
 import { CategoryForm } from "@/components/admin/catalog/CategoryForm";
 import type { CategoryProp } from "./types";
@@ -8,7 +8,7 @@ import type { CategoryProp } from "./types";
 export const metadata: Metadata = { title: "Categories | KeebForge Admin", robots: { index: false, follow: false } };
 
 export default async function AdminCategoriesPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
-  await requireAdmin();
+  await requirePermission("product", "create");
   const { edit } = await searchParams;
   const categories = await getAdminCategories();
   const editing = edit ? categories.find((c) => c.id === edit) ?? null : null;

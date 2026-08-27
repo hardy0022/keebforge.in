@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { syncTrackingCache } from "@/lib/tracking";
 
 export type ActionState = { ok?: boolean; error?: string };
@@ -21,7 +21,7 @@ const statusSchema = z.object({
 });
 
 export async function updateOrderStatus(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  await requirePermission("order", "update");
   const parsed = statusSchema.safeParse({
     orderId: formData.get("orderId"),
     status: formData.get("status"),
@@ -50,7 +50,7 @@ const timelineSchema = z.object({
 });
 
 export async function addTimelineEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  await requirePermission("order", "update");
   const parsed = timelineSchema.safeParse({
     orderId: formData.get("orderId"),
     status: formData.get("status"),
@@ -78,7 +78,7 @@ const shippingSchema = z.object({
 });
 
 export async function updateShipping(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  await requirePermission("order", "update");
   const parsed = shippingSchema.safeParse({
     orderId: formData.get("orderId"),
     courier: formData.get("courier") || undefined,
@@ -109,7 +109,7 @@ const notesSchema = z.object({
 });
 
 export async function addOrderNote(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  await requirePermission("order", "update");
   const parsed = notesSchema.safeParse({
     orderId: formData.get("orderId"),
     message: formData.get("message") || "",
@@ -135,7 +135,7 @@ export async function addOrderNote(_prev: ActionState, formData: FormData): Prom
 }
 
 export async function archiveOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  await requirePermission("order", "update");
   const orderId = formData.get("orderId");
   if (typeof orderId !== "string" || !orderId) return { error: "Invalid order." };
 

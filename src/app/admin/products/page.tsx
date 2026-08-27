@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { getAdminProducts, getAdminCategories, getAdminBrands, PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/admin-catalog";
 
@@ -14,7 +14,7 @@ export default async function AdminProductsPage({
 }: {
   searchParams: Promise<{ q?: string; category?: string; brand?: string; stock?: string; status?: string; sort?: string; page?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission("product", "view");
   const sp = await searchParams;
   const [categories, brands, result] = await Promise.all([
     getAdminCategories(),

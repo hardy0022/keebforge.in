@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
+import { deleteImage, renameAsset } from "@/lib/cloudinary";
 
 export type CatalogActionState = { ok?: boolean; error?: string; id?: string; message?: string };
 
@@ -40,6 +41,124 @@ function toSpecs(v: FormDataEntryValue | null): Record<string, string> {
   return out;
 }
 
+const CARD_ICON_NAMES = new Set(["keyboard", "mouse", "switch", "layers", "box", "cable", "battery", "cpu", "zap", "scale", "droplet", "shield"]);
+const MAX_CARD_FEATURES = 3;
+
+/** Parse the card-features editor payload: hard cap of 3 {icon,label,value} highlights. */
+function toCardFeatures(v: FormDataEntryValue | null): { icon: string; label: string; value: string }[] {
+  if (typeof v !== "string" || !v) return [];
+  let raw: unknown;
+  try {
+    raw = JSON.parse(v);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(raw)) return [];
+  const out: { icon: string; label: string; value: string }[] = [];
+  for (const row of raw.slice(0, MAX_CARD_FEATURES)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const label = typeof r.label === "string" ? r.label.trim().slice(0, 40) : "";
+    const value = typeof r.value === "string" ? r.value.trim().slice(0, 60) : "";
+    const icon = typeof r.icon === "string" && CARD_ICON_NAMES.has(r.icon) ? r.icon : "zap";
+    if (!label || !value) continue;
+    out.push({ icon, label, value });
+    if (out.length === MAX_CARD_FEATURES) break;
+  }
+  return out;
+}
+
+const MAX_OPTION_GROUPS = 3;
+
+export type OptionConfigGroup = {
+  id?: string;
+  name: string;
+  required: boolean;
+  options: { id?: string; name: string; addon: number }[]; // addon in paise
+};
+
+/**
+ * Parse the option-configurator editor payload (hidden `optionConfig` input).
+ * Returns groups with paise addons, or an error message for the admin form.
+ */
+function toOptionConfig(v: FormDataEntryValue | null): { error?: string; groups: OptionConfigGroup[] } {
+  if (typeof v !== "string" || !v) return { groups: [] };
+  let raw: unknown;
+  try {
+    raw = JSON.parse(v);
+  } catch {
+    return { error: "Option configuration could not be parsed.", groups: [] };
+  }
+  if (!Array.isArray(raw)) return { error: "Option configuration is malformed.", groups: [] };
+  if (raw.length === 0) return { groups: [] };
+  if (raw.length > MAX_OPTION_GROUPS) return { error: `At most ${MAX_OPTION_GROUPS} option groups are allowed.`, groups: [] };
+
+  const groups: OptionConfigGroup[] = [];
+  const groupNames = new Set<string>();
+  for (const row of raw) {
+    if (!row || typeof row !== "object") return { error: "Option configuration is malformed.", groups: [] };
+    const r = row as Record<string, unknown>;
+    const name = typeof r.name === "string" ? r.name.trim().slice(0, 60) : "";
+    if (!name) return { error: "Every option group needs a name.", groups: [] };
+    if (groupNames.has(name.toLowerCase())) return { error: `Duplicate option group "${name}".`, groups: [] };
+    groupNames.add(name.toLowerCase());
+
+    if (!Array.isArray(r.options) || r.options.length === 0) {
+      return { error: `Option group "${name}" needs at least one option.`, groups: [] };
+    }
+    const options: OptionConfigGroup["options"] = [];
+    const optionNames = new Set<string>();
+    for (const o of r.options) {
+      if (!o || typeof o !== "object") return { error: "Option configuration is malformed.", groups: [] };
+      const or = o as Record<string, unknown>;
+      const oName = typeof or.name === "string" ? or.name.trim().slice(0, 60) : "";
+      if (!oName) return { error: `Every option in "${name}" needs a name.`, groups: [] };
+      if (optionNames.has(oName.toLowerCase())) return { error: `Duplicate option "${oName}" in "${name}".`, groups: [] };
+      optionNames.add(oName.toLowerCase());
+      const addon = typeof or.addon === "number" && Number.isInteger(or.addon) && or.addon >= 0 ? or.addon : -1;
+      if (addon < 0) return { error: `Add-on price for "${oName}" must be zero or more.`, groups: [] };
+      options.push({
+        id: typeof or.id === "string" && or.id ? or.id : undefined,
+        name: oName,
+        addon,
+      });
+    }
+    groups.push({
+      id: typeof r.id === "string" && r.id ? r.id : undefined,
+      name,
+      required: r.required !== false,
+      options,
+    });
+  }
+  return { groups };
+}
+
+/** Sync a product's option groups/options with the editor payload, preserving ids. */
+async function syncOptionGroups(productId: string, groups: OptionConfigGroup[]) {
+  await prisma.$transaction(async (tx) => {
+    await tx.productOptionGroup.deleteMany({
+      where: { productId, ...(groups.some((g) => g.id) ? { id: { notIn: groups.map((g) => g.id!).filter(Boolean) } } : {}) },
+    });
+    for (const [gi, g] of groups.entries()) {
+      const group = await tx.productOptionGroup.upsert({
+        where: { id: g.id ?? "__new__" },
+        update: { name: g.name, required: g.required, sortOrder: gi, enabled: true },
+        create: { productId, name: g.name, required: g.required, sortOrder: gi, enabled: true },
+      });
+      await tx.productOption.deleteMany({
+        where: { groupId: group.id, ...(g.options.some((o) => o.id) ? { id: { notIn: g.options.map((o) => o.id!).filter(Boolean) } } : {}) },
+      });
+      for (const [oi, o] of g.options.entries()) {
+        await tx.productOption.upsert({
+          where: { id: o.id ?? "__new__" },
+          update: { name: o.name, priceAddon: o.addon, sortOrder: oi, enabled: true },
+          create: { groupId: group.id, name: o.name, priceAddon: o.addon, sortOrder: oi, enabled: true },
+        });
+      }
+    }
+  });
+}
+
 const productSchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(1, "Name is required.").max(200),
@@ -47,13 +166,13 @@ const productSchema = z.object({
   type: z.string().min(1, "Product type is required."),
   categoryId: z.string().min(1, "Category is required."),
   brandId: z.string().optional(),
-  shortDescription: z.string().trim().max(400).optional(),
   description: z.string().trim().optional(),
   features: z.string().optional(),
   whatsIncluded: z.string().optional(),
   warrantyInfo: z.string().trim().optional(),
   shippingInfo: z.string().trim().optional(),
   specs: z.string().optional(),
+  cardFeatures: z.string().optional(),
   price: z.coerce.number().int().min(0, "Price is required."),
   compareAtPrice: z.coerce.number().int().min(0).optional().or(z.literal(0)),
   costPrice: z.coerce.number().int().min(0).optional().or(z.literal(0)),
@@ -80,10 +199,12 @@ const productSchema = z.object({
   popular: z.string().optional(),
   isNew: z.string().optional(),
   status: z.string().optional(),
+  productType: z.string().optional(),
+  condition: z.string().optional(),
 });
 
 export async function saveProduct(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  await requireAdmin();
+  await requirePermission("product", "create");
   const parsed = productSchema.safeParse({
     id: formData.get("id") || undefined,
     name: formData.get("name"),
@@ -91,13 +212,13 @@ export async function saveProduct(_prev: CatalogActionState, formData: FormData)
     type: formData.get("type"),
     categoryId: formData.get("categoryId"),
     brandId: formData.get("brandId") || undefined,
-    shortDescription: formData.get("shortDescription") || undefined,
     description: formData.get("description") || undefined,
     features: formData.get("features") || undefined,
     whatsIncluded: formData.get("whatsIncluded") || undefined,
     warrantyInfo: formData.get("warrantyInfo") || undefined,
     shippingInfo: formData.get("shippingInfo") || undefined,
     specs: formData.get("specs") || undefined,
+    cardFeatures: formData.get("cardFeatures") || undefined,
     price: formData.get("price"),
     compareAtPrice: formData.get("compareAtPrice") || undefined,
     costPrice: formData.get("costPrice") || undefined,
@@ -124,14 +245,23 @@ export async function saveProduct(_prev: CatalogActionState, formData: FormData)
     popular: formData.get("popular") || undefined,
     isNew: formData.get("isNew") || undefined,
     status: formData.get("status") || undefined,
+    productType: formData.get("productType") || undefined,
+    condition: formData.get("condition") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid product data." };
   const d = parsed.data;
 
   const slug = d.slug || slugify(d.name);
+  const cardFeatures = toCardFeatures(formData.get("cardFeatures"));
+  const optionConfig = toOptionConfig(formData.get("optionConfig"));
+  if (optionConfig.error) return { error: optionConfig.error };
   if (!slug) return { error: "A name is required to create a slug." };
   const status = d.status || "ACTIVE";
   const active = status !== "DRAFT" && status !== "ARCHIVED";
+  const productType = ["CUSTOM", "NEW", "CLEARANCE"].includes(d.productType ?? "") ? (d.productType as never) : undefined;
+  const condition = ["NEW", "OPEN_BOX", "USED", "REFURBISHED", "DISPLAY", "CLEARANCE"].includes(d.condition ?? "")
+    ? (d.condition as never)
+    : null;
 
   const data: Prisma.ProductUncheckedCreateInput = {
     ...(d.id ? { id: d.id } : {}),
@@ -139,18 +269,20 @@ export async function saveProduct(_prev: CatalogActionState, formData: FormData)
     slug,
     type: d.type as never,
     status: status as never,
+    productType,
+    condition,
     categoryId: d.categoryId,
     brandId: d.brandId || null,
-    shortDescription: d.shortDescription || null,
     description: d.description || null,
     features: d.features ? { list: toList(formData.get("features")) } : Prisma.JsonNull,
     whatsIncluded: d.whatsIncluded ? { list: toList(formData.get("whatsIncluded")) } : Prisma.JsonNull,
     warrantyInfo: d.warrantyInfo || null,
     shippingInfo: d.shippingInfo || null,
     specifications: d.specs ? toSpecs(formData.get("specs")) : Prisma.JsonNull,
-    price: d.price,
-    compareAtPrice: d.compareAtPrice || null,
-    costPrice: d.costPrice || null,
+    cardFeatures: cardFeatures.length ? (cardFeatures as Prisma.InputJsonValue) : Prisma.JsonNull,
+    price: Math.round(d.price * 100),
+    compareAtPrice: d.compareAtPrice ? Math.round(d.compareAtPrice * 100) : null,
+    costPrice: d.costPrice ? Math.round(d.costPrice * 100) : null,
     gstRate: d.gstRate ?? 0,
     sku: d.sku || null,
     barcode: d.barcode || null,
@@ -166,7 +298,7 @@ export async function saveProduct(_prev: CatalogActionState, formData: FormData)
     freeShipping: d.freeShipping === "on",
     shippingRestrictions: d.shippingRestrictions || null,
     seoTitle: d.seoTitle || `${d.name} | KeebForge Shop`,
-    seoDescription: d.seoDescription || d.shortDescription || d.description?.slice(0, 160) || `${d.name} at KeebForge.`,
+    seoDescription: d.seoDescription || d.description?.slice(0, 160) || `${d.name} at KeebForge.`,
     seoKeywords: d.seoKeywords || null,
     canonicalUrl: d.canonicalUrl || `${SITE_URL}/product/${slug}`,
     ogImageUrl: d.ogImageUrl || null,
@@ -184,19 +316,66 @@ export async function saveProduct(_prev: CatalogActionState, formData: FormData)
     const alts = formData.getAll("imageAlt").map((v) => String(v));
     const orders = formData.getAll("imageOrder").map((v) => Number(v) || 0);
     const primaryIdx = Number(formData.get("imagePrimary") ?? "-1");
-    const newImages = urls.map((url, i) => ({ url, alt: alts[i] || null, sortOrder: orders[i] ?? i, primary: i === primaryIdx }));
+    // Freshly uploaded assets arrive with their Cloudinary publicIds. Assets
+    // uploaded while the product was still a draft live in a staging folder —
+    // rename them into the product's permanent folder now that we have its id.
+    type UploadedAsset = { publicId: string; url: string; width?: number; height?: number };
+    let uploaded: UploadedAsset[] = [];
+    try {
+      uploaded = JSON.parse(String(formData.get("uploadedAssets") || "[]")) as UploadedAsset[];
+    } catch {
+      uploaded = [];
+    }
+    const byUrl = new Map(uploaded.map((a) => [a.url, a]));
+    const finalUrls: string[] = [];
+    for (const asset of uploaded) {
+      if (!asset.publicId.includes("/products/drafts/")) continue;
+      const base = asset.publicId.split("/").pop() ?? "image";
+      const moved = await renameAsset(asset.publicId, `keebforge/products/${product.id}/${base}`);
+      if (moved) {
+        byUrl.set(asset.url, moved);
+      } else {
+        console.error(`[catalog] draft asset stuck in drafts folder: ${asset.publicId}`);
+      }
+    }
+
+    const newImages = urls.filter(Boolean).map((url, i) => {
+      const asset = byUrl.get(url);
+      return {
+        // A renamed draft asset's form URL still points at /drafts/ (404 after
+        // the move) — persist the post-rename secure_url instead.
+        url: asset?.url ?? url,
+        alt: alts[i] || null,
+        sortOrder: orders[i] ?? i,
+        primary: i === primaryIdx,
+        ...(asset ? { publicId: asset.publicId } : {}),
+      };
+    });
+    finalUrls.push(...newImages.map((i) => i.url));
 
     if (newImages.length > 0) {
-      // Soft-delete any images no longer in the list (they stay in Cloudinary storage).
-      await prisma.productImage.updateMany({ where: { productId: product.id, active: true, NOT: { url: { in: urls } } }, data: { active: false } });
+      // Rows no longer in the list are removed outright and their Cloudinary
+      // assets destroyed (best-effort; failures are logged for cleanup).
+      const removed = await prisma.productImage.findMany({
+        where: { productId: product.id, NOT: { url: { in: finalUrls } } },
+        select: { id: true, publicId: true },
+      });
+      if (removed.length > 0) {
+        await prisma.productImage.deleteMany({ where: { id: { in: removed.map((r) => r.id) } } });
+        for (const r of removed) {
+          if (r.publicId && !(await deleteImage(r.publicId))) {
+            console.error(`[catalog] orphaned product asset after removal: ${r.publicId}`);
+          }
+        }
+      }
       for (const img of newImages) {
         await prisma.productImage.upsert({
           where: { id: `img:${product.id}:${img.url}` },
-          update: { ...img, active: true },
+          update: { ...img },
           create: { id: `img:${product.id}:${img.url}`, productId: product.id, ...img },
         });
       }
-      await prisma.productImage.updateMany({ where: { productId: product.id, active: true }, data: { primary: false } });
+      await prisma.productImage.updateMany({ where: { productId: product.id }, data: { primary: false } });
       const primary = newImages.find((i) => i.primary) ?? newImages[0];
       await prisma.productImage.updateMany({ where: { productId: product.id, url: primary.url }, data: { primary: true } });
     }
@@ -204,6 +383,12 @@ export async function saveProduct(_prev: CatalogActionState, formData: FormData)
     revalidatePath("/admin/products");
     revalidatePath("/admin/products/inventory");
     revalidatePath("/shop");
+
+    // Option groups sync (empty payload clears all groups).
+    if (optionConfig.groups.length > 0 || (await prisma.productOptionGroup.count({ where: { productId: product.id } })) > 0) {
+      await syncOptionGroups(product.id, optionConfig.groups);
+    }
+
     return { ok: true, id: product.id };
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -219,7 +404,7 @@ const statusSchema = z.object({
 });
 
 export async function setProductStatus(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  await requireAdmin();
+  await requirePermission("product", "update");
   const parsed = statusSchema.safeParse({ id: formData.get("id"), status: formData.get("status") });
   if (!parsed.success) return { error: "Invalid request." };
   const { id, status } = parsed.data;
@@ -236,10 +421,10 @@ export async function setProductStatus(_prev: CatalogActionState, formData: Form
 }
 
 export async function duplicateProduct(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  await requireAdmin();
+  await requirePermission("product", "create");
   const id = formData.get("id");
   if (typeof id !== "string") return { error: "Invalid product." };
-  const src = await prisma.product.findUnique({ where: { id }, include: { images: true } });
+  const src = await prisma.product.findUnique({ where: { id }, include: { images: true, optionGroups: { include: { options: true } } } });
   if (!src) return { error: "Product not found." };
 
   const copy = await prisma.product.create({
@@ -250,13 +435,13 @@ export async function duplicateProduct(_prev: CatalogActionState, formData: Form
       status: "DRAFT",
       categoryId: src.categoryId,
       brandId: src.brandId,
-      shortDescription: src.shortDescription,
       description: src.description,
       features: src.features as Prisma.InputJsonValue,
       whatsIncluded: src.whatsIncluded as Prisma.InputJsonValue,
       warrantyInfo: src.warrantyInfo,
       shippingInfo: src.shippingInfo,
       specifications: src.specifications as Prisma.InputJsonValue,
+      cardFeatures: src.cardFeatures as Prisma.InputJsonValue,
       price: src.price,
       compareAtPrice: src.compareAtPrice,
       costPrice: src.costPrice,
@@ -282,8 +467,25 @@ export async function duplicateProduct(_prev: CatalogActionState, formData: Form
   });
 
   for (const img of src.images) {
-    await prisma.productImage.create({ data: { productId: copy.id, url: img.url, alt: img.alt, sortOrder: img.sortOrder, primary: img.primary } });
+    // publicId intentionally null — the duplicate reuses the same Cloudinary
+    // file but must never delete the original's asset.
+    await prisma.productImage.create({ data: { productId: copy.id, url: img.url, alt: img.alt, sortOrder: img.sortOrder, primary: img.primary, publicId: null } });
   }
+
+  await prisma.product.update({
+    where: { id: copy.id },
+    data: {
+      optionGroups: {
+        create: src.optionGroups.map((g) => ({
+          name: g.name,
+          required: g.required,
+          sortOrder: g.sortOrder,
+          enabled: g.enabled,
+          options: { create: g.options.map((o) => ({ name: o.name, priceAddon: o.priceAddon, sortOrder: o.sortOrder, enabled: o.enabled })) },
+        })),
+      },
+    },
+  });
 
   revalidatePath("/admin/products");
   return { ok: true, id: copy.id };
@@ -301,7 +503,7 @@ const categorySchema = z.object({
 });
 
 export async function saveCategory(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  await requireAdmin();
+  await requirePermission("product", "create");
   const parsed = categorySchema.safeParse({
     id: formData.get("id") || undefined,
     name: formData.get("name"),
@@ -343,7 +545,7 @@ const brandSchema = z.object({
 });
 
 export async function saveBrand(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  await requireAdmin();
+  await requirePermission("product", "create");
   const parsed = brandSchema.safeParse({
     id: formData.get("id") || undefined,
     name: formData.get("name"),
@@ -389,7 +591,7 @@ const variantSchema = z.object({
 });
 
 export async function saveVariant(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  await requireAdmin();
+  await requirePermission("product", "update");
   const parsed = variantSchema.safeParse({
     id: formData.get("id") || undefined,
     productId: formData.get("productId"),
@@ -422,8 +624,8 @@ export async function saveVariant(_prev: CatalogActionState, formData: FormData)
       name: d.name,
       sku: d.sku || null,
       barcode: d.barcode || null,
-      price: d.price || null,
-      compareAtPrice: d.compareAtPrice || null,
+      price: d.price ? Math.round(d.price * 100) : null,
+      compareAtPrice: d.compareAtPrice ? Math.round(d.compareAtPrice * 100) : null,
       weight: d.weight || null,
       options: Object.keys(parsedOptions).length ? parsedOptions : Prisma.JsonNull,
       active: d.active === "on" || d.active === undefined,
@@ -433,8 +635,8 @@ export async function saveVariant(_prev: CatalogActionState, formData: FormData)
       name: d.name,
       sku: d.sku || null,
       barcode: d.barcode || null,
-      price: d.price || null,
-      compareAtPrice: d.compareAtPrice || null,
+      price: d.price ? Math.round(d.price * 100) : null,
+      compareAtPrice: d.compareAtPrice ? Math.round(d.compareAtPrice * 100) : null,
       stock: d.stock ?? 0,
       weight: d.weight || null,
       options: Object.keys(parsedOptions).length ? parsedOptions : Prisma.JsonNull,
@@ -447,7 +649,7 @@ export async function saveVariant(_prev: CatalogActionState, formData: FormData)
 }
 
 export async function deleteVariant(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  await requireAdmin();
+  await requirePermission("product", "delete");
   const id = formData.get("id");
   if (typeof id !== "string") return { error: "Invalid variant." };
   const variant = await prisma.productVariant.findUnique({ where: { id }, include: { product: { select: { id: true } } } });
@@ -473,7 +675,9 @@ const inventorySchema = z.object({
 });
 
 export async function adjustInventory(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  const { profile } = await requireAdmin();
+  const ctx = await requirePermission("product", "update");
+  const profile = await prisma.profile.findUnique({ where: { userId: ctx.user.id }, select: { id: true } });
+  if (!profile) return { error: "Your account has no staff profile. Sign in through the site once, then retry." };
   const parsed = inventorySchema.safeParse({
     productId: formData.get("productId"),
     variantId: formData.get("variantId") || undefined,
@@ -557,7 +761,7 @@ function parseCsv(text: string): string[][] {
 }
 
 export async function importProducts(_prev: CatalogActionState, formData: FormData): Promise<CatalogActionState> {
-  await requireAdmin();
+  await requirePermission("product", "create");
   const file = formData.get("file");
   if (!(file instanceof File)) return { error: "Attach a CSV file." };
   const text = await file.text();

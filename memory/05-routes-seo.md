@@ -6,10 +6,9 @@
 |---|---|---|---|
 | `/` | static | `src/app/page.tsx` | homepage: hero, services, marquee, FAQ |
 | `/about` | static | `src/app/about/page.tsx` | |
-| `/services` | static | `src/app/services/page.tsx` | service catalog index |
-| `/services/[device]/[slug]` | dynamic | `src/app/services/[device]/[slug]/page.tsx` | device in `{keyboard, mouse, other}`; 404 on invalid |
-| `/repair/keyboard` | static | `src/app/repair/keyboard/page.tsx` | prices from DB via `formatServicePriceText()` |
-| `/repair/mouse` | static | `src/app/repair/mouse/page.tsx` | |
+| `/services` | static | `src/app/services/page.tsx` | landing page: hero (~68vh, badges visual), 4 category cards, 6 DB-priced popular services, keyboard/mouse splits, repair/custom panels, steps, FAQ, final CTA; container = `--container-w`, navbar matched via `body:has(main.sv-land)` |
+| `/services/configure` | static | `src/app/services/configure/page.tsx` | interactive configurator moved here from `/services` (device tabs, checkbox service matrix, live subtotal); hides quote-offline services via slug sets |
+| `/repair` | static | `src/app/repair/page.tsx` | Electronics Repair + inquiry form with photo upload |
 | `/reviews` | static | `src/app/reviews/page.tsx` | DB-backed, approved only |
 | `/work` | static | `src/app/work/page.tsx` | portfolio; images still local/JSON — Cloudinary pending |
 | `/work/[slug]` | dynamic | `src/app/work/[slug]/page.tsx` | |
@@ -39,6 +38,7 @@
 | `/admin/brands` | brand CRUD (`?edit=<id>`) |
 | `/admin/products/inventory` | stock rows + inline adjust + movement ledger |
 | `/admin/products/import`, `/admin/products/export` | CSV import page + CSV download route |
+| `/admin/services` | per-service pricing editor (unit/price/min/max/label/flags → feeds the public configurator) |
 | `/admin/[...slug]` | stub for unbuilt sections |
 | `/api/admin/upload` | gated Cloudinary upload (501 without creds) |
 
@@ -47,12 +47,12 @@ Admin chrome is hidden from the public site by `ShowOnSite` in the root layout.
 ## Redirects (two layers)
 
 **`next.config.ts` → `redirects()` (all 308):**
-- `/keyboard-repair` → `/repair/keyboard`
-- `/mouse-repair` → `/repair/mouse`
+- `/keyboard-repair` → `/repair`
+- `/mouse-repair` → `/repair`
 - `/pricing` → `/services`
 - `/order` → `/checkout`
 - `/Terms&Conditions` → `/terms` (note: URL-encoded `%26` does NOT match — only literal `&`)
-- 17 old service slugs → new canonical slugs (each old URL points straight at its final destination; Next redirects don't chain)
+- 17 old service slugs → `/services` (D-022 removed the per-service detail pages they used to target)
 
 **`src/proxy.ts` middleware (308):** handles the case-variant URLs because Next's `redirect()` matching is **case-insensitive** and would shadow real routes:
 - `/About`, `/About/` → `/about`

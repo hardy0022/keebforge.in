@@ -109,6 +109,21 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum ShopSectionType {
+  CUSTOM
+  NEW
+  CLEARANCE
+}
+
+enum ProductCondition {
+  NEW
+  OPEN_BOX
+  USED
+  REFURBISHED
+  DISPLAY
+  CLEARANCE
+}
+
 enum ReviewType {
   PRODUCT
   SERVICE
@@ -153,7 +168,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   profile       Profile?
-
+  members       Member[]
   @@unique([email])
   @@map("user")
 }
@@ -168,6 +183,8 @@ model Session {
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  activeOrganizationId String?
 
   @@unique([token])
   @@index([userId])
@@ -207,6 +224,54 @@ model Verification {
   @@map("verification")
 }
 
+// ─── Organizations (Better Auth organization plugin) ────────────────────────
+
+model Organization {
+  id        String   @id
+  name      String
+  slug      String   @unique
+  logo      String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  members     Member[]
+  invitations Invitation[]
+
+  @@map("organization")
+}
+
+model Member {
+  id             String   @id
+  organizationId String
+  userId         String
+  role           String   @default("member")
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String   @id
+  organizationId String
+  email          String
+  role           String
+  status         String   @default("pending")
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  inviterId      String
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
+}
+
 // ─── Identity & accounts ─────────────────────────────────────────────────────
 
 /// KeebForge business data for a Better Auth user. `userId` = the auth identity.
@@ -218,6 +283,7 @@ model Profile {
   email     String   @unique
   phone     String?
   avatarUrl String?
+  username  String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -245,7 +311,10 @@ model Address {
   id            String   @id @default(cuid())
   profileId     String
   label         String   @default("Home")
+  name          String?
+  email         String?
   streetAddress String
+  apartment     String?
   city          String
   state         String
   postalCode    String
@@ -306,15 +375,17 @@ model Product {
   slug              String        @unique
   type              ProductType
   status            ProductStatus @default(ACTIVE)
+  productType       ShopSectionType @default(NEW)
+  condition         ProductCondition?
   categoryId        String
   brandId           String?
-  shortDescription  String?
   description       String?
   features          Json? // list of strings
   whatsIncluded     Json? // list of strings
   warrantyInfo      String?
   shippingInfo      String?
   specifications    Json? // flexible key/value specs, e.g. {"Layout": "60%"}
+  cardFeatures      Json? // shop-card highlights, e.g. [{"icon":"mouse","label":"Sensor","value":"Focus Pro 30K"}]
   price             Int // paise (selling price)
   compareAtPrice    Int? // paise
   costPrice         Int? // paise — NEVER exposed to customers
@@ -350,6 +421,7 @@ model Product {
   category           Category            @relation(fields: [categoryId], references: [id])
   brand              Brand?              @relation(fields: [brandId], references: [id])
   variants           ProductVariant[]
+  optionGroups       ProductOptionGroup[]
   images             ProductImage[]
   inventoryMovements InventoryMovement[]
   orderItems         OrderItem[]
@@ -389,11 +461,45 @@ model ProductVariant {
   @@index([sku])
 }
 
+/// Generic configurable-product option groups (e.g. "Case Color", "Switch
+/// Choice"). Price = product base price + sum of selected options' addons.
+model ProductOptionGroup {
+  id        String   @id @default(cuid())
+  productId String
+  name      String
+  required  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options ProductOption[]
+
+  @@index([productId])
+}
+
+model ProductOption {
+  id         String   @id @default(cuid())
+  groupId    String
+  name       String
+  priceAddon Int      @default(0) // paise, >= 0, added to product base price
+  sortOrder  Int      @default(0)
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  group ProductOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+}
+
 model ProductImage {
   id        String  @id @default(cuid())
   productId String
   variantId String?
   url       String
+  publicId  String? // Cloudinary public id — null for manually-linked external URLs
   alt       String?
   sortOrder Int     @default(0)
   primary   Boolean @default(false)
@@ -424,9 +530,9 @@ model InventoryMovement {
   @@index([productId, variantId, createdAt])
 }
 
-// ─── Service catalog ─────────────────────────────────────────────────────────
+// ─── Mods taxonomy (retired mods catalog groupings, kept as data) ───────────
 
-model ServiceGroup {
+model Mods {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
@@ -436,7 +542,6 @@ model ServiceGroup {
   createdAt DateTime @default(now())
 
   services Service[]
-
   @@index([device, active, sortOrder])
 }
 
@@ -463,7 +568,7 @@ model Service {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  group         ServiceGroup   @relation(fields: [groupId], references: [id])
+  group         Mods             @relation(fields: [groupId], references: [id])
   orderServices OrderService[]
   reviews       Review[]
 
@@ -492,6 +597,14 @@ model Order {
   tax      Int    @default(0)
   total    Int    @default(0)
   currency String @default("INR")
+
+  // Shipping snapshot — historical orders keep their original rate context.
+  shippingProvider            String?
+  shippingMode                String?
+  shippingWeightGrams         Int?
+  shippingOriginPincode       String?
+  shippingDestinationPincode  String?
+  shippingQuotedAt            DateTime?
 
   billingDetails Json?
   summary        Json?
@@ -524,6 +637,7 @@ model OrderAddress {
   orderId       String   @unique
   label         String?
   streetAddress String
+  apartment     String?
   city          String
   state         String
   postalCode    String
@@ -599,15 +713,18 @@ model Payment {
   status            PaymentStatus @default(PENDING)
   method            String?
   razorpayOrderId   String?
-  razorpayPaymentId String?
+  razorpayPaymentId String?       @unique
   razorpaySignature String?
   paidAt            DateTime?
+  failureReason     String?
   createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([razorpayOrderId])
+  @@index([razorpayPaymentId])
 }
 
 model Shipment {
@@ -696,8 +813,9 @@ model Cart {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  profile Profile?   @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  items   CartItem[]
+  profile     Profile?         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  items       CartItem[]
+  serviceItem CartServiceItem?
 
   @@index([guestToken])
 }
@@ -708,6 +826,8 @@ model CartItem {
   productId String
   variantId String?
   quantity  Int      @default(1)
+  /// Configurable-product selections snapshot: { optionIds, selections: [{groupId, groupName, optionId, optionName, addon}] }.
+  config    Json?
   createdAt DateTime @default(now())
 
   cart    Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -715,6 +835,19 @@ model CartItem {
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
   @@index([cartId])
+}
+
+/// A single custom service job held in the cart (one per cart; adding a new
+/// configuration replaces the previous one). `config` matches the
+/// StoredServiceCheckout shape produced by the /services configurator.
+model CartServiceItem {
+  id        String   @id @default(cuid())
+  cartId    String   @unique
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
 }
 
 // ─── Reviews & coupons ───────────────────────────────────────────────────────
@@ -787,4 +920,43 @@ model SiteSetting {
   key       String   @id
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+// ── Cloudinary media (non-product entities) ──────────────────────────────────
+
+enum MediaEntityType {
+  REPAIR
+  ORDER
+  SERVICE
+}
+
+enum MediaRole {
+  BEFORE
+  AFTER
+  DIAGNOSTIC
+  WORK
+  FINAL
+  CUSTOMER_UPLOAD
+  OTHER
+}
+
+/// Cloudinary asset metadata for repair/order/service imagery. Product images
+/// live on ProductImage (which stores its own publicId); this covers the rest.
+model Media {
+  id           String          @id @default(cuid())
+  publicId     String          @unique
+  secureUrl    String
+  resourceType String          @default("image")
+  entityType   MediaEntityType
+  entityId     String // stable business id (OrderRepair.id, Order.id, Service.id)
+  folder       String
+  role         MediaRole       @default(OTHER)
+  altText      String?
+  sortOrder    Int             @default(0)
+  width        Int?
+  height       Int?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([entityType, entityId, role])
 }

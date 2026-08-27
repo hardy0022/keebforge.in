@@ -58,3 +58,15 @@ If the dev server was started before `prisma generate`/a migration, it keeps the
 
 ## G-017 — Controlled inputs must keep action-expected names
 `saveProduct` reads `formData.getAll("imageUrl")` / `"imageAlt"` / `"imageOrder"` + `"imagePrimary"`. The `ProductForm` image inputs were originally named `imageUrl-${i}` → images silently never persisted. Array-style same-name inputs (in DOM order) are what the action zips. Any form input consumed by a server action must match the action's expected name exactly.
+
+## G-018 — Vercel's apex→www domain redirect breaks `/api/*` (and Dash)
+`https://keebforge.in/api/auth` returned **308 → www** for every path, and the Better Auth Dash connection test failed with "server returned a redirect". This is a **Vercel dashboard Domains setting**, not app code — the repo has no www/apex redirect logic (`src/proxy.ts` excludes `api/`, no `vercel.json`, no middleware). Canonical-domain redirects must never cover `/api/*`: auth endpoints break behind them. Fix in the Vercel dashboard (see `08-roadmap.md`), not in the repo.
+
+## G-019 — Bare `GET /api/auth` returns 404 and that's normal
+The auth route is `app/api/auth/[...all]/route.ts`; a catch-all requires ≥1 segment, so `/api/auth` alone 404s. Health-check auth with `/api/auth/me` or `/api/auth/dash/validate` instead — both return **401** when the plugin/route is live. A 401 on dash endpoints is the "connected" signal, not an error.
+
+## G-021 — styled-jsx in a client component causes hydration mismatch under Turbopack
+`AdminShell.tsx` used a `<style jsx>` block with `@media` queries. Turbopack emitted the scoped `jsx-<hash>` class on the server but not on the client → "A tree hydrated but some attributes of the server rendered HTML didn't match". The block was moved to `globals.css` as plain media queries (`.kf-sidebar-desktop`, `.kf-mobile-sidebar`, `.kf-drawer-open`, `.kf-sidebar-toggle`, `.kf-admin-main`). **Rule: no `<style jsx>` in client components — put responsive rules in `globals.css`.**
+
+## G-020 — `NEXT_PUBLIC_*` is inlined at build time
+Changing `NEXT_PUBLIC_APP_URL` on Vercel requires a **redeploy** to take effect; server-only vars (`BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, API keys) are read at runtime and don't need a rebuild. If prod canonicals/OG URLs look wrong after an env change, the build didn't pick up the new value.

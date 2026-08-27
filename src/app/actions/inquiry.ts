@@ -2,6 +2,8 @@
 
 import { Resend } from "resend";
 import { z } from "zod";
+import { cloudinaryConfigured, uploadBuffer } from "@/lib/cloudinary";
+import { IMAGE_TYPES_MESSAGE, isAllowedImageMime, sniffImageType } from "@/lib/image-validation";
 
 const inquirySchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(80),
@@ -15,6 +17,9 @@ const inquirySchema = z.object({
   deviceModel: z.string().trim().min(2, "Please enter the device model.").max(120),
   issue: z.string().trim().min(20, "Please describe the issue in a little more detail.").max(2000),
 });
+
+const MAX_IMAGES = 5;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export type InquiryState = { ok?: boolean; error?: string };
 
@@ -33,6 +38,43 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
 
   const { name, phone, email, deviceModel, issue } = parsed.data;
 
+  const rawImages = formData.getAll("images").filter((f): f is File => f instanceof File);
+  if (rawImages.length > MAX_IMAGES) {
+    return { error: `You can attach at most ${MAX_IMAGES} photos.` };
+  }
+
+  for (const f of rawImages) {
+    if (!isAllowedImageMime(f.type)) {
+      return { error: `${IMAGE_TYPES_MESSAGE} ("${f.name}" isn't one of those).` };
+    }
+    if (f.size > MAX_IMAGE_BYTES) {
+      return { error: `Each photo must be under 5 MB — "${f.name}" is too large.` };
+    }
+  }
+
+  const uploaded: { url: string; publicId: string }[] = [];
+  if (rawImages.length > 0) {
+    if (!cloudinaryConfigured()) {
+      return {
+        error:
+          "Photo upload is temporarily unavailable. You can still send the inquiry without photos, or email the photos to contact@keebforge.in.",
+      };
+    }
+    for (const f of rawImages) {
+      const buf = Buffer.from(await f.arrayBuffer());
+      if (!sniffImageType(buf)) {
+        return { error: `"${f.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}` };
+      }
+      try {
+        const r = await uploadBuffer(buf, { folder: "keebforge/repairs/inquiries" });
+        uploaded.push({ url: r.url, publicId: r.publicId });
+      } catch (e) {
+        console.error("Cloudinary upload error:", e);
+        return { error: "One or more photos failed to upload. Please retry, or send the inquiry without photos." };
+      }
+    }
+  }
+
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { error } = await resend.emails.send({
@@ -49,6 +91,12 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
           <tr><td><strong>Device / Model</strong></td><td>${esc(deviceModel)}</td></tr>
           <tr><td><strong>Issue</strong></td><td>${esc(issue)}</td></tr>
         </table>
+        ${
+          uploaded.length > 0
+            ? `<h3>Photos (${uploaded.length})</h3>` +
+              uploaded.map((u) => `<p><a href="${esc(u.url)}">${esc(u.url)}</a></p>`).join("")
+            : ""
+        }
         <p style="color:#888">Reply to this inquiry by clicking Reply — it goes straight back to the customer.</p>
       `,
     });

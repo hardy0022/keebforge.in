@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
 import { getAdminOrder } from "@/lib/admin";
+import { prisma } from "@/lib/prisma";
+import { RepairImagesPanel, type RepairImagesRepair } from "@/components/admin/orders/RepairImagesPanel";
 import { OrderDetailClient } from "@/components/admin/orders/OrderDetailClient";
 
 export const metadata: Metadata = {
@@ -12,8 +14,39 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/** Safe reader for the SERVICE order device snapshot stored in Order.summary. */
+function serviceDeviceRows(summary: unknown): Array<[string, string]> {
+  if (!summary || typeof summary !== "object") return [];
+  const s = summary as Record<string, unknown>;
+  if (s.deviceType !== "KEYBOARD" && s.deviceType !== "MOUSE") return [];
+  const rows: Array<[string, string]> = [
+    ["Type", s.deviceType === "KEYBOARD" ? "Keyboard" : "Mouse"],
+    ["Brand / Model", [s.brand, s.model].filter((v) => typeof v === "string" && v).join(" ") || "—"],
+  ];
+  if (typeof s.layout === "string" && s.layout) rows.push(["Layout", s.layout]);
+  if (typeof s.switchModel === "string" && s.switchModel) rows.push(["Switch model", s.switchModel]);
+  if (typeof s.switchQuantity === "number") rows.push(["Switches", String(s.switchQuantity)]);
+  if (typeof s.stabilizerQuantity === "number" && s.stabilizerQuantity > 0) rows.push(["Stabilizers", String(s.stabilizerQuantity)]);
+  rows.push(["Keycaps", s.keycapsIncluded ? "Included" : "Not Included"]);
+  return rows;
+}
+
+function isQuoteOrder(summary: unknown): boolean {
+  return Boolean(summary && typeof summary === "object" && (summary as { hasQuotes?: unknown }).hasQuotes === true);
+}
+
+function isQuoteService(summary: unknown, slug: string): boolean {
+  if (!summary || typeof summary === "object") {
+    const lines = (summary as { services?: Array<{ slug?: unknown; isQuote?: unknown }> } | null)?.services;
+    if (Array.isArray(lines)) {
+      return lines.some((l) => l?.slug === slug && l.isQuote === true);
+    }
+  }
+  return false;
+}
+
 export default async function AdminOrderDetail({ params }: { params: Promise<{ orderNumber: string }> }) {
-  await requireAdmin();
+  await requirePermission("order", "view");
   const { orderNumber } = await params;
   const order = await getAdminOrder(orderNumber);
   if (!order) notFound();
@@ -23,6 +56,23 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ o
     label,
   }));
   const payTotal = order.payments.reduce((s, p) => s + p.amount, 0);
+
+  // Repair photos (customer uploads + admin workflow shots) grouped per repair.
+  const repairMedia =
+    order.repairs.length > 0
+      ? await prisma.media.findMany({
+          where: { entityType: "REPAIR", entityId: { in: order.repairs.map((r) => r.id) } },
+          select: { id: true, publicId: true, secureUrl: true, role: true, sortOrder: true, entityId: true },
+          orderBy: { sortOrder: "asc" },
+        })
+      : [];
+  const repairPanels: RepairImagesRepair[] = order.repairs.map((r) => ({
+    id: r.id,
+    label: `${r.deviceType} ${r.deviceModel}${r.issue ? ` — ${r.issue}` : ""}`,
+    media: repairMedia
+      .filter((m) => m.entityId === r.id)
+      .map(({ id, publicId, secureUrl, role, sortOrder }) => ({ id, publicId, secureUrl, role, sortOrder })),
+  }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -113,10 +163,37 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ o
                       </span>
                     </dt>
                     <dd className="num">
-                      {formatINR(p.amount)} <span className={`badge ${p.status === "PAID" ? "badge-ok" : "badge-warn"}`}>{p.status}</span>
+                      {formatINR(p.amount)} <span className={`badge ${p.status === "PAID" ? "badge-ok" : p.status === "FAILED" ? "badge-err" : "badge-warn"}`}>{p.status}</span>
                     </dd>
                   </div>
                 ))}
+                {order.payments.some((p) => p.razorpayPaymentId) && (
+                  <details className="kv" style={{ marginTop: 4 }}>
+                    <summary style={{ cursor: "pointer", color: "var(--acc)", fontWeight: 600 }}>
+                      Razorpay Details
+                    </summary>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8, paddingTop: 8, borderTop: "1px dashed var(--bdr)" }}>
+                      {order.payments
+                        .filter((p) => p.razorpayPaymentId)
+                        .map((p) => (
+                          <div key={p.id} style={{ fontSize: "0.75rem", fontFamily: "var(--ff-body)" }}>
+                            <div className="flex justify-between">
+                              <span className="muted">Payment ID</span>
+                              <code style={{ color: "var(--t1)" }}>{p.razorpayPaymentId}</code>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="muted">Order ID</span>
+                              <code style={{ color: "var(--t1)" }}>{p.razorpayOrderId}</code>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="muted">Signature</span>
+                              <code style={{ color: "var(--t1)" }}>{p.razorpaySignature ? `${p.razorpaySignature.slice(0, 16)}…` : "—"}</code>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </details>
+                )}
                 <div className="kv" style={{ marginTop: 4 }}>
                   <dt>Order total</dt>
                   <dd className="num" style={{ fontWeight: 700 }}>
@@ -202,19 +279,25 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ o
                       </td>
                     </tr>
                   ))}
-                  {order.services.map((s) => (
-                    <tr key={s.id}>
-                      <td>
-                        <span className="badge badge-lime">Service</span>
-                      </td>
-                      <td>{s.name}</td>
-                      <td className="num">{s.quantity}</td>
-                      <td className="num">{formatINR(s.unitPrice)}</td>
-                      <td className="num" style={{ textAlign: "right" }}>
-                        {formatINR(s.lineTotal)}
-                      </td>
-                    </tr>
-                  ))}
+                  {order.services.map((s) => {
+                    const quote = s.lineTotal === 0 && isQuoteService(order.summary, s.slug);
+                    return (
+                      <tr key={s.id}>
+                        <td>
+                          <span className="badge badge-lime">Service</span>
+                        </td>
+                        <td>
+                          {s.name}
+                          {quote && <span className="badge badge-warn" style={{ marginLeft: 6 }}>QUOTE</span>}
+                        </td>
+                        <td className="num">{s.quantity}</td>
+                        <td className="num">{quote ? "—" : formatINR(s.unitPrice)}</td>
+                        <td className="num" style={{ textAlign: "right" }}>
+                          {quote ? "pending quote" : formatINR(s.lineTotal)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {order.repairs.map((r) => (
                     <tr key={r.id}>
                       <td>
@@ -244,6 +327,33 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ o
           </div>
         </div>
       </div>
+
+      {/* Repair image management */}
+      {repairPanels.length > 0 && (
+        <div className="admin-card">
+          <RepairImagesPanel repairs={repairPanels} />
+        </div>
+      )}
+
+      {/* Service device configuration */}
+      {order.type === "SERVICE" && serviceDeviceRows(order.summary).length > 0 && (
+        <div className="admin-card">
+          <h3>Device configuration</h3>
+          <dl className="pill-grid">
+            {serviceDeviceRows(order.summary).map(([k, v]) => (
+              <div className="kv" key={k}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+          {isQuoteOrder(order.summary) && (
+            <div style={{ marginTop: 8 }}>
+              <span className="badge badge-warn">Contains quote-based services — final pricing after inspection</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="admin-grid cols-2" style={{ gridTemplateColumns: "2fr 1fr" }}>
         {/* Timeline */}
