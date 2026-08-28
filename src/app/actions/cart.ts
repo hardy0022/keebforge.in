@@ -82,6 +82,15 @@ export async function addToCart(_prev: CartActionState | null, formData: FormDat
   const { productId, variantId, quantity, optionIds } = parsed.data;
   if (variantId && optionIds) return { error: "Choose either a variant or options, not both." };
 
+  // Custom orders are built to order one at a time — quantity is always 1.
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { productType: true, active: true },
+  });
+  if (!product || !product.active) return { error: "This product is no longer available." };
+  const madeToOrder = product.productType === "CUSTOM";
+  const qty = madeToOrder ? 1 : quantity;
+
   // Configurable products: resolve price + selections from live DB data.
   let config: ProductConfigSnapshot | null = null;
   if (optionIds) {
@@ -103,24 +112,26 @@ export async function addToCart(_prev: CartActionState | null, formData: FormDat
     config = configSnapshot(resolved);
   }
 
-  const check = await quantityCheck(productId, variantId ?? null, quantity);
+  const check = await quantityCheck(productId, variantId ?? null, qty);
   if (check) return { error: check };
 
   const cart = await cartForCurrentUser();
 
   // Identical configurations merge into one line; different ones stay separate.
+  // Made-to-order units never merge — each build is its own quantity-1 line.
   const candidates = await prisma.cartItem.findMany({
     where: { cartId: cart.id, productId, variantId: variantId ?? null },
   });
   const key = config ? configKey(config.optionIds) : null;
-  const existing =
-    key === null
+  const existing = madeToOrder
+    ? undefined
+    : key === null
       ? candidates.find((c) => !c.config)
       : candidates.find((c) => {
           const cfg = c.config as ProductConfigSnapshot | null;
           return cfg?.kind === "options" && configKey(cfg.optionIds) === key;
         });
-  const nextQty = existing ? existing.quantity + quantity : quantity;
+  const nextQty = existing ? existing.quantity + qty : qty;
   // Re-validate combined quantity against live stock (same item may already be in cart).
   const checkAgain = await quantityCheck(productId, variantId ?? null, nextQty);
   if (checkAgain) return { error: checkAgain };
@@ -129,7 +140,7 @@ export async function addToCart(_prev: CartActionState | null, formData: FormDat
     await prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: nextQty } });
   } else {
     await prisma.cartItem.create({
-      data: { cartId: cart.id, productId, variantId: variantId ?? null, quantity, ...(config ? { config } : {}) },
+      data: { cartId: cart.id, productId, variantId: variantId ?? null, quantity: qty, ...(config ? { config } : {}) },
     });
   }
 

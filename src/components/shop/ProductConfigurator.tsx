@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addToCart } from "@/app/actions/cart";
 import { formatINR } from "@/lib/money";
 import { defaultOptionId, type OptionGroupLike } from "@/lib/product-options";
+import CartIcon from "@/components/icons/cart-icon";
+import type { AnimatedIconHandle } from "@/components/icons/types";
 
 /**
  * Configurator for products with admin-defined option groups
@@ -39,6 +41,7 @@ export function ProductConfigurator({
   const [qty, setQty] = useState(1);
   const [buyNow, setBuyNow] = useState(false);
   const [state, action, pending] = useActionState(addToCart, null);
+  const cartIconRef = useRef<AnimatedIconHandle>(null);
 
   const complete = active.every((g) => !g.required || picks[g.id]);
   const optionIds = Object.values(picks);
@@ -105,7 +108,10 @@ export function ProductConfigurator({
             className="btn-prime btn-prime-lg product-buy-btn"
             disabled={pending || out || !complete}
             onClick={() => setBuyNow(false)}
+            onMouseEnter={() => cartIconRef.current?.startAnimation()}
+            onMouseLeave={() => cartIconRef.current?.stopAnimation()}
           >
+            {!out && <CartIcon ref={cartIconRef} size={16} strokeWidth={1.8} />}
             {out ? "Out of Stock" : pending ? "Adding…" : "Add to Cart"}
           </button>
           {!out && (

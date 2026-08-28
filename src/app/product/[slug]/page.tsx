@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { AddToCart } from "@/components/shop/AddToCart";
 import { ProductConfigurator } from "@/components/shop/ProductConfigurator";
+import { ShippingWarranty } from "@/components/shop/ShippingWarranty";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { WhyForge } from "@/components/home/WhyForge";
@@ -166,8 +167,8 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </section>
 
-      {/* ─── SPECS / FEATURES / INCLUDED ─────────────────────────────────── */}
-      {(specs.length > 0 || features.length > 0 || included.length > 0) && (
+      {/* ─── SPECS | DESCRIPTION / FEATURES / INCLUDED ───────────────────── */}
+      {(product.description || specs.length > 0 || features.length > 0 || included.length > 0) && (
         <section className="svc-section" aria-label="Product details">
           <div className="wrap">
             <div className="product-details-grid">
@@ -184,55 +185,47 @@ export default async function ProductPage({ params }: Props) {
                   </dl>
                 </section>
               )}
-              {(features.length > 0 || included.length > 0) && (
-                <div className="product-lists">
-                  {features.length > 0 && (
-                    <section className="product-section" aria-labelledby="features-heading">
-                      <h2 id="features-heading" className="product-section-title">Key Features</h2>
-                      <ul className="product-features">
-                        {features.map((feature, i) => (
-                          <li key={i}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <path d="M20 6L9 17l-5-5" />
-                            </svg>
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-                  {included.length > 0 && (
-                    <section className="product-section" aria-labelledby="included-heading">
-                      <h2 id="included-heading" className="product-section-title">What&apos;s Included</h2>
-                      <ul className="product-included">
-                        {included.map((item, i) => (
-                          <li key={i}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
-                            </svg>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ─── DESCRIPTION ─────────────────────────────────────────────────── */}
-      {product.description && (
-        <section className="svc-section" aria-labelledby="description-heading">
-          <div className="wrap">
-            <div className="product-description-block">
-              <h2 id="description-heading" className="product-section-title">About this product</h2>
-              <div className="product-description">
-                {product.description.split(/\n\n+/).map((para, i) => (
-                  <p key={i}>{para}</p>
-                ))}
+              <div className="product-lists">
+                {product.description && (
+                  <section className="product-section" aria-labelledby="description-heading">
+                    <h2 id="description-heading" className="product-section-title">About this product</h2>
+                    <div className="product-description">
+                      {product.description.split(/\n\n+/).map((para, i) => (
+                        <p key={i}>{para}</p>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                {features.length > 0 && (
+                  <section className="product-section" aria-labelledby="features-heading">
+                    <h2 id="features-heading" className="product-section-title">Key Features</h2>
+                    <ul className="product-features">
+                      {features.map((feature, i) => (
+                        <li key={i}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+                {included.length > 0 && (
+                  <section className="product-section" aria-labelledby="included-heading">
+                    <h2 id="included-heading" className="product-section-title">What&apos;s Included</h2>
+                    <ul className="product-included">
+                      {included.map((item, i) => (
+                        <li key={i}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+                          </svg>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
               </div>
             </div>
           </div>
@@ -240,26 +233,10 @@ export default async function ProductPage({ params }: Props) {
       )}
 
       {/* ─── SHIPPING / WARRANTY ─────────────────────────────────────────── */}
-      {(product.shippingInfo || product.warrantyInfo) && (
-        <section className="svc-section" aria-label="Shipping and warranty">
-          <div className="wrap">
-            <div className="product-details-grid product-details-grid--split">
-              {product.shippingInfo && (
-                <div className="product-section">
-                  <h2 className="product-section-title">Shipping</h2>
-                  <p className="product-shipping-info">{product.shippingInfo}</p>
-                </div>
-              )}
-              {product.warrantyInfo && (
-                <div className="product-section">
-                  <h2 className="product-section-title">Warranty</h2>
-                  <p className="product-warranty-info">{product.warrantyInfo}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
+      <ShippingWarranty
+        shippingInfo={product.shippingInfo}
+        warrantyInfo={product.warrantyInfo}
+      />
 
       {/* ─── RELATED ─────────────────────────────────────────────────────── */}
       {related.length > 0 && (

@@ -11,7 +11,7 @@ const CartIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
   ) => {
     const [scope, animate] = useAnimate();
 
-    const start = async () => {
+    const start = () => {
       animate(
         ".cart-icon",
         { x: [0, 6, 0] },

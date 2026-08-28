@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addToCart } from "@/app/actions/cart";
+import CartIcon from "@/components/icons/cart-icon";
+import type { AnimatedIconHandle } from "@/components/icons/types";
 
 type VariantProp = {
   id: string;
@@ -51,6 +53,7 @@ export function AddToCart({
   const [qty, setQty] = useState(1);
   const [buyNow, setBuyNow] = useState(false);
   const [state, action, pending] = useActionState(addToCart, null);
+  const cartIconRef = useRef<AnimatedIconHandle>(null);
 
   const matches = (v: VariantProp, picks: Record<string, string>) =>
     Object.entries(picks).every(([k, val]) => !val || v.options?.[k] === val);
@@ -147,7 +150,10 @@ export function AddToCart({
             className="btn-prime btn-prime-lg product-buy-btn"
             disabled={pending || out || (groups.length > 0 && !complete)}
             onClick={() => setBuyNow(false)}
+            onMouseEnter={() => cartIconRef.current?.startAnimation()}
+            onMouseLeave={() => cartIconRef.current?.stopAnimation()}
           >
+            {!out && <CartIcon ref={cartIconRef} size={16} strokeWidth={1.8} />}
             {out ? "Out of Stock" : pending ? "Adding…" : "Add to Cart"}
           </button>
           {!out && (

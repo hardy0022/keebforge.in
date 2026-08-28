@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { CartQty } from "@/components/cart/CartQty";
+import TrashIcon from "@/components/icons/trash-icon";
 import { buildMetadata } from "@/lib/seo";
 import { getCartWithItems, availableQuantity } from "@/lib/cart";
 import { resolveConfiguredPrice, type ProductConfigSnapshot } from "@/lib/product-options";
@@ -26,12 +27,11 @@ export default async function ShopCartPage() {
         : null;
     const unitPrice = resolved?.ok ? resolved.unitPrice : item.variant?.price ?? item.product.price;
     const selections = cfg?.kind === "options" ? (resolved?.ok ? resolved.selections : cfg.selections) : [];
-    const compareAt = item.variant?.compareAtPrice ?? item.product.compareAtPrice;
     const available = item.variant
       ? availableQuantity(item.variant.stock, item.variant.reservedQuantity)
       : availableQuantity(item.product.stock, item.product.reservedQuantity);
     const image = item.product.images[0];
-    return { item, unitPrice, compareAt, available, image, lineTotal: unitPrice * item.quantity, selections };
+    return { item, unitPrice, available, image, lineTotal: unitPrice * item.quantity, selections };
   });
   const subtotal = rows.reduce((s, r) => s + r.lineTotal, 0);
 
@@ -73,7 +73,7 @@ export default async function ShopCartPage() {
                 </div>
 
                 {/* ── Product rows ── */}
-                {rows.map(({ item, unitPrice, compareAt, available, image, lineTotal, selections }) => (
+                {rows.map(({ item, available, image, lineTotal, selections }) => (
                   <article key={item.id} className="cart-row">
                     <div className="cart-row-product">
                       {image && (
@@ -101,23 +101,22 @@ export default async function ShopCartPage() {
                     </div>
 
                     <div className="cart-row-qty">
-                      <CartQty itemId={item.id} quantity={item.quantity} available={available} />
-                      <form action={removeCartItem}>
-                        <input type="hidden" name="itemId" value={item.id} />
-                        <button type="submit" className="cart-remove-btn" aria-label={`Remove ${item.product.name}`}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
-                      </form>
+                      {item.product.productType === "CUSTOM" ? (
+                        <span className="cart-qty-static">1</span>
+                      ) : (
+                        <CartQty itemId={item.id} quantity={item.quantity} available={available} />
+                      )}
                     </div>
 
                     <div className="cart-row-total">
                       <span className="cart-row-price">{formatINR(lineTotal)}</span>
-                      {compareAt != null && compareAt > unitPrice && (
-                        <span className="cart-row-compare">{formatINR(compareAt)}</span>
-                      )}
+                      <form action={removeCartItem}>
+                        <input type="hidden" name="itemId" value={item.id} />
+                        <button type="submit" className="cart-remove-btn" aria-label={`Remove ${item.product.name} from cart`}>
+                          <TrashIcon size={14} dangerHover className="cart-remove-icon" aria-hidden />
+                          Remove
+                        </button>
+                      </form>
                     </div>
                   </article>
                 ))}
