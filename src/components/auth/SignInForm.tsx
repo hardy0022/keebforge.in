@@ -14,7 +14,7 @@ async function homeForRole(): Promise<string> {
   return "/";
 }
 
-export function SignInForm() {
+export function SignInForm({ next }: { next?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +33,7 @@ export function SignInForm() {
       setBusy(false);
       return;
     }
-    router.push(await homeForRole());
+    router.push(next ?? (await homeForRole()));
     router.refresh();
   }
 

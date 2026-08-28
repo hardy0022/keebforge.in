@@ -9,6 +9,7 @@ import { ProductCard } from "@/components/shop/ProductCard";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { WhyForge } from "@/components/home/WhyForge";
 import { ProductGallery } from "@/components/shop/ProductGallery";
+import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { buildMetadata, JsonLd, breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 import { getProductBySlug, getRelatedProducts } from "@/lib/data";
 import { availableQuantity } from "@/lib/cart";
@@ -43,8 +44,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function ProductPage({ params }: Props) {
+export default async function ProductPage({ params, searchParams }: Props & { searchParams: Promise<{ rp?: string }> }) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const reviewPage = Math.max(1, Number(sp.rp) || 1);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
@@ -238,6 +241,9 @@ export default async function ProductPage({ params }: Props) {
         warrantyInfo={product.warrantyInfo}
       />
 
+      {/* ─── CUSTOMER REVIEWS ────────────────────────────────────────────── */}
+      <ReviewSection product={{ id: product.id, name: product.name, slug: product.slug }} page={reviewPage} />
+
       {/* ─── RELATED ─────────────────────────────────────────────────────── */}
       {related.length > 0 && (
         <section className="svc-section" aria-labelledby="related-heading">
@@ -275,6 +281,17 @@ export default async function ProductPage({ params }: Props) {
               priceCurrency: "INR",
               availability: buyable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
             },
+            ...(product.ratingCount > 0 && product.ratingAverage
+              ? {
+                  aggregateRating: {
+                    "@type": "AggregateRating",
+                    ratingValue: product.ratingAverage.toFixed(1),
+                    reviewCount: product.ratingCount,
+                    bestRating: 5,
+                    worstRating: 1,
+                  },
+                }
+              : {}),
           },
         ]}
       />

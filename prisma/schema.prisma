@@ -128,6 +128,7 @@ enum ReviewType {
   PRODUCT
   SERVICE
   REPAIR
+  GENERAL // standalone review with no product/service/review target
 }
 
 enum ReviewStatus {
@@ -865,16 +866,26 @@ model Review {
   authorName     String?
   authorLocation String?
   serviceLabel   String?
+  /// Product context preserved when the product is later deleted
+  /// (productId → NULL via ON DELETE SET NULL). Always the name/slug at review
+  /// creation time — never re-read from the live product.
+  productNameSnapshot String?
+  productSlugSnapshot String?
   date           DateTime?
   verified       Boolean      @default(false)
   status         ReviewStatus @default(PENDING)
   createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   profile Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
   order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
 
+  /// One written review per customer per product. PostgreSQL unique indexes
+  /// treat NULLs as distinct, so orphaned reviews (productId = NULL after
+  /// product deletion) never collide.
+  @@unique([profileId, productId])
   @@index([status, type])
   @@index([productId, status])
   @@index([serviceId, status])
@@ -910,6 +921,7 @@ model WorkProject {
   date          DateTime?
   featured      Boolean      @default(false)
   active        Boolean      @default(true)
+  sortOrder     Int          @default(0)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -928,6 +940,7 @@ enum MediaEntityType {
   REPAIR
   ORDER
   SERVICE
+  REVIEW
 }
 
 enum MediaRole {

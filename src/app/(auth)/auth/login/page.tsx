@@ -11,9 +11,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { user } = await getCurrentAuth();
   if (user) redirect((await getAdminContext()) ? "/admin" : "/");
+
+  const sp = await searchParams;
+  // Only allow internal redirects — never open redirects.
+  const next = sp.next && sp.next.startsWith("/") && !sp.next.startsWith("//") ? sp.next : undefined;
 
   return (
     <AuthShell
@@ -42,7 +46,7 @@ export default async function LoginPage() {
         <p className="auth-subtitle">Sign in to your KeebForge account</p>
       </header>
 
-      <SignInForm />
+      <SignInForm next={next} />
 
     </AuthShell>
   );

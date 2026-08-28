@@ -1,0 +1,1 @@
+ALTER TYPE "ReviewType" ADD VALUE 'GENERAL';

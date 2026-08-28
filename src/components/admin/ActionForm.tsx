@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-export type ActionState = { ok?: boolean; error?: string; message?: string };
+export type ActionState = { ok?: boolean; error?: string; message?: string; id?: string };
 
 export function ActionForm({
   action,

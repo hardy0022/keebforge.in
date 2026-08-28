@@ -18,6 +18,7 @@ const NAV: { href: string; label: string; icon: string }[] = [
   { href: "/admin/payments", label: "Payments", icon: "💳" },
   { href: "/admin/shipments", label: "Shipments", icon: "📦" },
   { href: "/admin/reviews", label: "Reviews", icon: "⭐" },
+  { href: "/admin/work", label: "Work", icon: "🧰" },
   { href: "/admin/content", label: "Content", icon: "📝" },
   { href: "/admin/coupons", label: "Coupons", icon: "🏷️" },
   { href: "/admin/analytics", label: "Analytics", icon: "📈" },

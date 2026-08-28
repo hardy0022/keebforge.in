@@ -7,7 +7,7 @@ import { EyeIcon } from "./SignInForm";
 import { usernameError } from "@/lib/username";
 import { PASSWORD_RULES } from "@/lib/password";
 
-export function RegisterForm() {
+export function RegisterForm({ next }: { next?: string }) {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -89,7 +89,7 @@ export function RegisterForm() {
       /* non-fatal */
     }
 
-    router.push("/");
+    router.push(next ?? "/");
     router.refresh();
   }
 

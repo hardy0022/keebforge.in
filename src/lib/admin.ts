@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import type { Prisma, OrderStatus, PaymentStatus, Role } from "@prisma/client";
+import type { Prisma, OrderStatus, PaymentStatus, ReviewStatus, ReviewType, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 /** Admin role hierarchy. Profile.role stays the source of truth. */
@@ -209,3 +209,86 @@ export const getAdminOrder = cache((orderNumber: string) =>
     },
   })
 );
+
+// ─── Reviews (moderation) ───────────────────────────────────────────────────
+
+export type AdminReviewsQuery = {
+  status?: ReviewStatus;
+  type?: ReviewType;
+  rating?: number;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type AdminReviewRow = Prisma.ReviewGetPayload<{
+  select: {
+    id: true;
+    rating: true;
+    title: true;
+    body: true;
+    authorName: true;
+    verified: true;
+    status: true;
+    type: true;
+    serviceLabel: true;
+    createdAt: true;
+    productNameSnapshot: true;
+    productSlugSnapshot: true;
+    profile: { select: { id: true; name: true; email: true } };
+    product: { select: { id: true; name: true; slug: true; active: true } };
+  };
+}> & { images: { url: string }[] };
+
+export const getAdminReviews = cache((params: AdminReviewsQuery) => {
+  const { status, type, rating, q, page = 1, pageSize = 20 } = params;
+  const where: Prisma.ReviewWhereInput = {
+    ...(status ? { status } : {}),
+    ...(type ? { type } : {}),
+    ...(rating ? { rating } : {}),
+    ...(q
+      ? {
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { body: { contains: q, mode: "insensitive" } },
+            { authorName: { contains: q, mode: "insensitive" } },
+            { productNameSnapshot: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+  const select = {
+    id: true,
+    rating: true,
+    title: true,
+    body: true,
+    authorName: true,
+    verified: true,
+    status: true,
+    type: true,
+    serviceLabel: true,
+    createdAt: true,
+    productNameSnapshot: true,
+    productSlugSnapshot: true,
+    profile: { select: { id: true, name: true, email: true } },
+    product: { select: { id: true, name: true, slug: true, active: true } },
+  } satisfies Prisma.ReviewSelect;
+
+  return Promise.all([
+    prisma.review.count({ where }),
+    prisma.review.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize, select }),
+  ]).then(async ([total, items]) => {
+    const media = await prisma.media.findMany({
+      where: { entityType: "REVIEW", entityId: { in: items.map((r) => r.id) } },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+    const byReview = new Map<string, { url: string }[]>();
+    for (const m of media) {
+      const list = byReview.get(m.entityId) ?? [];
+      list.push({ url: m.secureUrl });
+      byReview.set(m.entityId, list);
+    }
+    const rows: AdminReviewRow[] = items.map((r) => ({ ...r, images: byReview.get(r.id) ?? [] }));
+    return { items: rows, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
+  });
+});

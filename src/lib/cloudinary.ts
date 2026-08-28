@@ -29,7 +29,7 @@ const ROOT = "keebforge";
  * Products use their stable cuid (survives slug renames); repairs/orders use
  * their business ids. Never customer names/emails/phones.
  */
-export function mediaFolder(entityType: "PRODUCT" | "REPAIR" | "ORDER", entityId: string, role?: string): string {
+export function mediaFolder(entityType: "PRODUCT" | "REPAIR" | "ORDER" | "REVIEW" | "WORK", entityId: string, role?: string): string {
   switch (entityType) {
     case "PRODUCT": {
       // Drafts (new-product editor, before the row exists) get a staging folder
@@ -41,6 +41,10 @@ export function mediaFolder(entityType: "PRODUCT" | "REPAIR" | "ORDER", entityId
       return `${ROOT}/repairs/${entityId}`;
     case "ORDER":
       return `${ROOT}/orders/${entityId}`;
+    case "REVIEW":
+      return `${ROOT}/reviews/${entityId}`;
+    case "WORK":
+      return `${ROOT}/work/${entityId}`;
   }
 }
 

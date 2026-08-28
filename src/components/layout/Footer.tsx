@@ -71,6 +71,7 @@ const SUPPORT = [
   { label: "Shipping Information" },
   { label: "Returns & Refunds" },
   { href: "/contact", label: "Contact" },
+  { href: "/write-review", label: "Write a Review" },
 ];
 
 function SocialButton({ label }: { label: (typeof SOCIALS)[number]["label"] }) {
