@@ -7,18 +7,20 @@ export function CtaSection({
   note,
   primaryLabel = "Shop Now",
   primaryHref = "/shop",
+  tag = "Let&apos;s build something great",
 }: {
   title: ReactNode;
   desc?: string;
   note?: ReactNode;
   primaryLabel?: string;
   primaryHref?: string;
+  tag?: string;
 }) {
   return (
     <section className="cta-section" aria-labelledby="cta-t">
       <div className="cta-deco" aria-hidden="true" />
       <div className="cta-wrap">
-        <span className="cta-tag">Let&apos;s build something great</span>
+        <span className="cta-tag">{tag}</span>
         <h2 className="cta-title" id="cta-t">
           {title}
         </h2>

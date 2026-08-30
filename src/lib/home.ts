@@ -30,7 +30,7 @@ export type HomeWork = {
 };
 
 export type HomeData = {
-  product: HomeProduct | null;
+  products: HomeProduct[];
   work: HomeWork[];
   reviews: {
     summary: Awaited<ReturnType<typeof getSiteReviewSummary>>;
@@ -39,24 +39,28 @@ export type HomeData = {
 };
 
 const HOME_WORK_TAKE = 5;
+const HOME_FEATURE_TAKE = 4;
 
-/** One cached fetch for the whole homepage: featured product, work, reviews, services. */
+/** One cached fetch for the whole homepage: featured products, work, reviews, services. */
 export const getHomeData = cache(async (): Promise<HomeData> => {
-  const featured = await prisma.product.findFirst({
-    where: { featured: true, active: true, status: "ACTIVE" },
+  const featured = await prisma.product.findMany({
+    where: { featured: true, active: true, status: "ACTIVE", images: { some: { active: true } } },
     orderBy: { createdAt: "desc" },
+    take: HOME_FEATURE_TAKE,
     select: PRODUCT_SELECT,
   });
 
   // ponytail: dev DB has no `featured` products — fall back to newest ACTIVE
-  // product with imagery so the homepage never renders a hero with no build.
-  const product =
-    featured ??
-    (await prisma.product.findFirst({
-      where: { active: true, status: "ACTIVE", images: { some: { active: true } } },
-      orderBy: { createdAt: "desc" },
-      select: PRODUCT_SELECT,
-    }));
+  // products with imagery so the homepage never renders an empty showcase.
+  const products =
+    featured.length > 0
+      ? featured
+      : await prisma.product.findMany({
+          where: { active: true, status: "ACTIVE", images: { some: { active: true } } },
+          orderBy: { createdAt: "desc" },
+          take: HOME_FEATURE_TAKE,
+          select: PRODUCT_SELECT,
+        });
 
   const [work, [summary, feed]] = await Promise.all([
     prisma.workProject.findMany({
@@ -69,7 +73,7 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
   ]);
 
   return {
-    product,
+    products,
     work: work.map((w) => ({
       ...w,
       images: (Array.isArray(w.images) ? w.images : []) as { url: string; alt?: string }[],

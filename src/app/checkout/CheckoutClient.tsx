@@ -13,6 +13,7 @@ import {
 import { SERVICE_CHECKOUT_KEY, type ConfigService, type StoredServiceCheckout } from "@/components/services/ServiceConfigurator";
 import { AddressPicker, type SavedAddressOption } from "@/components/services/AddressPicker";
 import { INDIAN_STATES } from "@/lib/indian-states";
+import { launchRazorpayPayment, type CreateOrderResponse } from "@/lib/razorpay-pay";
 
 interface SavedAddress {
   id: string;
@@ -27,17 +28,6 @@ interface SavedAddress {
   country: string;
   phone: string | null;
   isDefault: boolean;
-}
-
-interface CreateOrderResponse {
-  orderNumber: string;
-  orderId: string;
-  razorpayOrderId?: string;
-  amount?: number;
-  currency?: string;
-  keyId?: string;
-  requiresQuote?: boolean;
-  error?: string;
 }
 
 type FormData = {
@@ -94,57 +84,6 @@ function toServiceConfig(s: ConfigService): ServiceConfig {
     priceLabel: s.priceLabel,
     groupSlug: s.groupSlug,
   };
-}
-
-/* ─────────────────────────── shared payment flow ──────────────────────── */
-
-interface LaunchRazorpayOpts {
-  order: CreateOrderResponse;
-  description: string;
-  prefill: { name: string; email: string; contact: string };
-  onVerified: () => void;
-  onDismissed: () => void;
-  onError: (msg: string) => void;
-}
-
-/** Opens the Razorpay modal and verifies the result server-side. Shared by service + product checkout. */
-function launchRazorpayPayment({ order, description, prefill, onVerified, onDismissed, onError }: LaunchRazorpayOpts) {
-  if (!window.Razorpay || !order.keyId || !order.razorpayOrderId || !order.amount || !order.currency) {
-    onError("Payment gateway failed to load. Refresh the page and try again.");
-    return;
-  }
-  const rzp = new window.Razorpay({
-    key: order.keyId,
-    amount: order.amount,
-    currency: order.currency,
-    name: "KeebForge",
-    description,
-    order_id: order.razorpayOrderId,
-    prefill,
-    notes: { orderId: order.orderId, orderNumber: order.orderNumber },
-    theme: { color: "#d4f700" },
-    handler: (response) => {
-      void (async () => {
-        try {
-          const res = await fetch("/api/payments/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...response, orderId: order.orderId }),
-          });
-          const data = await res.json().catch(() => null);
-          if (!res.ok) {
-            onError((data as { error?: string } | null)?.error ?? "Payment verification failed. Contact support with your payment ID.");
-            return;
-          }
-          onVerified();
-        } catch {
-          onError("Payment verification failed. Please contact support.");
-        }
-      })();
-    },
-    modal: { ondismiss: onDismissed },
-  });
-  rzp.open();
 }
 
 /* ────────────────────────── Service checkout ─────────────────────────── */

@@ -43,6 +43,7 @@ export async function syncTrackingCache(orderId: string): Promise<void> {
       lineTotal: s.lineTotal,
     })),
     repairs: order.repairs.map((r) => ({
+      id: r.id,
       deviceType: r.deviceType,
       deviceModel: r.deviceModel,
       issue: r.issue,

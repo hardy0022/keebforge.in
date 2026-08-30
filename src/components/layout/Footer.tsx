@@ -65,11 +65,10 @@ const COMPANY = [
   { href: "/terms", label: "Terms & Conditions" },
 ];
 
-/* Routes without pages yet render as non-links tagged SOON — never dead hrefs. */
-const SUPPORT = [
-  { label: "Track Order" },
-  { label: "Shipping Information" },
-  { label: "Returns & Refunds" },
+const SUPPORT: { href: string; label: string }[] = [
+  { href: "/track-order", label: "Track Order" },
+  { href: "/shipping-information", label: "Shipping Information" },
+  { href: "/returns-refunds", label: "Returns & Refunds" },
   { href: "/contact", label: "Contact" },
   { href: "/write-review", label: "Write a Review" },
 ];
@@ -154,18 +153,11 @@ export async function SiteFooter() {
         <nav aria-label="Support">
           <div className="footer-col-title">Support</div>
           <div className="footer-col-links">
-            {SUPPORT.map((l) =>
-              l.href ? (
-                <Link key={l.label} href={l.href}>
-                  {l.label}
-                </Link>
-              ) : (
-                <span key={l.label} className="footer-link-soon" title="Coming soon">
-                  {l.label}
-                  <em>Soon</em>
-                </span>
-              )
-            )}
+            {SUPPORT.map((l) => (
+              <Link key={l.label} href={l.href}>
+                {l.label}
+              </Link>
+            ))}
           </div>
         </nav>
       </div>

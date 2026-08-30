@@ -31,11 +31,14 @@ function ActionForm({
 }) {
   const [state, formAction, pending] = useActionState(action, {});
 
+  const success = state.ok === true;
+  const errMsg = state.error || (state.ok === false ? "Something went wrong." : "");
+
   return (
     <>
-      {state.ok !== undefined && (
-        <div className={`kf-toast ${state.ok ? "ok" : "err"}`} role="status">
-          {state.ok ? `✓ ${toastLabel} saved` : "✕ Unable to save"}
+      {(success || errMsg) && (
+        <div className={`kf-toast ${success ? "ok" : "err"}`} role={success ? "status" : "alert"}>
+          {success ? `✓ ${toastLabel} saved` : `✕ ${errMsg}`}
         </div>
       )}
       <form action={formAction}>{children(pending, state)}</form>

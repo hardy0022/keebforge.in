@@ -11,6 +11,9 @@ const STATIC: { path: string; changeFrequency?: MetadataRoute.Sitemap[number]["c
   { path: "/faq", priority: 0.5 },
   { path: "/work", priority: 0.7 },
   { path: "/contact", priority: 0.5 },
+  { path: "/track-order", priority: 0.5 },
+  { path: "/shipping-information", priority: 0.4 },
+  { path: "/returns-refunds", priority: 0.4 },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

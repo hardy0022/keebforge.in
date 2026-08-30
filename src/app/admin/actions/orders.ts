@@ -33,11 +33,16 @@ export async function updateOrderStatus(_prev: ActionState, formData: FormData):
   const order = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true, orderNumber: true } });
   if (!order) return { error: "Order not found." };
 
-  await prisma.$transaction([
-    prisma.order.update({ where: { id: orderId }, data: { status } }),
-    prisma.orderTimeline.create({ data: { orderId, status, note: note ?? null } }),
-  ]);
-  await syncTrackingCache(orderId);
+  try {
+    await prisma.$transaction([
+      prisma.order.update({ where: { id: orderId }, data: { status } }),
+      prisma.orderTimeline.create({ data: { orderId, status, note: note ?? null } }),
+    ]);
+    await syncTrackingCache(orderId);
+  } catch (e) {
+    console.error("updateOrderStatus failed:", e);
+    return { error: "Couldn't save status change." };
+  }
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${order.orderNumber}`);
   return { ok: true };
@@ -63,8 +68,13 @@ export async function addTimelineEntry(_prev: ActionState, formData: FormData): 
   const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
   if (!order) return { error: "Order not found." };
 
-  await prisma.orderTimeline.create({ data: { orderId, status: enumVal, note: note || null } });
-  await syncTrackingCache(orderId);
+  try {
+    await prisma.orderTimeline.create({ data: { orderId, status: enumVal, note: note || null } });
+    await syncTrackingCache(orderId);
+  } catch (e) {
+    console.error("addTimelineEntry failed:", e);
+    return { error: "Couldn't add timeline entry." };
+  }
   revalidatePath(`/admin/orders/${order.orderNumber}`);
   return { ok: true };
 }
@@ -92,12 +102,17 @@ export async function updateShipping(_prev: ActionState, formData: FormData): Pr
   const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
   if (!order) return { error: "Order not found." };
 
-  await prisma.shipment.upsert({
-    where: { orderId },
-    update: data,
-    create: { orderId, ...data },
-  });
-  await syncTrackingCache(orderId);
+  try {
+    await prisma.shipment.upsert({
+      where: { orderId },
+      update: data,
+      create: { orderId, ...data },
+    });
+    await syncTrackingCache(orderId);
+  } catch (e) {
+    console.error("updateShipping failed:", e);
+    return { error: "Couldn't save shipping details." };
+  }
   revalidatePath(`/admin/orders/${order.orderNumber}`);
   return { ok: true };
 }
@@ -121,15 +136,20 @@ export async function addOrderNote(_prev: ActionState, formData: FormData): Prom
   const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
   if (!order) return { error: "Order not found." };
 
-  await prisma.orderMessage.create({
-    data: {
-      orderId,
-      author: "ADMIN",
-      message,
-      visibleToCustomer: visibleToCustomer === "1",
-    },
-  });
-  await syncTrackingCache(orderId);
+  try {
+    await prisma.orderMessage.create({
+      data: {
+        orderId,
+        author: "ADMIN",
+        message,
+        visibleToCustomer: visibleToCustomer === "1",
+      },
+    });
+    await syncTrackingCache(orderId);
+  } catch (e) {
+    console.error("addOrderNote failed:", e);
+    return { error: "Couldn't save note." };
+  }
   revalidatePath(`/admin/orders/${order.orderNumber}`);
   return { ok: true };
 }
@@ -142,8 +162,13 @@ export async function archiveOrder(_prev: ActionState, formData: FormData): Prom
   const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
   if (!order) return { error: "Order not found." };
 
-  await prisma.order.update({ where: { id: orderId }, data: { isDeleted: true } });
-  await prisma.tracking.deleteMany({ where: { orderId } });
+  try {
+    await prisma.order.update({ where: { id: orderId }, data: { isDeleted: true } });
+    await prisma.tracking.deleteMany({ where: { orderId } });
+  } catch (e) {
+    console.error("archiveOrder failed:", e);
+    return { error: "Couldn't archive order." };
+  }
   revalidatePath("/admin/orders");
   return { ok: true };
 }

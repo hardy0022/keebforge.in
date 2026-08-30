@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { sendInquiry, type InquiryState } from "@/app/actions/inquiry";
+import { sniffImageFile } from "@/lib/image-validation";
 
 const ACCEPT = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_IMAGES = 5;
 const MAX_BYTES = 5 * 1024 * 1024;
 
-export function InquiryForm() {
+export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
   const [state, formAction, pending] = useActionState<InquiryState, FormData>(sendInquiry, {});
   const inputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<File[]>([]);
@@ -24,7 +25,7 @@ export function InquiryForm() {
     setImages(files);
   };
 
-  const handleFiles = (incoming: File[]) => {
+  const handleFiles = async (incoming: File[]) => {
     setImgError(null);
     const existing = Array.from(inputRef.current?.files ?? []);
     const seen = new Set(existing.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
@@ -34,12 +35,13 @@ export function InquiryForm() {
       const key = `${f.name}:${f.size}:${f.lastModified}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      if (!ACCEPT.includes(f.type)) {
-        err = err ?? `"${f.name}" isn't a supported image. Use JPG, PNG, WebP or AVIF.`;
-        continue;
-      }
       if (f.size > MAX_BYTES) {
         err = err ?? `"${f.name}" is over 5 MB. Compress it and try again.`;
+        continue;
+      }
+      // Gallery/camera picks may report an empty or generic MIME type — sniff the bytes.
+      if (!(await sniffImageFile(f))) {
+        err = err ?? `"${f.name}" isn't a supported image. Use JPG, PNG, WebP or AVIF.`;
         continue;
       }
       merged.push(f);
@@ -75,11 +77,15 @@ export function InquiryForm() {
   }
 
   return (
-    <form action={formAction} className="card">
-      <h3 className="ct">Send a Repair Inquiry</h3>
-      <p className="cd" style={{ marginBottom: 20 }}>
-        Describe your device and issue — we&apos;ll get back to you with a quote.
-      </p>
+    <form action={formAction} className="card contact-form">
+      {!hideIntro && (
+        <>
+          <h3 className="ct">Send a Repair Inquiry</h3>
+          <p className="cd" style={{ marginBottom: 20 }}>
+            Describe your device and issue — we&apos;ll get back to you with a quote.
+          </p>
+        </>
+      )}
 
       <div className="form-row">
         <label htmlFor="iq-name">Name</label>
@@ -94,8 +100,8 @@ export function InquiryForm() {
         <input id="iq-email" name="email" type="email" placeholder="your@email.com" required autoComplete="email" />
       </div>
       <div className="form-row">
-        <label htmlFor="iq-device">Keyboard / Device Model</label>
-        <input id="iq-device" name="deviceModel" type="text" placeholder="e.g. Keychron K2, Logitech G Pro…" required />
+        <label htmlFor="iq-device">Keyboard / Device Model <span className="optional">(optional)</span></label>
+        <input id="iq-device" name="deviceModel" type="text" placeholder="e.g. Keychron K2, Logitech G Pro…" />
       </div>
       <div className="form-row">
         <label htmlFor="iq-issue">Issue Description</label>
@@ -109,7 +115,7 @@ export function InquiryForm() {
       </div>
 
       <div className="form-row">
-        <label htmlFor="iq-images">Photos of the Issue</label>
+        <label htmlFor="iq-images">Photos of the Issue <span className="optional">(optional)</span></label>
         <p className="upload-hint">
           Upload clear photos of the device, damage, PCB, or affected area. Photos help us understand the issue
           before we receive the device.

@@ -26,7 +26,7 @@ export function SiteChrome({
       </ShowOnSite>
       <main className="page-main">{children}</main>
       <ShowOnSite exclude={["/mods/checkout", "/shop/checkout"]}>
-        {footer}
+        <div className={pathname === "/contact" ? "contact-footer" : undefined}>{footer}</div>
       </ShowOnSite>
     </>
   );

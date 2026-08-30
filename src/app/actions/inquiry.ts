@@ -3,7 +3,7 @@
 import { Resend } from "resend";
 import { z } from "zod";
 import { cloudinaryConfigured, uploadBuffer } from "@/lib/cloudinary";
-import { IMAGE_TYPES_MESSAGE, isAllowedImageMime, sniffImageType } from "@/lib/image-validation";
+import { IMAGE_TYPES_MESSAGE, sniffImageType } from "@/lib/image-validation";
 
 const inquirySchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(80),
@@ -14,7 +14,7 @@ const inquirySchema = z.object({
     .max(20)
     .regex(/^[0-9+\-\s()]+$/, "Only digits, +, - and spaces are allowed."),
   email: z.string().trim().email("Please enter a valid email address.").max(120),
-  deviceModel: z.string().trim().min(2, "Please enter the device model.").max(120),
+  deviceModel: z.string().trim().max(120).default(""),
   issue: z.string().trim().min(20, "Please describe the issue in a little more detail.").max(2000),
 });
 
@@ -42,31 +42,30 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
   if (rawImages.length > MAX_IMAGES) {
     return { error: `You can attach at most ${MAX_IMAGES} photos.` };
   }
-
-  for (const f of rawImages) {
-    if (!isAllowedImageMime(f.type)) {
-      return { error: `${IMAGE_TYPES_MESSAGE} ("${f.name}" isn't one of those).` };
-    }
-    if (f.size > MAX_IMAGE_BYTES) {
-      return { error: `Each photo must be under 5 MB — "${f.name}" is too large.` };
-    }
+  // Validate by file bytes, not browser-reported MIME — server-action form
+  // serialization often turns gallery picks into generic "blob" files with a
+  // lost MIME type while the bytes are valid JPEG/PNG. Same path as reviews.
+  const images = await Promise.all(
+    rawImages.map(async (f) => ({ name: f.name, buffer: Buffer.from(await f.arrayBuffer()) })),
+  );
+  for (const img of images) {
+    if (img.buffer.length > MAX_IMAGE_BYTES)
+      return { error: `Each photo must be under 5 MB — "${img.name}" is too large.` };
+    if (!sniffImageType(img.buffer))
+      return { error: `"${img.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}` };
   }
 
   const uploaded: { url: string; publicId: string }[] = [];
-  if (rawImages.length > 0) {
+  if (images.length > 0) {
     if (!cloudinaryConfigured()) {
       return {
         error:
           "Photo upload is temporarily unavailable. You can still send the inquiry without photos, or email the photos to contact@keebforge.in.",
       };
     }
-    for (const f of rawImages) {
-      const buf = Buffer.from(await f.arrayBuffer());
-      if (!sniffImageType(buf)) {
-        return { error: `"${f.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}` };
-      }
+    for (const img of images) {
       try {
-        const r = await uploadBuffer(buf, { folder: "keebforge/repairs/inquiries" });
+        const r = await uploadBuffer(img.buffer, { folder: "keebforge/repairs/inquiries" });
         uploaded.push({ url: r.url, publicId: r.publicId });
       } catch (e) {
         console.error("Cloudinary upload error:", e);
@@ -81,7 +80,7 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
       from: process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>",
       to: ["contact@keebforge.in"],
       replyTo: email,
-      subject: `Repair Inquiry — ${deviceModel} — ${name}`,
+      subject: `Repair Inquiry — ${deviceModel || "Device"} — ${name}`,
       html: `
         <h2>Repair Inquiry — KeebForge.in</h2>
         <table cellpadding="6" style="font-family:sans-serif;font-size:14px;color:#1a1a1a">
