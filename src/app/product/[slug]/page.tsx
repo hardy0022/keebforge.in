@@ -85,6 +85,7 @@ export default async function ProductPage({ params, searchParams }: Props & { se
     <main className="product-page">
       <div className="wrap page-start">
         <Breadcrumbs
+          className="breadcrumbs-lime"
           items={[
             { name: "Shop", href: "/shop" },
             { name: product.category.name, href: `/shop/${product.category.slug}` },
@@ -242,7 +243,7 @@ export default async function ProductPage({ params, searchParams }: Props & { se
       />
 
       {/* ─── CUSTOMER REVIEWS ────────────────────────────────────────────── */}
-      <ReviewSection product={{ id: product.id, name: product.name, slug: product.slug }} page={reviewPage} />
+      <ReviewSection scope={{ type: "product", product: { id: product.id, name: product.name, slug: product.slug } }} page={reviewPage} />
 
       {/* ─── RELATED ─────────────────────────────────────────────────────── */}
       {related.length > 0 && (

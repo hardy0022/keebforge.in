@@ -41,6 +41,6 @@ export const config = {
      * Case-variant old URLs only; api/ (incl. Better Auth) and public files
      * are excluded.
      */
-    "/((?!_next/static|_next/image|favicon.ico|icon-192.png|icon-32.png|images/|api/|track/|.*\\.(?:webp|png|jpg|jpeg|svg|ico|txt|xml)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/|track/|.*\\.(?:webp|png|jpg|jpeg|svg|ico|txt|xml)$).*)",
   ],
 };

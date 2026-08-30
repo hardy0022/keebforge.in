@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-export function Breadcrumbs({ items }: { items: { name: string; href?: string }[] }) {
+export function Breadcrumbs({ items, className }: { items: { name: string; href?: string }[]; className?: string }) {
   return (
-    <nav aria-label="Breadcrumb" className="text-xs tracking-wider text-[var(--t3)] uppercase">
+    <nav aria-label="Breadcrumb" className={`text-xs tracking-wider text-[var(--t3)] uppercase${className ? ` ${className}` : ""}`}>
       <ol className="flex flex-wrap gap-1.5 items-center">
         <li>
           <Link href="/" className="hover:text-[var(--t1)] transition-colors">

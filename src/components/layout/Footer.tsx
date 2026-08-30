@@ -61,7 +61,7 @@ const COMPANY = [
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
   { href: "/faq", label: "FAQ" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/privacy-policy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms & Conditions" },
 ];
 

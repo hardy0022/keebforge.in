@@ -1,3 +1,4 @@
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
 
 /** The two-column rating summary (big average + 5★ bar distribution). */
@@ -14,7 +15,9 @@ export function ReviewSummary({
     <div className="reviews-summary">
       <div className="reviews-summary-avg">
         <div className="reviews-summary-avg-main">
-          <span className="reviews-avg-num">{Number((average ?? 0).toFixed(1)).toString()}</span>
+          <span className="reviews-avg-num">
+                  <NumberTicker value={Math.max(0, average ?? 0)} decimalPlaces={1} className="reviews-avg-num" />
+                </span>
           <span className="reviews-avg-label">out of 5</span>
         </div>
         <ReviewStars rating={average ?? 0} size="lg" />

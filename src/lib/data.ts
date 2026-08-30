@@ -17,6 +17,8 @@ export const getServiceCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
   })
 );
 
+export type ServiceGroups = Awaited<ReturnType<typeof getServiceCatalog>>;
+
 export const getApprovedReviews = cache((take = 12) =>
   prisma.review.findMany({
     where: { status: "APPROVED" },

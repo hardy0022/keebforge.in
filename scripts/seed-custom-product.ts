@@ -91,7 +91,6 @@ async function main() {
       "Build a bespoke mechanical keyboard in India: layout, switches, keycaps and case to your spec — assembled, lubed and tuned by KeebForge.",
     seoKeywords: "custom keyboard india, made to order keyboard, custom mech keyboard build",
     canonicalUrl: `https://keebforge.in/product/${SLUG}`,
-    ogImageUrl: "/images/poster.webp",
     active: true,
     featured: true,
     popular: true,
@@ -176,17 +175,7 @@ async function main() {
     console.log(`Option group: ${group.name} (${g.options.length} options)`);
   }
 
-  for (const [idx, url] of ["/images/poster.webp", "/images/banner.webp"].entries()) {
-    const existing = await prisma.productImage.findFirst({ where: { productId: product.id, url } });
-    if (existing) {
-      await prisma.productImage.update({ where: { id: existing.id }, data: { alt: product.name, sortOrder: idx, primary: idx === 0, active: true } });
-    } else {
-      await prisma.productImage.create({
-        data: { productId: product.id, url, alt: product.name, sortOrder: idx, primary: idx === 0, active: true },
-      });
-    }
-  }
-  console.log("Images: primary /images/poster.webp, secondary /images/banner.webp");
+  console.log("Images: none (local placeholder images removed; use Cloudinary media URLs).");
 
   console.log("\nDone. Preview: https://keebforge.in/shop/custom and /product/" + SLUG);
 }

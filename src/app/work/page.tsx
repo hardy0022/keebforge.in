@@ -1,130 +1,207 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { PageHero } from "@/components/ui/PageHero";
+import { Reveal } from "@/components/home/Reveal";
+import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
+import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { CtaSection } from "@/components/ui/CtaSection";
-import { ReviewCard } from "@/components/reviews/ReviewCard";
-import { ReviewPagination } from "@/components/reviews/ReviewPagination";
-import { ReviewSummary } from "@/components/reviews/ReviewSummary";
 import { buildMetadata } from "@/lib/seo";
+import { cldUrl } from "@/lib/cloudinary-url";
 import { prisma } from "@/lib/prisma";
-import { getPublicReviews, getSiteReviewSummary } from "@/lib/reviews";
 
 export const metadata: Metadata = buildMetadata({
   title: "Sample Work & Portfolio | KeebForge",
   description:
-    "A snapshot of KeebForge's recent keyboard builds, repairs, PCB work and modifications — real projects serviced for customers across India.",
+    "A collection of KeebForge's keyboard builds, repairs, PCB work and modifications — real projects and customer feedback from the KeebForge workshop.",
   path: "/work",
 });
 
 type WorkImage = { url: string; alt?: string; publicId?: string };
 
+export const CATEGORY: Record<string, string> = {
+  CUSTOM_BUILD: "Custom Build",
+  REPAIR: "Repair",
+  MOD: "Mod",
+  PCB: "PCB Work",
+  MOUSE: "Mouse",
+  OTHER: "Project",
+};
+
 export default async function WorkPage({ searchParams }: { searchParams: Promise<{ rp?: string }> }) {
   const [{ rp }] = [await searchParams];
   const page = Math.max(1, parseInt(rp ?? "1", 10) || 1);
 
-  const [projects, summary, feed] = await Promise.all([
-    prisma.workProject.findMany({
-      where: { active: true },
-      orderBy: [{ sortOrder: "asc" }, { featured: "desc" }, { createdAt: "desc" }],
-    }),
-    getSiteReviewSummary(),
-    getPublicReviews({ page }),
-  ]);
-  const currentFeedPage = Math.min(page, feed.pages);
+  const projects = await prisma.workProject.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { featured: "desc" }, { createdAt: "desc" }],
+  });
+
+  const PER_PAGE = 12;
+  const featured = projects[0];
+  const rest = projects.slice(1);
+  const gridPages = Math.max(1, Math.ceil(rest.length / PER_PAGE));
+  const gridPage = Math.min(page, gridPages);
+  const gridProjects = rest.slice((gridPage - 1) * PER_PAGE, gridPage * PER_PAGE);
+  const featuredImg = (featured?.images as WorkImage[] | null) ?? undefined;
 
   return (
-    <main>
-      <PageHero
-        tag="Portfolio"
-        title="Sample Work"
-        desc="A snapshot of recent builds, repairs, and modifications. Every project below was handled end-to-end in the KeebForge workshop."
-      />
+    <main className="work-page">
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="work-hero">
+        <div className="work-wrap">
+          <Reveal>
+            <p className="hp-kicker work-eyebrow">
+              <span className="hp-kicker-mark">{"//"}</span> Portfolio
+            </p>
+            <h1 className="work-hero-title">
+              <DiaTextReveal
+                text="Sample Work"
+                textColor="var(--t1)"
+                colors={["#c9f31d", "#eaff6a", "#8ec900"]}
+                duration={1.4}
+              />
+            </h1>
+            <p className="work-hero-desc">
+              A collection of keyboard builds, repairs, modifications and workshop projects completed by KeebForge.
+            </p>
+          </Reveal>
+        </div>
+      </section>
 
-      <section className="svc-section" aria-labelledby="work-heading">
-        <div className="wrap">
-          <div className="section-head">
-            <h2 id="work-heading" className="product-section-title">
-              From the Workshop
-            </h2>
-            <p className="text-[var(--t3)]">Hand-picked projects — builds, repairs, and mods done in-house.</p>
-          </div>
-
-          {projects.length === 0 ? (
-            <p className="text-[var(--t3)]">No projects published yet.</p>
-          ) : (
-            <div className="gallery-grid">
-              {projects.map((p) => {
-                const imgs = (p.images as WorkImage[]) ?? [];
-                const first = imgs[0];
-                return (
-                  <Link key={p.id} href={`/work/${p.slug}`} className="gallery-item" aria-label={p.title}>
-                    {first ? (
-                      <Image src={first.url} alt={first.alt ?? p.title} fill sizes="(min-width: 1080px) 33vw, (min-width: 640px) 50vw, 100vw" />
-                    ) : (
-                      <span className="flex items-center justify-center h-full text-[var(--t3)]">⌨️</span>
-                    )}
-                    <div className="gallery-item-overlay">
-                      <span className="gallery-item-label">{p.title}</span>
-                      {imgs.length > 1 && <span className="gallery-item-meta">{imgs.length} photos</span>}
+      {/* ── Featured work ─────────────────────────────────────────────────── */}
+      <section className="work-feat" aria-labelledby="work-featured">
+        <div className="work-wrap">
+          {featured ? (
+            <Reveal className="work-showcase-wrap">
+              <article className="work-showcase">
+                <div className="work-showcase-media">
+                  {featuredImg?.[0] ? (
+                    <>
+                      <Image
+                        src={cldUrl(featuredImg[0].url, 1600)}
+                        alt={featuredImg[0].alt ?? featured.title}
+                        fill
+                        priority
+                        sizes="(min-width: 720px) 325px, 100vw"
+                      />
+                      <span className="work-showcase-flag">Featured</span>
+                    </>
+                  ) : (
+                    <div className="work-media-empty">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect width="20" height="14" x="2" y="5" rx="2" />
+                        <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M7 17h10" />
+                      </svg>
+                      <span>No image yet</span>
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
+                  )}
+                </div>
+                <div className="work-showcase-body">
+                  <div className="work-showcase-title-row">
+                    <h3 id="work-featured" className="work-feat-title">
+                      {featured.title}
+                    </h3>
+                    <Link href={`/work/${featured.slug}`} className="work-showcase-link">
+                      View →
+                    </Link>
+                  </div>
+                  {featured.description && <p className="work-feat-desc">{featured.description}</p>}
+                </div>
+              </article>
+            </Reveal>
+          ) : (
+            <Reveal>
+              <div className="work-empty">
+                <p className="work-empty-title">No projects published yet.</p>
+                <p className="work-empty-sub">Once an admin publishes a project, it will appear here automatically.</p>
+              </div>
+            </Reveal>
           )}
         </div>
       </section>
 
-      <section className="svc-section reviews-section" aria-labelledby="work-reviews-heading">
-        <div className="wrap">
-          <div className="product-reviews">
-            <header className="product-reviews-head">
-              <h2 id="work-reviews-heading" className="product-section-title">
-                Customer Reviews
-              </h2>
-              <Link href="/write-review" className="btn-prime review-write-btn">
-                Write a Review →
-              </Link>
-            </header>
-
-            {summary.count === 0 ? (
-              <div className="review-empty">
-                <p className="review-empty-title">No reviews yet</p>
-                <p className="review-empty-sub">Share your experience with KeebForge and help others choose with confidence.</p>
-                <Link href="/write-review" className="btn-prime">
-                  Write a Review →
-                </Link>
+      {/* ── Recent work ──────────────────────────────────────────────────── */}
+      {rest.length > 0 && (
+        <section className="work-portfolio" aria-labelledby="work-grid-heading">
+          <div className="work-wrap">
+            <Reveal>
+              <div className="work-sec-head">
+                <p className="hp-kicker">
+                  <span className="hp-kicker-mark">{"//"}</span> Recent Work
+                </p>
+                <h2 id="work-grid-heading" className="work-sec-title">
+                  Recent projects and workshop builds.
+                </h2>
               </div>
-            ) : (
-              <>
-                <ReviewSummary count={summary.count} average={summary.average} distribution={summary.distribution} />
+            </Reveal>
 
-                <div className="reviews-grid-wrap">
-                  <p className="reviews-grid-label">Reviews</p>
-                  <div className="reviews-grid">
-                    {feed.items.map((r) => (
-                      <ReviewCard key={r.id} review={r} verified={r.verified} />
-                    ))}
-                  </div>
+            <div className="work-grid">
+              {gridProjects.map((p, i) => {
+                const imgs = (p.images as WorkImage[]) ?? [];
+                const img = imgs[0];
+                return (
+                  <Reveal as="div" key={p.id} delay={(i % 4) * 80}>
+                    <Link href={`/work/${p.slug}`} className="work-card" aria-label={p.title}>
+                      <div className="work-card-media">
+                        {img ? (
+                          <Image src={cldUrl(img.url, 900)} alt={img.alt ?? p.title} fill sizes="(min-width: 960px) 23vw, (min-width: 640px) 46vw, 100vw" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-[var(--t3)]">⌨️</div>
+                        )}
+                        <span className="work-card-arrow" aria-hidden="true">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M7 17L17 7" />
+                            <path d="M8 7h9v9" />
+                          </svg>
+                        </span>
+                      </div>
+                      <div className="work-card-body">
+                        <span className="work-cat">{CATEGORY[p.category] ?? "Project"}</span>
+                        <span className="work-card-title">{p.title}</span>
+                        {imgs.length > 1 && <span className="work-card-photos">{imgs.length} photos</span>}
+                      </div>
+                    </Link>
+                  </Reveal>
+                );
+              })}
+            </div>
 
-                  {feed.pages > 1 && <ReviewPagination basePath="/work" current={currentFeedPage} pages={feed.pages} />}
-                </div>
-              </>
+            {gridPages > 1 && (
+              <nav className="work-pager" aria-label="Work pagination">
+                {gridPage > 1 && (
+                  <Link href={`/work?rp=${gridPage - 1}`} className="btn-ghost">
+                    ← Newer
+                  </Link>
+                )}
+                <span className="work-pager-info">
+                  Page {gridPage} of {gridPages}
+                </span>
+                {gridPage < gridPages && (
+                  <Link href={`/work?rp=${gridPage + 1}`} className="btn-ghost">
+                    Older →
+                  </Link>
+                )}
+              </nav>
             )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
+      {/* ── Customer reviews ─────────────────────────────────────────────── */}
+      <ReviewSection scope={{ type: "site" }} page={page} titleReveal />
+
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <CtaSection
         title={
           <>
-            Want Work
+            Ready to Build
             <br />
-            Like This?
+            Something Better?
           </>
         }
-        desc="Every project starts with an order — describe your build or repair and get it handled the same way."
+        desc="Have a keyboard that needs work or want something custom? Real builds and repairs, handled the same way in the KeebForge workshop."
+        primaryLabel="Start a Project →"
+        primaryHref="/shop"
       />
     </main>
   );

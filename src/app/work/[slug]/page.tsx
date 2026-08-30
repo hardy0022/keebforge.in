@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { CtaSection } from "@/components/ui/CtaSection";
+import { WorkImageSlider } from "@/components/work/WorkImageSlider";
 import { buildMetadata } from "@/lib/seo";
 import { getWorkProjectBySlug } from "@/lib/data";
+
+type WorkImage = { url: string; alt?: string; publicId?: string };
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -19,81 +22,76 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
   const project = await getWorkProjectBySlug(slug);
   if (!project) notFound();
 
-  const imgs = (project.images as { url: string; alt?: string }[]) ?? [];
+  const imgs = (project.images as WorkImage[] | null) ?? [];
+  const date = project.date
+    ? project.date.toLocaleDateString("en-IN", { month: "short", year: "numeric" })
+    : null;
 
   return (
     <main>
-      <section className="pt-[calc(var(--nav-h)+40px)] pb-8">
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="pt-[calc(var(--nav-h)+44px)] pb-14 md:pb-20">
         <div className="wrap">
-          <Breadcrumbs items={[{ name: "Work", href: "/work" }, { name: project.title }]} />
-        </div>
-      </section>
+          <Breadcrumbs className="breadcrumbs-lime" items={[{ name: "Work", href: "/work" }, { name: project.title }]} />
 
-      <section className="pb-8">
-        <div className="wrap">
-          <div className="max-w-[760px]">
-            <h1 className="font-display text-[clamp(1.8rem,4vw,2.6rem)] font-bold leading-tight tracking-[-0.02em] text-[var(--t1)]">
-              {project.title}
-            </h1>
-            {project.date && (
-              <p className="mt-2 text-[0.68rem] uppercase tracking-[0.1em] text-[var(--t3)]">
-                {project.date.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
-              </p>
-            )}
-            <p className="mt-4 text-[0.9rem] leading-relaxed text-[var(--t2)]">{project.description}</p>
-            {project.workPerformed && (
-              <p className="mt-3 text-[0.85rem] leading-relaxed text-[var(--t2)]">{project.workPerformed}</p>
-            )}
+          <div className="mt-10 grid items-center gap-10 md:mt-14 md:grid-cols-[45%_55%] md:gap-12">
+            <div className="max-w-[540px]">
+              <h1 className="font-display text-[clamp(2.25rem,5vw,4.25rem)] font-bold leading-[1.02] tracking-[-0.03em] text-[var(--t1)]">
+                {project.title}
+              </h1>
+              {date && (
+                <p className="mt-4 text-[0.7rem] uppercase tracking-[0.12em] text-[var(--t3)]">Completed {date}</p>
+              )}
+              <div className="mt-6 text-[0.95rem] leading-relaxed text-[var(--t2)] md-content">
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>{project.description}</ReactMarkdown>
+              </div>
+            </div>
+
+            {imgs.length > 0 && <WorkImageSlider images={imgs} projectName={project.title} />}
           </div>
         </div>
       </section>
 
-      {imgs.length > 0 && (
-        <section className="pb-8">
+      {/* ── About this project ───────────────────────────────────────────── */}
+      {project.workPerformed && (
+        <section className="pb-16 md:pb-20">
           <div className="wrap">
-            <div className="grid gap-4 md:grid-cols-2">
-              {imgs.map((img, i) => (
-                <figure
-                  key={i}
-                  className="rounded-[var(--r-md)] overflow-hidden border border-[var(--bdr)] bg-[var(--bg1)]"
-                >
-                  <Image
-                    src={img.url}
-                    alt={img.alt ?? project.title}
-                    width={1200}
-                    height={900}
-                    sizes="(min-width: 768px) 50vw, 100vw"
-                    className="w-full h-auto"
-                  />
-                </figure>
-              ))}
+            <div className="max-w-[680px]">
+              <h2 className="font-display text-[clamp(1.4rem,3vw,2rem)] font-bold tracking-[-0.02em] text-[var(--t1)]">
+                About this project
+              </h2>
+              <div className="mt-5 text-[0.95rem] leading-relaxed text-[var(--t2)] md-content">
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>{project.workPerformed}</ReactMarkdown>
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      <div className="svc-section">
+      {/* ── Closing CTA ──────────────────────────────────────────────────── */}
+      <section className="py-15">
         <div className="wrap">
-          <div className="flex flex-wrap gap-3">
-            <Link href="/shop/checkout" className="btn-prime">
-              Start a Project Like This
-            </Link>
-            <Link href="/work" className="btn-ghost">
-              ← All Work
-            </Link>
+          <div className="mx-auto max-w-[960px] rounded-[var(--r-md)] border border-[var(--bdr)] bg-[var(--bg1)] px-6 py-12 text-center md:py-14">
+            <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[var(--acc)]">
+              Have a project like this?
+            </p>
+            <h2 className="mt-4 font-display text-[clamp(1.9rem,3vw,2.5rem)] font-bold tracking-[-0.02em] text-[var(--t1)]">
+              Let&apos;s build something great.
+            </h2>
+            <p className="mt-4 text-[0.9rem] leading-relaxed text-[var(--t2)]">
+              Have an idea in mind? Let&apos;s turn it into something real.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link href="/shop/checkout" className="btn-prime">
+                Start a Project Like This
+              </Link>
+              <Link href="/work" className="btn-ghost">
+                ← All Work
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
-
-      <CtaSection
-        title={
-          <>
-            See Your Build
-            <br />
-            Here Next
-          </>
-        }
-      />
+      </section>
     </main>
   );
 }

@@ -17,12 +17,13 @@ export function buildMetadata({
   title,
   description,
   path = "",
-  image = "/images/banner.webp",
+  image = "",
   type = "website",
   robots = "index, follow, max-image-preview:large",
   noIndex = false,
 }: SEOInput): Metadata {
   const url = `${SITE_URL}${path}`;
+  const ogImages = image ? [{ url: `${SITE_URL}${image}`, width: 1200, height: 630, alt: "KeebForge.in" }] : undefined;
   return {
     title,
     description,
@@ -35,13 +36,13 @@ export function buildMetadata({
       siteName: "KeebForge.in",
       locale: "en_IN",
       type,
-      images: [{ url: `${SITE_URL}${image}`, width: 1200, height: 630, alt: "KeebForge.in" }],
+      images: ogImages,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [`${SITE_URL}${image}`],
+      images: image ? [`${SITE_URL}${image}`] : undefined,
     },
   };
 }
