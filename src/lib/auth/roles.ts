@@ -14,6 +14,7 @@ const STAFF_PERMISSIONS: Record<string, string[]> = {
   service: ["view"],
   customer: ["view"],
   setting: ["view"],
+  coupon: ["view", "update"],
 };
 
 /** Permission check against the user's Profile.role. */
@@ -29,16 +30,14 @@ export function canAction(role: Role, resource: string, action: string): boolean
  */
 const NAV_PERMISSIONS: Record<string, [resource: string, action: string]> = {
   "/admin/orders": ["order", "view"],
-  "/admin/repairs": ["repair", "view"],
   "/admin/products": ["product", "view"],
-  "/admin/services": ["service", "view"],
+  "/admin/mods": ["service", "view"],
   "/admin/customers": ["customer", "view"],
   "/admin/payments": ["order", "view"],
   "/admin/shipments": ["order", "view"],
   "/admin/reviews": ["product", "view"],
   "/admin/work": ["setting", "update"],
-  "/admin/content": ["setting", "view"],
-  "/admin/coupons": ["order", "view"],
+  "/admin/coupons": ["coupon", "view"],
   "/admin/analytics": ["order", "view"],
   "/admin/activity": ["order", "view"],
   "/admin/settings": ["setting", "view"],

@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset",
-    "assets:optimize": "node scripts/optimize-assets.mjs"
+    "assets:optimize": "node scripts/optimize-assets.mjs",
+    "check:coupons": "tsx src/lib/coupon-eval.ts"
   },
   "dependencies": {
     "@better-auth/infra": "^0.4.2",

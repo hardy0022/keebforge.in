@@ -13,6 +13,7 @@ import {
   quoteFingerprint,
   toShippingMode,
 } from "@/lib/shipping";
+import { validateCoupon, couponOrderCreateData, incrementCouponUsage, type CouponEligible } from "@/lib/coupons";
 import { Prisma } from "@prisma/client";
 import Razorpay from "razorpay";
 
@@ -40,11 +41,24 @@ const addressSchema = z.object({
     .regex(/^\+?[0-9\s-]{10,15}$/, "Enter a valid phone number."),
 });
 
+const billingSchema = z.object({
+  fullName: z.string().trim().min(1, "Full name is required.").max(160),
+  addressLine1: z.string().trim().min(1, "Address is required.").max(300),
+  addressLine2: z.string().trim().max(120).optional(),
+  city: z.string().trim().min(1, "City is required.").max(100),
+  state: z.string().trim().min(1, "State is required.").max(100),
+  pinCode: z.string().trim().regex(/^[1-9]\d{5}$/, "Enter a valid 6-digit PIN code."),
+  phone: z.string().trim().min(10, "Enter a valid phone number.").max(15),
+});
+
 const bodySchema = z.object({
   shippingAddress: addressSchema,
   email: z.string().trim().email("Enter a valid email address.").optional(),
   saveAddress: z.boolean().optional(),
   mode: z.string().optional(),
+  couponCode: z.string().trim().max(40).optional(),
+  billingSameAsShipping: z.boolean().optional(),
+  billingAddress: billingSchema.optional(),
 });
 
 /** Shipping-mode error taxonomy mapped to HTTP status. */
@@ -75,6 +89,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid delivery details." }, { status: 400 });
     }
     const { shippingAddress: addr, saveAddress } = parsed.data;
+    const billingAddr = parsed.data.billingAddress;
     const requestedModeRaw = parsed.data.mode == null ? DEFAULT_SHIPPING_MODE : toShippingMode(parsed.data.mode);
     if (!requestedModeRaw || !enabledShippingModes().includes(requestedModeRaw)) {
       return NextResponse.json({ error: "Invalid shipping method." }, { status: 400 });
@@ -241,7 +256,20 @@ export async function POST(req: NextRequest) {
       console.log(`[create-order] quote validated fp=${shippingSnapshot.fingerprint} amount=${shippingAmount}`);
     }
 
-    const discountAmount = 0; // coupons apply at a later step
+    // ── Coupon: validated server-side against the authoritative subtotal ────
+    let discountAmount = 0;
+    let couponEligible: CouponEligible | null = null;
+    if (parsed.data.couponCode) {
+      const res = await validateCoupon(parsed.data.couponCode, subtotal, {
+        profileId: profile?.id ?? null,
+        email,
+      });
+      if (!res.ok) {
+        return NextResponse.json({ error: res.error }, { status: 400 });
+      }
+      discountAmount = res.coupon.discount;
+      couponEligible = res.coupon;
+    }
 
     const taxAmount = 0;
     const totalAmount = subtotal + shippingAmount - discountAmount + taxAmount;
@@ -296,6 +324,9 @@ export async function POST(req: NextRequest) {
               shippingQuotedAt: shippingSnapshot.quotedAt,
             }
           : {}),
+        ...(couponEligible
+          ? couponOrderCreateData(couponEligible, discountAmount, { profileId: profile?.id ?? null, email })
+          : {}),
         items: { create: orderItems },
         shippingAddress: {
           create: {
@@ -331,9 +362,24 @@ export async function POST(req: NextRequest) {
           razorpayOrderId: rzpOrder.id,
           razorpayOrderAmount: rzpOrder.amount,
           ...(shippingSnapshot ? { shippingFingerprint: shippingSnapshot.fingerprint } : {}),
+          ...(billingAddr
+            ? {
+                billingAddress: {
+                  fullName: billingAddr.fullName,
+                  addressLine1: billingAddr.addressLine1,
+                  addressLine2: billingAddr.addressLine2 ?? null,
+                  city: billingAddr.city,
+                  state: billingAddr.state,
+                  pinCode: billingAddr.pinCode,
+                  phone: billingAddr.phone,
+                },
+              }
+            : {}),
         } as unknown as Prisma.InputJsonValue,
       },
     });
+
+    if (couponEligible) await incrementCouponUsage(couponEligible.couponId);
 
     return NextResponse.json({
       orderId: order.id,

@@ -16,8 +16,9 @@ export function SiteChrome({
 }) {
   const pathname = usePathname();
   const isAuth = pathname.startsWith("/auth");
+  const isMaintenance = pathname === "/maintenance";
 
-  if (isAuth) return <>{children}</>;
+  if (isAuth || isMaintenance) return <>{children}</>;
 
   return (
     <>

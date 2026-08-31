@@ -29,6 +29,51 @@ function toPaise(v: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+const priceOnlySchema = z.object({
+  id: z.string().min(1, "Service id missing."),
+  price: z.string().optional(),
+  priceMin: z.string().optional(),
+  priceMax: z.string().optional(),
+  priceLabel: z.string().trim().optional(),
+});
+
+function readPriceOnly(formData: FormData) {
+  const parsed = priceOnlySchema.safeParse({
+    id: formData.get("id") || undefined,
+    price: formData.get("price") || undefined,
+    priceMin: formData.get("priceMin") || undefined,
+    priceMax: formData.get("priceMax") || undefined,
+    priceLabel: formData.get("priceLabel") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid service." };
+  const d = parsed.data;
+  const price = toPaise(d.price);
+  const priceMin = toPaise(d.priceMin);
+  const priceMax = toPaise(d.priceMax);
+  if (price == null && priceMin == null) {
+    return { error: "Set a price or a price range." };
+  }
+  return { data: { ...d, price, priceMin, priceMax } };
+}
+
+export async function updateServicePrice(_prev: ServiceActionState, formData: FormData): Promise<ServiceActionState> {
+  await requirePermission("service", "update");
+  const r = readPriceOnly(formData);
+  if ("error" in r) return { error: r.error };
+  await prisma.service.update({
+    where: { id: r.data.id },
+    data: {
+      price: r.data.price,
+      priceMin: r.data.priceMin,
+      priceMax: r.data.priceMax,
+      priceLabel: r.data.priceLabel || null,
+    },
+  });
+  revalidatePath("/admin/mods");
+  revalidatePath("/mods");
+  return { ok: true, message: "Price updated" };
+}
+
 export async function saveService(_prev: ServiceActionState, formData: FormData): Promise<ServiceActionState> {
   await requirePermission("service", "create");
   const parsed = serviceSchema.safeParse({
@@ -71,7 +116,7 @@ export async function saveService(_prev: ServiceActionState, formData: FormData)
     },
   });
 
-  revalidatePath("/admin/services");
+  revalidatePath("/admin/mods");
   revalidatePath("/mods");
   return { ok: true, message: `${d.active === undefined ? "" : ""}Service saved` };
 }

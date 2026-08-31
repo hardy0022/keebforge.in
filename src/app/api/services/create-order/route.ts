@@ -17,6 +17,7 @@ import { deriveLegs } from "@/lib/shipping-estimate";
 import { PACKAGE_LIMITS, isValidPackage } from "@/lib/package-limits";
 import { generateOrderNumber } from "@/lib/orders";
 import { syncTrackingCache } from "@/lib/tracking";
+import { validateCoupon, couponOrderCreateData, incrementCouponUsage, type CouponEligible } from "@/lib/coupons";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,8 @@ const bodySchema = z.object({
     })
     .optional(),
   contactNote: z.string().trim().max(280).optional(),
+  couponCode: z.string().trim().max(40).optional(),
+  saveAddress: z.boolean().optional(),
   shippingAddress: z.object({
     streetAddress: z.string().trim().min(1, "Address is required").max(280),
     addressLine2: z.string().trim().max(280).optional(),
@@ -163,6 +166,44 @@ export async function POST(req: NextRequest) {
     const { profile } = await getCurrentAuth();
     const orderNumber = generateOrderNumber();
 
+    // ── Persist saved address for logged-in customers (first one = default) ──
+    if (profile && cfg.saveAddress) {
+      const existingCount = await prisma.address.count({ where: { profileId: profile.id } });
+      await prisma.address.create({
+        data: {
+          profileId: profile.id,
+          label: "Home",
+          streetAddress: cfg.shippingAddress.streetAddress,
+          apartment: cfg.shippingAddress.addressLine2 || null,
+          city: cfg.shippingAddress.city,
+          state: cfg.shippingAddress.state,
+          postalCode: cfg.shippingAddress.postalCode,
+          country: cfg.shippingAddress.country || "India",
+          phone: cfg.customer.phone,
+          isDefault: existingCount === 0,
+        },
+      });
+    }
+
+    // ── Coupon: validated server-side against the authoritative subtotal ────
+    let discountAmount = 0;
+    let couponEligible: CouponEligible | null = null;
+    if (parsed.data.couponCode) {
+      const res = await validateCoupon(parsed.data.couponCode, totals.subtotal, {
+        profileId: profile?.id ?? null,
+        email: cfg.customer.email,
+      });
+      if (!res.ok) {
+        return NextResponse.json({ error: res.error }, { status: 400 });
+      }
+      discountAmount = res.coupon.discount;
+      couponEligible = res.coupon;
+      totals.total -= discountAmount;
+      if (totals.total <= 0) {
+        return NextResponse.json({ error: "Invalid order amount" }, { status: 400 });
+      }
+    }
+
     const summary = {
       deviceType: cfg.deviceType,
       brand: cfg.brand,
@@ -222,6 +263,7 @@ export async function POST(req: NextRequest) {
         customerPhone: cfg.customer.phone,
         subtotal: totals.subtotal,
         shipping: totals.shipping,
+        discount: discountAmount,
         tax: 0,
         total: totals.total,
         currency: "INR",
@@ -232,6 +274,12 @@ export async function POST(req: NextRequest) {
               shippingOriginPincode: shipMeta.originPincode,
               shippingDestinationPincode: shipMeta.destinationPincode,
             }
+          : {}),
+        ...(couponEligible
+          ? couponOrderCreateData(couponEligible, discountAmount, {
+              profileId: profile?.id ?? null,
+              email: cfg.customer.email,
+            })
           : {}),
         summary,
         ...(rzpOrderId ? { billingDetails: { razorpayOrderId: rzpOrderId, razorpayOrderAmount: totals.total } } : {}),
@@ -269,6 +317,8 @@ export async function POST(req: NextRequest) {
     });
 
     await syncTrackingCache(order.id);
+
+    if (couponEligible) await incrementCouponUsage(couponEligible.couponId);
 
     if (quoteOnly) {
       return NextResponse.json({ orderNumber, orderId: order.id, requiresQuote: true });

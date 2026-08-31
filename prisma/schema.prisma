@@ -613,6 +613,12 @@ model Order {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  // Coupon usage snapshot — preserved on the order so history stays correct
+  // even if the coupon is later edited or disabled.
+  couponId        String?
+  couponCode      String?
+  couponDiscount  Int? // paise actually applied at order time
+
   profile         Profile?       @relation(fields: [profileId], references: [id], onDelete: SetNull)
   shippingAddress OrderAddress?
   items           OrderItem[]
@@ -625,6 +631,7 @@ model Order {
   warranty        WarrantyRecord?
   tracking        Tracking?
   review          Review?
+  couponUsage     CouponUsage?
 
   @@index([profileId])
   @@index([status])
@@ -892,19 +899,42 @@ model Review {
 }
 
 model Coupon {
-  id          String     @id @default(cuid())
-  code        String     @unique
-  type        CouponType
-  value       Int // percent (0-100) or paise
-  minOrder    Int? // paise
-  maxDiscount Int?
-  active      Boolean    @default(true)
-  usageLimit  Int?
-  usedCount   Int        @default(0)
-  expiresAt   DateTime?
-  createdAt   DateTime   @default(now())
+  id               String     @id @default(cuid())
+  code             String     @unique
+  type             CouponType
+  value            Int // percent (0-100) or paise
+  minOrder         Int? // paise
+  maxDiscount      Int?
+  active           Boolean    @default(true)
+  usageLimit       Int?
+  usedCount        Int        @default(0)
+  perCustomerLimit Int?
+  startsAt         DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  usages CouponUsage[]
 
   @@index([active])
+}
+
+/// Tracks each coupon redemption against an order (and, via the customer
+/// snapshot, per-customer limits). Kept beyond the order so limits and
+/// history remain queryable without denormalising the order.
+model CouponUsage {
+  id             String   @id @default(cuid())
+  couponId       String
+  orderId        String   @unique
+  profileId      String?
+  customerEmail  String
+  discountPaise  Int
+  createdAt      DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([couponId, customerEmail])
 }
 
 // ─── Content ─────────────────────────────────────────────────────────────────

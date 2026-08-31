@@ -8,22 +8,45 @@ import { usePathname, useRouter } from "next/navigation";
 import type { Role } from "@prisma/client";
 
 
-const NAV: { href: string; label: string; icon: string }[] = [
-  { href: "/admin", label: "Dashboard", icon: "📊" },
-  { href: "/admin/orders", label: "Orders", icon: "🧾" },
-  { href: "/admin/repairs", label: "Workshop", icon: "🔧" },
-  { href: "/admin/products", label: "Products", icon: "⌨️" },
-  { href: "/admin/services", label: "Mods", icon: "🛠️" },
-  { href: "/admin/customers", label: "Customers", icon: "👥" },
-  { href: "/admin/payments", label: "Payments", icon: "💳" },
-  { href: "/admin/shipments", label: "Shipments", icon: "📦" },
-  { href: "/admin/reviews", label: "Reviews", icon: "⭐" },
-  { href: "/admin/work", label: "Work", icon: "🧰" },
-  { href: "/admin/content", label: "Content", icon: "📝" },
-  { href: "/admin/coupons", label: "Coupons", icon: "🏷️" },
-  { href: "/admin/analytics", label: "Analytics", icon: "📈" },
-  { href: "/admin/activity", label: "Activity", icon: "🕘" },
-  { href: "/admin/settings", label: "Settings", icon: "⚙️" },
+const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: string }[] }[] = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: "📊" },
+      { href: "/admin/analytics", label: "Analytics", icon: "📈" },
+    ],
+  },
+  {
+    label: "Catalog",
+    items: [
+      { href: "/admin/products", label: "Products", icon: "⌨️" },
+      { href: "/admin/mods", label: "Mods", icon: "🛠️" },
+      { href: "/admin/work", label: "Workshop", icon: "🧰" },
+      { href: "/admin/coupons", label: "Coupons", icon: "🏷️" },
+    ],
+  },
+  {
+    label: "Sales",
+    items: [
+      { href: "/admin/orders", label: "Orders", icon: "🧾" },
+      { href: "/admin/payments", label: "Payments", icon: "💳" },
+      { href: "/admin/shipments", label: "Shipments", icon: "📦" },
+    ],
+  },
+  {
+    label: "Customer",
+    items: [
+      { href: "/admin/customers", label: "Customers", icon: "👥" },
+      { href: "/admin/reviews", label: "Reviews", icon: "⭐" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/admin/activity", label: "Activity", icon: "🕘" },
+      { href: "/admin/settings", label: "Settings", icon: "⚙️" },
+    ],
+  },
 ];
 
 export function AdminShell({
@@ -79,20 +102,29 @@ export function AdminShell({
           </span>
         )}
       </div>
-      <nav style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: "2px" }}>
-        {NAV.filter((item) => item.href === "/admin" || allowedNav.includes(item.href)).map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            title={collapsed ? item.label : undefined}
-            className={`sidebar-link${isActive(item.href) ? " active" : ""}`}
-            style={collapsed ? { justifyContent: "center", padding: "9px 0" } : undefined}
-            onClick={() => setOpen(false)}
-          >
-            <span className="ico">{item.icon}</span>
-            {!collapsed && <span>{item.label}</span>}
-          </Link>
-        ))}
+      <nav style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: collapsed ? 8 : 16 }}>
+        {NAV_GROUPS.map((group) => {
+          const items = group.items.filter((item) => item.href === "/admin" || allowedNav.includes(item.href));
+          if (items.length === 0) return null;
+          return (
+            <div key={group.label} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              {!collapsed && <span className="nav-group-label">{group.label}</span>}
+              {items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={collapsed ? item.label : undefined}
+                  className={`sidebar-link${isActive(item.href) ? " active" : ""}`}
+                  style={collapsed ? { justifyContent: "center", padding: "9px 0" } : undefined}
+                  onClick={() => setOpen(false)}
+                >
+                  <span className="ico">{item.icon}</span>
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              ))}
+            </div>
+          );
+        })}
       </nav>
       <div
         style={{

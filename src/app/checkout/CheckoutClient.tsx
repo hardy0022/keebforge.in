@@ -14,6 +14,7 @@ import { SERVICE_CHECKOUT_KEY, type ConfigService, type StoredServiceCheckout } 
 import { AddressPicker, type SavedAddressOption } from "@/components/services/AddressPicker";
 import { INDIAN_STATES } from "@/lib/indian-states";
 import { launchRazorpayPayment, type CreateOrderResponse } from "@/lib/razorpay-pay";
+import { CouponPanel, type AppliedCoupon } from "@/components/checkout/CouponPanel";
 
 interface SavedAddress {
   id: string;
@@ -121,6 +122,8 @@ export function ServiceCheckout({
   // billing columns) — payload fields are forward-compatible extras.
   const [billingSame, setBillingSame] = useState(true);
   const [billing, setBilling] = useState<BillingAddress>(EMPTY_BILLING);
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const [saveAddress, setSaveAddress] = useState(false);
 
   const cfg = useMemo(
     () => ({
@@ -153,7 +156,8 @@ export function ServiceCheckout({
         ? (config.shipping.quote.pickupPaise ?? 0) + config.shipping.quote.returnPaise
         : config.shipping.quote.returnPaise
       : 0;
-  const payableTotal = preview.total + modShipPaise;
+  const discount = coupon?.discount ?? 0;
+  const payableTotal = Math.max(0, preview.total + modShipPaise - discount);
 
   // Stash values are fixed at mount — read them as plain consts so the
   // prefill effect can reference them without stale-closure lint noise.
@@ -280,6 +284,8 @@ export function ServiceCheckout({
             country: "India",
           },
           billingSameAsShipping: billingSame,
+          saveAddress: selectedAddrId === "" && saveAddress,
+          couponCode: coupon?.code ?? undefined,
           ...(billingSame
             ? {}
             : {
@@ -428,6 +434,17 @@ export function ServiceCheckout({
                             <input type="text" inputMode="numeric" maxLength={6} className={fieldClass(!!(showErrors && fieldErrors.postalCode))} value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value.replace(/\D/g, "") })} placeholder="110001" autoComplete="postal-code" />
                           </Field>
                         </div>
+                        {(selectedAddrId === "" || addresses.length === 0) && (
+                          <label className="flex items-center gap-2 text-sm text-[var(--t2)] cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={saveAddress}
+                              onChange={(e) => setSaveAddress(e.target.checked)}
+                              className="accent-[var(--acc)]"
+                            />
+                            Save this address to my account
+                          </label>
+                        )}
                       </div>
                     )}
                   </>
@@ -552,7 +569,6 @@ export function ServiceCheckout({
 
               {/* Selected services */}
               <div className="border-t border-[var(--bdr)] pt-3 pb-3">
-                <p className="text-[0.7rem] uppercase tracking-[0.1em] text-[var(--t3)] mb-2">Selected Services</p>
                 <ul className="space-y-2 max-h-56 overflow-y-auto">
                   {preview.lines.map((line) => (
                     <li key={line.serviceId} className="flex items-center justify-between gap-3">
@@ -572,36 +588,42 @@ export function ServiceCheckout({
                 </ul>
               </div>
 
-              {/* Totals */}
+              {/* Coupon + pricing */}
               <div className="border-t border-[var(--bdr)] pt-3 space-y-1.5">
-                <Row label="Subtotal" value={preview.subtotal === 0 ? "—" : `${formatINR(preview.subtotal)}`} />
-                {showShipBreakdown && shipQuote?.returnPaise ? (
-                  config.shipping!.method === "pickup" ? (
-                    <>
-                      <Row label="Pickup Shipping" value={formatINR(shipQuote.pickupPaise ?? 0)} />
+                <CouponPanel subtotalPaise={preview.subtotal} coupon={coupon} setCoupon={setCoupon} />
+                <div className="border-t border-[var(--bdr)] pt-3 space-y-1.5">
+                  <Row label="Subtotal" value={preview.subtotal === 0 ? "—" : `${formatINR(preview.subtotal)}`} />
+                  {coupon && (
+                    <Row label="Discount" value={<span className="text-[var(--acc)]">−{formatINR(coupon.discount)}</span>} />
+                  )}
+                  {showShipBreakdown && shipQuote?.returnPaise ? (
+                    config.shipping!.method === "pickup" ? (
+                      <>
+                        <Row label="Pickup Shipping" value={formatINR(shipQuote.pickupPaise ?? 0)} />
+                        <Row label="Return Shipping" value={formatINR(shipQuote.returnPaise)} />
+                        <Row label={<strong>Total Shipping</strong>} value={<strong>{formatINR(modShipPaise)}</strong>} />
+                      </>
+                    ) : (
                       <Row label="Return Shipping" value={formatINR(shipQuote.returnPaise)} />
-                      <Row label={<strong>Total Shipping</strong>} value={<strong>{formatINR(modShipPaise)}</strong>} />
-                    </>
+                    )
                   ) : (
-                    <Row label="Return Shipping" value={formatINR(shipQuote.returnPaise)} />
-                  )
-                ) : (
-                  <Row label="Shipping" value="Calculated after confirmation" />
-                )}
-                <div className="flex items-baseline justify-between pt-3 mt-1 border-t border-[var(--bdr)]">
-                  <span className="font-display font-bold text-[var(--t1)]">{quoteOnly ? "Payable Now" : "Total"}</span>
-                  <span className="font-display font-bold text-[var(--acc)]" style={{ fontSize: "1.6rem", lineHeight: 1 }}>
-                    {quoteOnly ? "₹0" : formatINR(payableTotal)}
-                  </span>
+                    <Row label="Shipping" value="Calculated after confirmation" />
+                  )}
+                  <div className="flex items-baseline justify-between pt-3 mt-1 border-t border-[var(--bdr)]">
+                    <span className="font-display font-bold text-[var(--t1)]">{quoteOnly ? "Payable Now" : "Total"}</span>
+                    <span className="font-display font-bold text-[var(--acc)]" style={{ fontSize: "1.6rem", lineHeight: 1 }}>
+                      {quoteOnly ? "₹0" : formatINR(payableTotal)}
+                    </span>
+                  </div>
+                  {quoteOnly && (
+                    <p className="text-xs text-[var(--t3)]">Final quote confirmed after inspection.</p>
+                  )}
+                  {preview.hasQuotes && !quoteOnly && (
+                    <p className="text-sm text-[var(--warn)] pt-1">
+                      Final pricing for quote-based services will be confirmed after inspection.
+                    </p>
+                  )}
                 </div>
-                {quoteOnly && (
-                  <p className="text-xs text-[var(--t3)]">Final quote confirmed after inspection.</p>
-                )}
-                {preview.hasQuotes && !quoteOnly && (
-                  <p className="text-sm text-[var(--warn)] pt-1">
-                    Final pricing for quote-based services will be confirmed after inspection.
-                  </p>
-                )}
               </div>
 
               <AffordabilityWidget amountPaise={quoteOnly ? null : payableTotal} keyId={razorpayKeyId} />
@@ -738,13 +760,17 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
 
   // shipping + payment
   const [shipMode, setShipMode] = useState<"surface" | "express">(shippingModes[0] ?? "express");
-  const [retryTick, setRetryTick] = useState(0);
   const [shipping, setShipping] = useState<ShipState>({ status: "idle" });
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const [billingSame, setBillingSame] = useState(true);
+  const [billing, setBilling] = useState<BillingAddress>(EMPTY_BILLING);
 
-  const setField = (k: keyof DeliveryForm) => (ev: React.ChangeEvent<HTMLInputElement>) =>
+  const setField = (k: keyof DeliveryForm) => (ev: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: ev.target.value }));
+  const setBillingField = (k: keyof BillingAddress) => (ev: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setBilling((b) => ({ ...b, [k]: ev.target.value }));
 
   // Boot: server cart + account/saved addresses in parallel.
   useEffect(() => {
@@ -853,7 +879,7 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
       cancelled = true;
       clearTimeout(t);
     };
-  }, [form.postalCode, shipMode, retryTick]);
+  }, [form.postalCode, shipMode]);
 
   function pickAddress(id: string) {
     setSelectedAddressId(id);
@@ -881,13 +907,15 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
   }
 
   const fieldErrors = validateDelivery(form, !authUser);
+  const billingErrors = validateBilling(billing);
   const shippingResolved = shipping.status === "quotes" || shipping.status === "free";
   const subtotal = (lines ?? []).reduce((s, it) => s + (it.variant?.price ?? it.product.price) * it.quantity, 0);
   const shipOptions = shipping.status === "quotes" ? shipping.options : null;
   const selectedOption = shipOptions?.find((o) => o.method === shipMode) ?? null;
   const shippingAmount = selectedOption ? selectedOption.amountPaise : shipping.status === "free" ? 0 : null;
-  const total = shippingAmount == null ? null : subtotal + shippingAmount;
-  const formValid = Object.keys(fieldErrors).length === 0;
+  const discount = coupon?.discount ?? 0;
+  const total = shippingAmount == null ? null : subtotal + shippingAmount - discount;
+  const formValid = Object.keys(fieldErrors).length === 0 && (billingSame || Object.keys(billingErrors).length === 0);
   const canPlace = !!lines && lines.length > 0 && authChecked && shippingResolved && formValid && !placing;
 
   async function placeOrder() {
@@ -913,6 +941,21 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
           email: authUser ? undefined : form.email.trim(),
           saveAddress: Boolean(authUser) && selectedAddressId === "new" && saveAddress,
           mode: shipMode,
+          couponCode: coupon?.code ?? undefined,
+          billingSameAsShipping: billingSame,
+          ...(billingSame
+            ? {}
+            : {
+                billingAddress: {
+                  fullName: billing.fullName.trim(),
+                  addressLine1: billing.addressLine1.trim(),
+                  addressLine2: billing.addressLine2.trim() || undefined,
+                  city: billing.city.trim(),
+                  state: billing.state.trim(),
+                  pinCode: billing.pinCode.trim(),
+                  phone: billing.phone.trim(),
+                },
+              }),
         }),
       });
       const data = await res.json();
@@ -1000,9 +1043,9 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
       <RazorpayScript />
       <section className="svc-section">
         <div className="wrap">
-          <p className="sec-num">{"// CHECKOUT"}</p>
-          <h1 className="sec-title font-display">Complete Your Order</h1>
-          <p className="text-[var(--t2)] mb-8 max-w-xl">
+          <p className="panel-tag">CHECKOUT</p>
+          <h1 className="sec-title font-display">Review &amp; Pay</h1>
+          <p className="sec-desc text-[var(--t3)]">
             Review your items, enter delivery details and pay securely.
           </p>
 
@@ -1013,12 +1056,75 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
           )}
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
-            {/* ── Left column: delivery details ── */}
+            {/* ── Left column: stepped form ── */}
             <div className="flex flex-col gap-4">
-              {authUser && savedAddresses.length > 0 && (
-                <div className="card px-5 py-4.5">
-                  <h2 className="ct mb-3">Saved Addresses</h2>
-                  <div className="flex flex-col gap-2">
+
+              {/* ── 01 · Customer Details ── */}
+              <section className="card">
+                <p className="panel-tag">STEP 01</p>
+                <h2 className="panel-title">Customer Details</h2>
+                {!authUser && authChecked && (
+                  <p className="text-sm text-[var(--t3)] mb-3">Checking out as guest.</p>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="First Name *" error={showErrors ? fieldErrors.firstName : undefined}>
+                    <input
+                      className={fieldClass(showErrors && !!fieldErrors.firstName)}
+                      value={form.firstName}
+                      onChange={setField("firstName")}
+                      autoComplete="given-name"
+                    />
+                  </Field>
+                  <Field label="Last Name *" error={showErrors ? fieldErrors.lastName : undefined}>
+                    <input
+                      className={fieldClass(showErrors && !!fieldErrors.lastName)}
+                      value={form.lastName}
+                      onChange={setField("lastName")}
+                      autoComplete="family-name"
+                    />
+                  </Field>
+                  {authUser ? (
+                    <Field label="Email" error={showErrors ? fieldErrors.email : undefined}>
+                      <input className={`${fieldClass(false)} opacity-60`} value={authUser.email} disabled readOnly />
+                    </Field>
+                  ) : (
+                    <Field label="Email *" error={showErrors ? fieldErrors.email : undefined}>
+                      <input
+                        type="email"
+                        className={fieldClass(showErrors && !!fieldErrors.email)}
+                        value={form.email}
+                        onChange={setField("email")}
+                        autoComplete="email"
+                      />
+                    </Field>
+                  )}
+                  <Field label="Phone *" error={showErrors ? fieldErrors.phone : undefined}>
+                    <input
+                      inputMode="tel"
+                      className={fieldClass(showErrors && !!fieldErrors.phone)}
+                      value={form.phone}
+                      onChange={setField("phone")}
+                      autoComplete="tel"
+                    />
+                  </Field>
+                </div>
+              </section>
+
+              {/* ── 02 · Shipping Address ── */}
+              <section className="card">
+                <div className="flex items-baseline justify-between">
+                  <div>
+                    <p className="panel-tag">STEP 02</p>
+                    <h2 className="panel-title" style={{ marginBottom: 0 }}>Shipping Address</h2>
+                  </div>
+                  {savedAddresses.length > 0 && (
+                    <span className="text-[0.65rem] uppercase tracking-[0.06em] text-[var(--t3)]">
+                      {savedAddresses.length} saved
+                    </span>
+                  )}
+                </div>
+                {authUser && savedAddresses.length > 0 && (
+                  <div className="flex flex-col gap-2 mt-4">
                     {savedAddresses.map((a) => (
                       <label key={a.id} className={addrCardClass(selectedAddressId === a.id)}>
                         <input
@@ -1050,57 +1156,8 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
                       <span className="ct">Use a different address</span>
                     </label>
                   </div>
-                </div>
-              )}
-
-              <div className="card px-5 py-4.5">
-                <h2 className="ct mb-4">Delivery Details</h2>
-                {!authUser && authChecked && (
-                  <p className="text-sm text-[var(--t3)] mb-4">Checking out as guest.</p>
                 )}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="First Name *" error={showErrors ? fieldErrors.firstName : undefined}>
-                    <input
-                      className={fieldClass(showErrors && !!fieldErrors.firstName)}
-                      value={form.firstName}
-                      onChange={setField("firstName")}
-                      autoComplete="given-name"
-                    />
-                  </Field>
-                  <Field label="Last Name *" error={showErrors ? fieldErrors.lastName : undefined}>
-                    <input
-                      className={fieldClass(showErrors && !!fieldErrors.lastName)}
-                      value={form.lastName}
-                      onChange={setField("lastName")}
-                      autoComplete="family-name"
-                    />
-                  </Field>
-                  {authUser ? (
-                    <div className="sm:col-span-2">
-                      <Field label="Email">
-                        <input className={`${fieldClass(false)} opacity-60`} value={authUser.email} disabled readOnly />
-                      </Field>
-                    </div>
-                  ) : (
-                    <Field label="Email *" error={showErrors ? fieldErrors.email : undefined}>
-                      <input
-                        type="email"
-                        className={fieldClass(showErrors && !!fieldErrors.email)}
-                        value={form.email}
-                        onChange={setField("email")}
-                        autoComplete="email"
-                      />
-                    </Field>
-                  )}
-                  <Field label="Phone *" error={showErrors ? fieldErrors.phone : undefined}>
-                    <input
-                      inputMode="tel"
-                      className={fieldClass(showErrors && !!fieldErrors.phone)}
-                      value={form.phone}
-                      onChange={setField("phone")}
-                      autoComplete="tel"
-                    />
-                  </Field>
+                <div className="grid gap-4 sm:grid-cols-2 mt-4">
                   <div className="sm:col-span-2">
                     <Field label="Street Address *" error={showErrors ? fieldErrors.streetAddress : undefined}>
                       <input
@@ -1133,12 +1190,17 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
                       />
                     </Field>
                     <Field label="State *" error={showErrors ? fieldErrors.state : undefined}>
-                      <input
-                        className={fieldClass(showErrors && !!fieldErrors.state)}
+                      <select
+                        className={`shop-select w-full${showErrors && fieldErrors.state ? " error" : ""}`}
                         value={form.state}
                         onChange={setField("state")}
                         autoComplete="address-level1"
-                      />
+                      >
+                        <option value="">Select State</option>
+                        {INDIAN_STATES.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
                     </Field>
                     <Field label="PIN Code *" error={showErrors ? fieldErrors.postalCode : undefined}>
                       <input
@@ -1163,54 +1225,107 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
                     Save this address to my account
                   </label>
                 )}
-              </div>
+              </section>
 
-              <div className="card px-5 py-4.5">
-                <h2 className="ct mb-3">Shipping</h2>
-                {shipOptions && shipOptions.length > 0 && (
-                  <div className="flex flex-col gap-2 mb-3" role="radiogroup" aria-label="Shipping method">
-                    {shipOptions.map((o) => (
-                      <label key={o.method} className={addrCardClass(o.method === shipMode)}>
-                        <input
-                          type="radio"
-                          name="shipMode"
-                          checked={o.method === shipMode}
-                          onChange={() => setShipMode(o.method)}
-                          disabled={placing}
-                          className="mt-1 accent-[var(--acc)]"
-                        />
-                        <span className="flex-1 min-w-0">
-                          <span className="ct block">{o.name}</span>
-                          <span className="text-sm text-[var(--t3)] block">{o.carrier}</span>
+              {/* ── 03 · Payment ── */}
+              <section className="card">
+                <p className="panel-tag">STEP 03</p>
+                <h2 className="panel-title" style={{ marginBottom: 12 }}>Payment</h2>
+                <p className="text-sm text-[var(--t3)]">All transactions are secure and encrypted.</p>
+                <label
+                  className="block rounded-lg border border-[var(--acc)] bg-[var(--bg2)] p-4 cursor-pointer mt-3"
+                  style={{ boxShadow: "0 0 0 1px color-mix(in srgb, var(--acc) 35%, transparent)" }}
+                >
+                  <span className="flex items-start gap-3">
+                    <input type="radio" name="paymentMethod" checked readOnly className="mt-1 shrink-0" style={{ accentColor: "var(--acc)" }} aria-label="Razorpay payment gateway" />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-3 flex-wrap">
+                        <span>
+                          <span className="font-display font-bold text-sm text-[var(--t1)] block">Razorpay Payment Gateway</span>
+                          <span className="text-xs text-[var(--t3)]">UPI, Cards, International Cards, Wallets</span>
                         </span>
-                        <span className="font-display font-bold text-[var(--t1)] whitespace-nowrap">{formatINR(o.amountPaise)}</span>
-                      </label>
-                    ))}
+                        <span className="flex items-center gap-1.5 flex-wrap" aria-hidden="true">
+                          <span className="text-[0.65rem] font-bold tracking-wide px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t2)]">UPI</span>
+                          <span className="text-[0.65rem] font-bold italic tracking-wide px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t2)]">VISA</span>
+                          <span className="flex items-center px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)]">
+                            <span className="inline-block w-3 h-3 rounded-full opacity-90" style={{ background: "#EB001B" }} />
+                            <span className="inline-block w-3 h-3 rounded-full opacity-90 -ml-1.5" style={{ background: "#F79E1B" }} />
+                          </span>
+                          <span className="text-[0.65rem] font-medium px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t3)]">+more</span>
+                        </span>
+                      </span>
+                      <span className="block text-xs text-[var(--t3)] mt-2.5">
+                        You&apos;ll be redirected to Razorpay&apos;s secure checkout to complete your purchase.
+                      </span>
+                    </span>
+                  </span>
+                </label>
+              </section>
+
+              {/* ── 05 · Billing Address ── */}
+              <section className="card">
+                <p className="panel-tag">STEP 04</p>
+                <h2 className="panel-title" style={{ marginBottom: 16 }}>Billing Address</h2>
+                <div className="grid gap-2">
+                  {(
+                    [
+                      { same: true, label: "Same as shipping address" },
+                      { same: false, label: "Use a different billing address" },
+                    ] as const
+                  ).map((opt) => (
+                    <label
+                      key={opt.label}
+                      className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${billingSame === opt.same ? "border-[var(--acc)] bg-[var(--bg2)]" : "border-[var(--bdr)] hover:border-[var(--t3)]"}`}
+                    >
+                      <input type="radio" name="billingOption" checked={billingSame === opt.same} onChange={() => setBillingSame(opt.same)} className="shrink-0" style={{ accentColor: "var(--acc)" }} />
+                      <span className={`text-sm ${billingSame === opt.same ? "font-medium text-[var(--t1)]" : "text-[var(--t2)]"}`}>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {!billingSame && (
+                  <div className="grid gap-3 mt-4">
+                    <Field label="Full Name *" error={showErrors ? billingErrors.fullName : undefined}>
+                      <input type="text" className={fieldClass(!!(showErrors && billingErrors.fullName))} value={billing.fullName} onChange={setBillingField("fullName")} placeholder="Name on the bill" autoComplete="billing name" />
+                    </Field>
+                    <Field label="Address Line 1 *" error={showErrors ? billingErrors.addressLine1 : undefined}>
+                      <input type="text" className={fieldClass(!!(showErrors && billingErrors.addressLine1))} value={billing.addressLine1} onChange={setBillingField("addressLine1")} placeholder="House/Flat/Building, Street, Area" autoComplete="billing address-line1" />
+                    </Field>
+                    <Field label="Address Line 2 (Optional)">
+                      <input type="text" className="shop-field w-full" value={billing.addressLine2} onChange={setBillingField("addressLine2")} placeholder="Landmark (optional)" autoComplete="billing address-line2" />
+                    </Field>
+                    <div className="addr-city-row">
+                      <Field label="City *" error={showErrors ? billingErrors.city : undefined}>
+                        <input type="text" className={fieldClass(!!(showErrors && billingErrors.city))} value={billing.city} onChange={setBillingField("city")} placeholder="City" autoComplete="billing address-level2" />
+                      </Field>
+                      <Field label="State *" error={showErrors ? billingErrors.state : undefined}>
+                        <select
+                          className={`shop-select w-full${showErrors && billingErrors.state ? " error" : ""}`}
+                          value={billing.state}
+                          onChange={setBillingField("state")}
+                          autoComplete="billing address-level1"
+                        >
+                          <option value="">Select State</option>
+                          {INDIAN_STATES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="PIN Code *" error={showErrors ? billingErrors.pinCode : undefined}>
+                        <input type="text" inputMode="numeric" maxLength={6} className={fieldClass(!!(showErrors && billingErrors.pinCode))} value={billing.pinCode} onChange={setBillingField("pinCode")} placeholder="110001" autoComplete="billing postal-code" />
+                      </Field>
+                    </div>
+                    <Field label="Phone *" error={showErrors ? billingErrors.phone : undefined}>
+                      <input type="tel" className={fieldClass(!!(showErrors && billingErrors.phone))} value={billing.phone} onChange={setBillingField("phone")} placeholder="+91 98765 43210" autoComplete="billing tel" />
+                    </Field>
                   </div>
                 )}
-                {shipping.status === "idle" && (
-                  <p className="text-sm text-[var(--t3)]">Enter your delivery pincode to calculate shipping.</p>
-                )}
-                {shipping.status === "calculating" && <p className="text-sm text-[var(--t3)]">Calculating shipping…</p>}
-                {shipping.status === "free" && (
-                  <Row label="Shipping" value={<span className="text-[var(--acc)] font-bold">FREE</span>} />
-                )}
-                {(shipping.status === "unavailable" || shipping.status === "error") && (
-                  <>
-                    <p className="text-sm text-[var(--err)]">{shipping.message}</p>
-                    <button type="button" className="btn-ghost btn-sm mt-2" onClick={() => setRetryTick((n) => n + 1)}>
-                      Try again
-                    </button>
-                  </>
-                )}
-                <p className="text-xs text-[var(--t3)] mt-3">Final rate is confirmed when your order is placed.</p>
-              </div>
+              </section>
             </div>
 
             {/* ── Right column: sticky summary ── */}
             <aside className="card checkout-summary">
-              <h2 className="ct mb-4">Order Summary</h2>
-              <div className="flex flex-col gap-3 mb-4 pb-4 border-b border-[var(--line)]">
+              <h2 className="panel-title" style={{ marginBottom: 16 }}>Order Summary</h2>
+              <div className="flex flex-col gap-3 mb-4 pb-4 border-b border-[var(--bdr)]">
                 {lines.map((it) => {
                   const unit = it.variant?.price ?? it.product.price;
                   const configLine =
@@ -1221,9 +1336,9 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
                     <div key={it.id} className="flex items-center gap-3">
                       {it.product.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={it.product.image} alt="" className="w-12 h-12 rounded object-cover border border-[var(--line)]" />
+                        <img src={it.product.image} alt="" className="w-12 h-12 rounded object-cover border border-[var(--bdr)]" />
                       ) : (
-                        <div className="w-12 h-12 rounded bg-[var(--bg2)] border border-[var(--line)] flex items-center justify-center text-lg">
+                        <div className="w-12 h-12 rounded bg-[var(--bg2)] border border-[var(--bdr)] flex items-center justify-center text-lg">
                           ⌨️
                         </div>
                       )}
@@ -1240,27 +1355,33 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
                   );
                 })}
               </div>
-              <Row label="Subtotal" value={formatINR(subtotal)} />
-              <div className="my-2">
-                <Row
-                  label="Shipping"
-                  value={
-                    shipping.status === "free" ? (
-                      <span className="text-[var(--acc)] font-bold">FREE</span>
-                    ) : selectedOption ? (
-                      formatINR(selectedOption.amountPaise)
-                    ) : shipping.status === "calculating" ? (
-                      "…"
-                    ) : (
-                      "—"
-                    )
-                  }
-                />
-              </div>
-              <div className="border-t border-[var(--line)] my-3 pt-3">
-                <div className="flex justify-between font-display font-bold text-[var(--t1)]">
-                  <span>Total</span>
-                  <span>{total == null ? "—" : formatINR(total)}</span>
+              <div className="pt-0.5 space-y-1.5">
+                <CouponPanel subtotalPaise={subtotal} coupon={coupon} setCoupon={setCoupon} />
+                <div className="border-t border-[var(--bdr)] pt-5 space-y-1.5">
+                  <Row label="Subtotal" value={formatINR(subtotal)} />
+                  {coupon && (
+                    <Row label="Discount" value={<span className="text-[var(--acc)]">−{formatINR(coupon.discount)}</span>} />
+                  )}
+                  <Row
+                    label="Shipping"
+                    value={
+                      shipping.status === "free" ? (
+                        <span className="text-[var(--acc)] font-bold">FREE</span>
+                      ) : selectedOption ? (
+                        formatINR(selectedOption.amountPaise)
+                      ) : shipping.status === "calculating" ? (
+                        "…"
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
+                  <div className="border-t border-[var(--bdr)] my-3 pt-3">
+                    <div className="flex justify-between font-display font-bold text-[var(--t1)]">
+                      <span>Total</span>
+                      <span>{total == null ? "—" : formatINR(total)}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               <AffordabilityWidget amountPaise={total} keyId={razorpayKeyId} />

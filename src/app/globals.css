@@ -5992,7 +5992,8 @@ a.shop-pager-num:hover {
   border-radius: 99px;
   padding: 3px;
 }
-.seg button {
+.seg button,
+.seg a {
   font-family: var(--ff-display);
   font-size: 0.72rem;
   font-weight: 700;
@@ -6002,8 +6003,10 @@ a.shop-pager-num:hover {
   background: transparent;
   color: var(--t3);
   cursor: pointer;
+  text-decoration: none;
 }
-.seg button.active {
+.seg button.active,
+.seg a.active {
   background: var(--acc);
   color: #000;
 }
@@ -6032,6 +6035,18 @@ a.shop-pager-num:hover {
   text-align: center;
   font-size: 0.9rem;
   flex-shrink: 0;
+}
+
+.nav-group-label {
+  display: block;
+  padding: 2px 12px 4px;
+  font-family: var(--ff-display);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t3);
+  opacity: 0.65;
 }
 
 .avatar {
@@ -6731,6 +6746,91 @@ a.shop-pager-num:hover {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--t3);
+}
+
+/* ─── Admin settings maintenance modal ───────────────────────────────────── */
+
+.env-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--bdr);
+  background: var(--bg3);
+}
+.env-indicator .env-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 99px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.25);
+}
+.env-indicator .env-name {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+}
+.env-indicator .env-host {
+  font-size: 0.74rem;
+  color: var(--t2);
+  line-height: 1.3;
+}
+.env-indicator.env-prod {
+  border-color: rgba(255, 107, 61, 0.35);
+  background: rgba(255, 107, 61, 0.08);
+}
+.env-indicator.env-prod .env-dot {
+  background: #ff6b3d;
+}
+.env-indicator.env-prod .env-name {
+  color: #ffb07a;
+}
+.env-indicator.env-dev {
+  border-color: rgba(91, 140, 255, 0.28);
+  background: rgba(91, 140, 255, 0.07);
+}
+.env-indicator.env-dev .env-dot {
+  background: #5b8cff;
+}
+.env-indicator.env-dev .env-name {
+  color: #9dbbff;
+}
+
+.kf-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 7, 12, 0.72);
+  backdrop-filter: blur(3px);
+}
+.kf-settings-modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg2);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-md);
+  padding: 22px;
+  box-shadow: 0 24px 64px -12px rgba(6, 5, 12, 0.7), 0 0 0 1px var(--bdr);
+}
+
+@media (max-width: 640px) {
+  .kf-settings-status {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .kf-settings-status .btn-admin {
+    align-self: flex-start;
+  }
+  .kf-settings-modal {
+    padding: 18px;
+  }
 }
 
 /* ─── Admin shell responsive (moved from styled-jsx → hydration fix) ────── */
@@ -11461,4 +11561,243 @@ a.reviews-page:hover {
   color: var(--t3);
   font-size: 0.82rem;
   margin-top: 14px;
+}
+
+/* ── Checkout coupon section ─────────────────────────────── */
+.coupon-section {
+  margin: 2px 0 6px;
+}
+.coupon-heading {
+  font-family: var(--ff-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--t3);
+  margin-bottom: 8px;
+}
+.coupon-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.coupon-input-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.coupon-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--t3);
+  pointer-events: none;
+}
+.coupon-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 34px;
+  font-family: var(--ff-body);
+  font-size: 0.85rem;
+  color: var(--t1);
+  background: var(--bg2);
+  border: 1px solid var(--bdr);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+.coupon-input::placeholder {
+  color: var(--t3);
+}
+.coupon-input:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--acc-glow2);
+}
+.coupon-input:disabled {
+  opacity: 0.6;
+}
+.coupon-apply {
+  flex-shrink: 0;
+  height: 38px;
+  min-width: 72px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ff-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0b0d0a;
+  background: var(--acc);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out), opacity 0.2s var(--ease-out);
+}
+.coupon-apply:hover {
+  background: var(--acc-dim) ;
+  color: var(--acc);
+}
+.coupon-apply:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.coupon-error {
+  font-size: 0.75rem;
+  color: var(--err);
+  margin-top: 6px;
+}
+/* Applied state */
+.coupon-applied {
+  border: 1px solid var(--bdr);
+  border-radius: 10px;
+  background: var(--bg2);
+  padding: 9px 12px;
+}
+.coupon-applied-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.coupon-check {
+  color: var(--acc);
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.coupon-code {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  color: var(--t1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.coupon-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--t3);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s var(--ease-out);
+}
+.coupon-remove:hover {
+  color: var(--err);
+}
+.coupon-desc {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 5px 0 0;
+  font-size: 0.78rem;
+  color: var(--t3);
+}
+.coupon-amount {
+  color: var(--acc);
+  font-weight: 600;
+}
+@media (max-width: 560px) {
+  .coupon-row {
+    flex-direction: column;
+  }
+  .coupon-apply {
+    width: 100%;
+  }
+}
+
+/* ─── Admin Mods ────────────────────────────────────────────────────────────── */
+.mods-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 700px) {
+  .mods-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.mods-service-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(180deg, var(--surf), transparent), var(--bg2);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.mods-service-card:hover {
+  border-color: var(--bdr-h);
+  box-shadow: 0 0 0 1px var(--surf), 0 6px 18px -20px var(--acc-glow);
+}
+.mods-service-info {
+  flex: 1 1 170px;
+  min-width: 150px;
+}
+.mods-device {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bdr);
+}
+.mods-cat-label {
+  font-family: var(--ff-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--acc);
+  margin: 0 0 10px;
+}
+.mods-editor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.mods-field {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mods-field .input {
+  height: 34px;
+  width: 92px;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+}
+.mods-field-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t3);
+  font-weight: 600;
+}
+.mods-field.wide .input {
+  width: 118px;
+}
+@media (max-width: 460px) {
+  .mods-service-card {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .mods-service-info {
+    flex-basis: 100%;
+  }
+  .mods-editor {
+    justify-content: flex-start;
+  }
 }

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 // Next.js redirect() matches sources case-insensitively, so case-variant old
 // URLs are handled here instead of next.config to avoid shadowing real routes.
@@ -7,8 +8,17 @@ const CASED_PATHS: Record<string, string> = {
   "/About/": "/about",
 };
 
+// Paths that are never blocked by maintenance mode.
+const MAINTENANCE_BYPASS = ["/admin", "/auth", "/maintenance"];
+
+function isBypassPath(pathname: string): boolean {
+  return MAINTENANCE_BYPASS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
 export async function proxy(request: NextRequest) {
-  const target = CASED_PATHS[request.nextUrl.pathname];
+  const { pathname } = request.nextUrl;
+
+  const target = CASED_PATHS[pathname];
   if (target) {
     const url = request.nextUrl.clone();
     url.pathname = target;
@@ -19,7 +29,7 @@ export async function proxy(request: NextRequest) {
   // provider text> on OAuth failures. Only known-safe codes may reach the
   // page — everything else is stripped so raw upstream error text never
   // enters the rendered HTML/RSC payload.
-  if (request.nextUrl.pathname === "/auth/error") {
+  if (pathname === "/auth/error") {
     const sp = request.nextUrl.searchParams;
     const code = sp.get("error");
     if (sp.has("error_description") || sp.size > 1 || (code !== null && !SAFE_AUTH_ERROR_CODES.has(code))) {
@@ -27,6 +37,17 @@ export async function proxy(request: NextRequest) {
       url.search = "";
       if (code && SAFE_AUTH_ERROR_CODES.has(code)) url.searchParams.set("error", code);
       return NextResponse.redirect(url, 307);
+    }
+  }
+
+  // Maintenance mode: redirect public routes to /maintenance.
+  // Bypass admin, auth, maintenance itself, and API/static (excluded by matcher).
+  if (!isBypassPath(pathname)) {
+    const setting = await prisma.siteSetting.findUnique({ where: { key: "maintenanceMode" } });
+    if (setting?.value === true) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/maintenance";
+      return NextResponse.redirect(url, 302);
     }
   }
 
@@ -38,8 +59,8 @@ const SAFE_AUTH_ERROR_CODES = new Set(["access_denied", "state_mismatch", "state
 export const config = {
   matcher: [
     /*
-     * Case-variant old URLs only; api/ (incl. Better Auth) and public files
-     * are excluded.
+     * Case-variant redirects + maintenance mode guard.
+     * api/ (incl. Better Auth), track/, and public files are excluded.
      */
     "/((?!_next/static|_next/image|favicon.ico|api/|track/|.*\\.(?:webp|png|jpg|jpeg|svg|ico|txt|xml)$).*)",
   ],
