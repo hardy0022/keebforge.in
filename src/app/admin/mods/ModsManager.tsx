@@ -1,8 +1,8 @@
 "use client";
 
-import { ServicePriceInline } from "./ServicePriceInline";
+import { ModPriceInline } from "./ModPriceInline";
 
-export type ModsService = {
+export type ModsItem = {
   id: string;
   name: string;
   description: string | null;
@@ -17,7 +17,7 @@ export type ModsGroup = {
   id: string;
   name: string;
   desc: string | null;
-  services: ModsService[];
+  items: ModsItem[];
 };
 
 export type ModsDevice = {
@@ -32,7 +32,7 @@ export function ModsManager({
   totals,
 }: {
   devices: ModsDevice[];
-  totals: { keyboard: number; mouse: number; services: number };
+  totals: { keyboard: number; mouse: number; mods: number };
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
@@ -42,7 +42,7 @@ export function ModsManager({
           Mods
         </h1>
         <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.88rem" }}>
-          Manage keyboard and mouse modification services and their pricing.
+          Manage keyboard and mouse modification options and their pricing.
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export function ModsManager({
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
         <div className="admin-stat lime"><b>{totals.keyboard}</b><span>Keyboard Mods</span></div>
         <div className="admin-stat purple"><b>{totals.mouse}</b><span>Mouse Mods</span></div>
-        <div className="admin-stat"><b>{totals.services}</b><span>Active Services</span></div>
+        <div className="admin-stat"><b>{totals.mods}</b><span>Active Mods</span></div>
       </div>
 
       {devices.map((d) => (
@@ -68,9 +68,9 @@ export function ModsManager({
               <h3 className="mods-cat-label" style={{ marginBottom: 10 }}>{g.name}</h3>
               {g.desc && <p className="muted" style={{ margin: "-6px 0 10px", fontSize: "0.78rem" }}>{g.desc}</p>}
               <div className="mods-grid">
-                {g.services.map((svc) => (
-                  <div key={svc.id} className="mods-service-card">
-                    <div className="mods-service-info">
+                {g.items.map((svc) => (
+                  <div key={svc.id} className="mods-item-card">
+                    <div className="mods-item-info">
                       <div style={{ fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.25 }}>{svc.name}</div>
                       {svc.description && (
                         <div className="muted" style={{ fontSize: "0.74rem", marginTop: 2, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -78,7 +78,7 @@ export function ModsManager({
                         </div>
                       )}
                     </div>
-                    <ServicePriceInline
+                    <ModPriceInline
                       svc={{
                         id: svc.id,
                         unit: svc.unit,

@@ -9,7 +9,7 @@ async function homeForRole(): Promise<string> {
   const res = await fetch("/api/auth/me", { cache: "no-store" });
   if (res.ok) {
     const me = await res.json();
-    if (me.role === "ADMIN" || me.role === "STAFF") return "/admin";
+    if (me.role === "ADMIN" || me.role === "STAFF" || me.role === "DEVELOPER") return "/admin";
   }
   return "/";
 }

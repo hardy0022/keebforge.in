@@ -3,8 +3,8 @@ import { cache } from "react";
 import type { Prisma, ShopSectionType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-/** Service groups with their active services, for a device. */
-export const getServiceCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
+/** Mod groups with their active mods, for a device. */
+export const getModsCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
   prisma.mods.findMany({
     where: { active: true, ...(device ? { device } : {}) },
     orderBy: { sortOrder: "asc" },
@@ -17,7 +17,7 @@ export const getServiceCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
   })
 );
 
-export type ServiceGroups = Awaited<ReturnType<typeof getServiceCatalog>>;
+export type ModsGroups = Awaited<ReturnType<typeof getModsCatalog>>;
 
 export const getApprovedReviews = cache((take = 12) =>
   prisma.review.findMany({

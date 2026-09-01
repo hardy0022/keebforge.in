@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentAuth, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatINR } from "@/lib/money";
-import { ORDER_STATUS_CHIP, ORDER_STATUS_LABELS } from "@/lib/orders";
+import { ORDER_STATUS_CHIP, ORDER_STATUS_LABELS, ORDER_TYPE_LABELS } from "@/lib/orders";
 
 export const metadata: Metadata = {
   title: "My Orders | KeebForge",
@@ -68,7 +68,7 @@ export default async function OrdersPage() {
                       <Link href={`/order/success/${order.orderNumber}`} className="account-order-number is-link">
                         {order.orderNumber}
                       </Link>
-                      <span className="account-order-type">{order.type}</span>
+                      <span className="account-order-type">{ORDER_TYPE_LABELS[order.type]}</span>
                     </div>
                     <div className="account-order-meta">
                       <span className="account-order-date">

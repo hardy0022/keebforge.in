@@ -11727,7 +11727,7 @@ a.reviews-page:hover {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-.mods-service-card {
+  .mods-item-card {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -11737,11 +11737,11 @@ a.reviews-page:hover {
   padding: 12px 14px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.mods-service-card:hover {
+.mods-item-card:hover {
   border-color: var(--bdr-h);
   box-shadow: 0 0 0 1px var(--surf), 0 6px 18px -20px var(--acc-glow);
 }
-.mods-service-info {
+.mods-item-info {
   flex: 1 1 170px;
   min-width: 150px;
 }
@@ -11790,11 +11790,11 @@ a.reviews-page:hover {
   width: 118px;
 }
 @media (max-width: 460px) {
-  .mods-service-card {
+.mods-item-card {
     flex-wrap: wrap;
     align-items: flex-start;
   }
-  .mods-service-info {
+  .mods-item-info {
     flex-basis: 100%;
   }
   .mods-editor {

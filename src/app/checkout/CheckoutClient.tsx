@@ -9,9 +9,9 @@ import { AffordabilityWidget } from "@/components/payments/AffordabilityWidget";
 import {
   calculateServiceOrder,
   type ServiceConfig,
-} from "@/lib/services/pricing";
-import { SERVICE_CHECKOUT_KEY, type ConfigService, type StoredServiceCheckout } from "@/components/services/ServiceConfigurator";
-import { AddressPicker, type SavedAddressOption } from "@/components/services/AddressPicker";
+} from "@/lib/mods/pricing";
+import { SERVICE_CHECKOUT_KEY, type ConfigService, type StoredServiceCheckout } from "@/components/mods/ModConfigurator";
+import { AddressPicker, type SavedAddressOption } from "@/components/mods/AddressPicker";
 import { INDIAN_STATES } from "@/lib/indian-states";
 import { launchRazorpayPayment, type CreateOrderResponse } from "@/lib/razorpay-pay";
 import { CouponPanel, type AppliedCoupon } from "@/components/checkout/CouponPanel";

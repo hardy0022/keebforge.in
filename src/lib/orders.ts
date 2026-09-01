@@ -1,6 +1,14 @@
 import { randomBytes } from "node:crypto";
-import type { OrderStatus, ServiceUnit } from "@prisma/client";
+import type { OrderStatus, OrderType, ServiceUnit } from "@prisma/client";
 import { formatINR, formatINRRange } from "@/lib/money";
+
+/** Canonical human labels for the machine OrderType enum. Single source of truth. */
+export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
+  PRODUCT: "Product",
+  SERVICE: "Mods",
+  REPAIR: "Repair",
+  COMBINED: "Combined",
+};
 
 /** Canonical human labels for the machine OrderStatus enum. Single source of truth. */
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {

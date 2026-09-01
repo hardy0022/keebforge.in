@@ -58,5 +58,5 @@ export async function requireAdmin(): Promise<AdminContext> {
 
 /** @legacy — Profile-role helper kept for display/redirect heuristics only. NOT an authorization check. */
 export function isAdminRole(role: Role) {
-  return role === "ADMIN" || role === "STAFF";
+  return role === "ADMIN" || role === "STAFF" || role === "DEVELOPER";
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { ActionForm, Spinner } from "@/components/admin/ActionForm";
-import { saveService } from "@/app/admin/actions/services";
+import { saveMod } from "@/app/admin/actions/mods";
 
-export type ServiceRowProp = {
+export type ModRowProp = {
   id: string;
   slug: string;
   name: string;
@@ -27,7 +27,7 @@ const UNITS = [
   ["QUOTE", "Quote"],
 ];
 
-export function ServicePriceForm({ svc }: { svc: ServiceRowProp }) {
+export function ModPriceForm({ svc }: { svc: ModRowProp }) {
   return (
     <div className="admin-card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
@@ -37,7 +37,7 @@ export function ServicePriceForm({ svc }: { svc: ServiceRowProp }) {
       </div>
       {svc.description && <p className="muted" style={{ fontSize: "0.78rem", marginTop: -4 }}>{svc.description}</p>}
 
-      <ActionForm action={saveService} toastLabel="Service">
+      <ActionForm action={saveMod} toastLabel="Mod">
         {(pending) => (
           <div className="admin-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, alignItems: "end" }}>
             <input type="hidden" name="id" value={svc.id} />

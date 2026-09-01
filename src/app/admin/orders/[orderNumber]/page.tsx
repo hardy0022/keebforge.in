@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
-import { ORDER_STATUS_LABELS } from "@/lib/orders";
+import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS } from "@/lib/orders";
 import { getAdminOrder } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { RepairImagesPanel, type RepairImagesRepair } from "@/components/admin/orders/RepairImagesPanel";
@@ -86,7 +86,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ o
           </h1>
         </div>
         <div className="admin-actions">
-          <span className="badge badge-purple">{order.type}</span>
+          <span className="badge badge-purple">{ORDER_TYPE_LABELS[order.type]}</span>
           <span className={`badge ${order.paymentStatus === "PAID" ? "badge-ok" : order.paymentStatus === "FAILED" ? "badge-err" : "badge-warn"}`}>
             {order.paymentStatus}
           </span>

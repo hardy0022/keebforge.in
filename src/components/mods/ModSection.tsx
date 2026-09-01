@@ -147,7 +147,7 @@ function UniformSwitchCard({ svc }: { svc: Service }) {
 }
 
 /** Renders a full service section from a DB group. */
-export function ServiceSection({ group, num }: { group: Mods & { services: Service[] }; num: string }) {
+export function ModSection({ group, num }: { group: Mods & { services: Service[] }; num: string }) {
   const combo = group.services.find((s) => s.combo);
   const regular = group.services.filter((s) => !s.combo);
   const allQuote = group.services.every((s) => s.unit === "QUOTE");

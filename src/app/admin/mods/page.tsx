@@ -1,14 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { getServiceCatalog } from "@/lib/data";
-import { GROUP_DESC } from "@/components/services/ServiceConfigurator";
+import { getModsCatalog } from "@/lib/data";
+import { GROUP_DESC } from "@/components/mods/ModConfigurator";
 import { ModsManager, type ModsDevice } from "./ModsManager";
 
 export const metadata: Metadata = { title: "Mods | KeebForge Admin", robots: { index: false, follow: false } };
 
 const HIDDEN_GROUP_SLUGS = new Set(["custom-pcb-design"]);
-const HIDDEN_SERVICE_SLUGS = new Set([
+const HIDDEN_MOD_SLUGS = new Set([
   "keyboard-build-60-65",
   "keyboard-build-tkl",
   "split-keyboard-build",
@@ -23,13 +23,13 @@ const HIDDEN_SERVICE_SLUGS = new Set([
 ]);
 
 const DEVICE_META: Record<string, { title: string; subtitle: string }> = {
-  KEYBOARD: { title: "Keyboard Mods", subtitle: "Manage services available for keyboard builds." },
-  MOUSE: { title: "Mouse Mods", subtitle: "Manage services available for mouse repairs and modifications." },
+  KEYBOARD: { title: "Keyboard Mods", subtitle: "Manage mods available for keyboard builds." },
+  MOUSE: { title: "Mouse Mods", subtitle: "Manage mods available for mouse repairs and modifications." },
 };
 
 export default async function AdminModsPage() {
-  await requirePermission("service", "view");
-  const groups = await getServiceCatalog();
+  await requirePermission("mod", "view");
+  const groups = await getModsCatalog();
 
   const devices: ModsDevice[] = (["KEYBOARD", "MOUSE"] as const)
     .map((device) => {
@@ -39,8 +39,8 @@ export default async function AdminModsPage() {
           id: g.id,
           name: g.name,
           desc: GROUP_DESC[g.slug] ?? null,
-          services: g.services
-            .filter((s) => !HIDDEN_SERVICE_SLUGS.has(s.slug))
+          items: g.services
+            .filter((s) => !HIDDEN_MOD_SLUGS.has(s.slug))
             .map((s) => ({
               id: s.id,
               name: s.name,
@@ -52,7 +52,7 @@ export default async function AdminModsPage() {
               priceLabel: s.priceLabel,
             })),
         }))
-        .filter((g) => g.services.length > 0);
+        .filter((g) => g.items.length > 0);
       return {
         device,
         title: DEVICE_META[device].title,
@@ -62,11 +62,11 @@ export default async function AdminModsPage() {
     })
     .filter((d) => d.groups.length > 0);
 
-  const devCount = (d: ModsDevice) => d.groups.reduce((n, g) => n + g.services.length, 0);
+  const modCount = (d: ModsDevice) => d.groups.reduce((n, g) => n + g.items.length, 0);
   const totals = {
-    keyboard: devCount(devices.find((d) => d.device === "KEYBOARD") ?? { device: "KEYBOARD", title: "", subtitle: "", groups: [] }),
-    mouse: devCount(devices.find((d) => d.device === "MOUSE") ?? { device: "MOUSE", title: "", subtitle: "", groups: [] }),
-    services: devices.reduce((n, d) => n + devCount(d), 0),
+    keyboard: modCount(devices.find((d) => d.device === "KEYBOARD") ?? { device: "KEYBOARD", title: "", subtitle: "", groups: [] }),
+    mouse: modCount(devices.find((d) => d.device === "MOUSE") ?? { device: "MOUSE", title: "", subtitle: "", groups: [] }),
+    mods: devices.reduce((n, d) => n + modCount(d), 0),
   };
 
   return (

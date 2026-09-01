@@ -387,7 +387,7 @@ export async function POST(req: NextRequest) {
       razorpayOrderId: rzpOrder.id,
       amount: rzpOrder.amount,
       currency: rzpOrder.currency,
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? process.env.RAZORPAY_KEY_ID,
       customerName: order.customerName,
       customerEmail: email,
       customerPhone: addr.phone,

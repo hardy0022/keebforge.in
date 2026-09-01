@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { buildMetadata } from "@/lib/seo";
-import { getServiceCatalog } from "@/lib/data";
+import { getModsCatalog } from "@/lib/data";
 import { DEFAULT_SHIPPING_MODE, enabledShippingModes } from "@/lib/shipping";
-import { ServiceConfigurator, type ConfigService } from "@/components/services/ServiceConfigurator";
+import { ModConfigurator, type ConfigService } from "@/components/mods/ModConfigurator";
 import { WhyForge } from "@/components/home/WhyForge";
 
 export const metadata: Metadata = buildMetadata({
@@ -14,7 +14,7 @@ export const metadata: Metadata = buildMetadata({
 
 /** Items hidden from the configurator (custom-build / PCB work is quoted offline). */
 const HIDDEN_GROUP_SLUGS = new Set(["custom-pcb-design"]);
-const HIDDEN_SERVICE_SLUGS = new Set([
+const HIDDEN_MOD_SLUGS = new Set([
   "keyboard-build-60-65",
   "keyboard-build-tkl",
   "split-keyboard-build",
@@ -28,12 +28,12 @@ const HIDDEN_SERVICE_SLUGS = new Set([
   "complete-mod-combo",
 ]);
 
-export default async function ServicesPage() {
-  const groups = await getServiceCatalog();
+export default async function ModsPage() {
+  const groups = await getModsCatalog();
 
   const visibleGroups = groups
     .filter((g) => !HIDDEN_GROUP_SLUGS.has(g.slug))
-    .map((g) => ({ ...g, services: g.services.filter((s) => !HIDDEN_SERVICE_SLUGS.has(s.slug)) }))
+    .map((g) => ({ ...g, services: g.services.filter((s) => !HIDDEN_MOD_SLUGS.has(s.slug)) }))
     .filter((g) => g.services.length > 0);
 
   const config: { name: string; slug: string; services: ConfigService[] }[] = visibleGroups.map((g) => ({
@@ -71,7 +71,7 @@ export default async function ServicesPage() {
         </p>
       </header>
 
-      <ServiceConfigurator
+      <ModConfigurator
         groups={config}
         shippingModes={enabledShippingModes()}
         defaultShipMode={DEFAULT_SHIPPING_MODE}

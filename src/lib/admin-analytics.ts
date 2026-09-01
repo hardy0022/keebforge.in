@@ -123,9 +123,9 @@ export const getOrderStatusBreakdown = cache(async () => {
   return buckets;
 });
 
-// ─── Workshop services (most requested) ────────────────────────────────────
+// ─── Workshop mods (most requested) ────────────────────────────────────────
 
-export const getWorkshopServices = cache(async (rangeDays: number, take = 6) => {
+export const getWorkshopMods = cache(async (rangeDays: number, take = 6) => {
   const from = rangeDays > 0 ? dayStart(rangeDays - 1) : undefined;
   const rows = await prisma.orderService.findMany({
     where: { ...(from ? { createdAt: { gte: from } } : {}) },

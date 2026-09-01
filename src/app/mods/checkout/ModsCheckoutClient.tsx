@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ServiceCheckout } from "@/app/checkout/CheckoutClient";
-import { SERVICE_CHECKOUT_KEY, type StoredServiceCheckout } from "@/components/services/ServiceConfigurator";
+import { SERVICE_CHECKOUT_KEY, type StoredServiceCheckout } from "@/components/mods/ModConfigurator";
 
 export default function ModsCheckoutClient({ razorpayKeyId }: { razorpayKeyId: string | null }) {
   const router = useRouter();

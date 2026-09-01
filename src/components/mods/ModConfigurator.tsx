@@ -6,11 +6,11 @@ import {
   calculateServiceOrder,
   type ServiceConfig,
   type ServiceOrderConfigInput,
-} from "@/lib/services/pricing";
+} from "@/lib/mods/pricing";
 import { PACKAGE_LIMITS } from "@/lib/package-limits";
 import { deriveLegs } from "@/lib/shipping-estimate";
 import { INDIAN_STATES } from "@/lib/indian-states";
-import { AddressPicker, type SavedAddressOption } from "@/components/services/AddressPicker";
+import { AddressPicker, type SavedAddressOption } from "@/components/mods/AddressPicker";
 
 export type ConfigService = {
   id: string;
@@ -477,7 +477,7 @@ function toServiceConfig(s: ConfigService): ServiceConfig {
   };
 }
 
-export function ServiceConfigurator({ groups, shippingModes, defaultShipMode }: Props) {
+export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Props) {
   const modes = shippingModes?.length ? shippingModes : (["express" as ModsShipMode]);
   const router = useRouter();
   const [device, setDevice] = useState<DeviceKey>("KEYBOARD");
@@ -1364,7 +1364,7 @@ export function ServiceConfigurator({ groups, shippingModes, defaultShipMode }: 
             ) : (
               <>
                 <div className="total-row">
-                  <span className="total-label">Service Subtotal</span>
+                  <span className="total-label">Mods Subtotal</span>
                   <span className="total-amount" style={{ fontSize: "1.35rem", color: "var(--t1)" }}>₹{amt(preview.subtotal)}</span>
                 </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateServicePrice } from "@/app/admin/actions/services";
+import { updateModPrice } from "@/app/admin/actions/mods";
 import { Spinner } from "@/components/admin/ActionForm";
 
 type Prop = {
@@ -19,8 +19,8 @@ function toRs(paise: number | null): string {
   return paise == null ? "" : String(paise / 100);
 }
 
-export function ServicePriceInline({ svc }: { svc: Prop }) {
-  const [state, formAction, pending] = useActionState(updateServicePrice, {});
+export function ModPriceInline({ svc }: { svc: Prop }) {
+  const [state, formAction, pending] = useActionState(updateModPrice, {});
 
   if (svc.unit === "QUOTE") {
     return (

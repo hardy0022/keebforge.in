@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAuth } from "@/lib/auth";
 import { getCartWithItems } from "@/lib/cart";
-import { loadActiveServiceConfigs } from "@/lib/services/server";
+import { loadActiveModConfigs } from "@/lib/mods/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export async function GET() {
       ? (cart.serviceItem.config as { serviceIds?: string[] } | null)
       : null;
     const serviceServices = svcConfig?.serviceIds
-      ? await loadActiveServiceConfigs([...new Set(svcConfig.serviceIds)])
+      ? await loadActiveModConfigs([...new Set(svcConfig.serviceIds)])
       : [];
 
     return NextResponse.json({

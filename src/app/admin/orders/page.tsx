@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
-import { ORDER_STATUS_LABELS } from "@/lib/orders";
+import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS } from "@/lib/orders";
 import { getAdminOrders } from "@/lib/admin";
 
 export const metadata: Metadata = {
@@ -129,7 +129,7 @@ export default async function AdminOrdersPage({
                       </div>
                     </td>
                     <td>
-                      <span className="badge badge-purple">{o.type}</span>
+                      <span className="badge badge-purple">{ORDER_TYPE_LABELS[o.type]}</span>
                     </td>
                     <td>
                       <span className="badge">{ORDER_STATUS_LABELS[o.status]}</span>

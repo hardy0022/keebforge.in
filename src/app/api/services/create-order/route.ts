@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentAuth } from "@/lib/auth";
 import Razorpay from "razorpay";
 import { z } from "zod";
-import { calculateServiceOrder } from "@/lib/services/pricing";
-import { loadActiveServiceConfigs } from "@/lib/services/server";
+import { calculateServiceOrder } from "@/lib/mods/pricing";
+import { loadActiveModConfigs } from "@/lib/mods/server";
 import {
   calculateShipping,
   calculateVolumetricWeight,
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
     // Authoritative inputs: services straight from the DB (active only).
     const ids = [...new Set(cfg.serviceIds)];
-    const serviceConfigs = await loadActiveServiceConfigs(ids);
+    const serviceConfigs = await loadActiveModConfigs(ids);
     if (serviceConfigs.length !== ids.length) {
       return NextResponse.json(
         { error: "One or more selected services are no longer available. Please refresh your configuration." },

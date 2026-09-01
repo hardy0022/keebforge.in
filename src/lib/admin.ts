@@ -4,7 +4,7 @@ import type { Prisma, OrderStatus, PaymentStatus, ReviewStatus, ReviewType, Role
 import { prisma } from "@/lib/prisma";
 
 /** Admin role hierarchy. Profile.role stays the source of truth. */
-export const ADMIN_ROLES: Role[] = ["ADMIN", "STAFF"];
+export const ADMIN_ROLES: Role[] = ["ADMIN", "STAFF", "DEVELOPER"];
 
 /** Terminal / non-active order statuses (used for pipeline + "active" counts). */
 const TERMINAL: OrderStatus[] = ["DELIVERED", "ORDER_COMPLETED"];

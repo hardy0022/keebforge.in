@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
-import { ORDER_BUCKET_LABELS, getAnalyticsKPIs, getAnalyticsSeries, getOrderStatusBreakdown, getWorkshopServices } from "@/lib/admin-analytics";
+import { ORDER_BUCKET_LABELS, getAnalyticsKPIs, getAnalyticsSeries, getOrderStatusBreakdown, getWorkshopMods } from "@/lib/admin-analytics";
 import { getRecentActivity, getRecentOrders } from "@/lib/admin";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
 import { RevenueOrdersChart } from "@/components/admin/RevenueOrdersChart";
@@ -35,7 +35,7 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
     getAnalyticsKPIs(rangeDays),
     getAnalyticsSeries(rangeDays),
     getOrderStatusBreakdown(),
-    getWorkshopServices(rangeDays),
+    getWorkshopMods(rangeDays),
     getRecentActivity(8),
     getRecentOrders(8),
   ]);
@@ -93,7 +93,7 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
         <div className="admin-stat purple">
           <span>Workshop active</span>
           <b>{kpis.activeWorkshop}</b>
-          <div className="muted" style={{ fontSize: "0.68rem" }}>repair / service orders</div>
+          <div className="muted" style={{ fontSize: "0.68rem" }}>repair / mod orders</div>
         </div>
       </div>
 
@@ -155,11 +155,11 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
         </div>
 
         <div className="admin-card">
-          <h3>Workshop Services</h3>
+          <h3>Workshop Mods</h3>
           {workshop.length === 0 ? (
             <div className="empty">
               <b>No workshop data yet</b>
-              Most-requested services appear here once workshop orders are placed.
+              Most-requested mods appear here once workshop orders are placed.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

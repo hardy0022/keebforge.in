@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { ServiceConfig } from "./pricing";
 
 /** Maps a Prisma Service row onto the pricing module's input shape. */
-export function toServiceConfig(s: {
+export function toModConfig(s: {
   id: string;
   slug: string;
   name: string;
@@ -33,8 +33,8 @@ export function toServiceConfig(s: {
  * Loads the requested services fresh from the DB (active only) in pricing
  * input shape — the server-authoritative source for any money math.
  */
-export async function loadActiveServiceConfigs(ids: string[]): Promise<ServiceConfig[]> {
+export async function loadActiveModConfigs(ids: string[]): Promise<ServiceConfig[]> {
   if (ids.length === 0) return [];
   const rows = await prisma.service.findMany({ where: { id: { in: ids }, active: true } });
-  return rows.map(toServiceConfig);
+  return rows.map(toModConfig);
 }

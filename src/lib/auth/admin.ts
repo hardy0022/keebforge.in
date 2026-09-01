@@ -15,7 +15,7 @@ export type AdminContext = {
   profile: Pick<Profile, "id" | "role">;
 };
 
-const PROFILE_ADMIN_ROLES: Role[] = ["ADMIN", "STAFF"];
+const PROFILE_ADMIN_ROLES: Role[] = ["ADMIN", "STAFF", "DEVELOPER"];
 
 const ORG_ADMIN_ROLES = ["owner", "developer"];
 
@@ -27,7 +27,7 @@ async function hasOrgAdminRole(userId: string): Promise<boolean> {
   return !!member;
 }
 
-function profileHasAdminRole(profile: { role: Role } | null): profile is { role: Role } & { role: "ADMIN" | "STAFF" } {
+function profileHasAdminRole(profile: { role: Role } | null): profile is { role: Role } & { role: "ADMIN" | "STAFF" | "DEVELOPER" } {
   return !!profile && PROFILE_ADMIN_ROLES.includes(profile.role);
 }
 
