@@ -29,6 +29,7 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: s
     label: "Sales",
     items: [
       { href: "/admin/orders", label: "Orders", icon: "🧾" },
+      { href: "/admin/orders/completed", label: "Completed", icon: "✅" },
       { href: "/admin/payments", label: "Payments", icon: "💳" },
       { href: "/admin/shipments", label: "Shipments", icon: "📦" },
     ],

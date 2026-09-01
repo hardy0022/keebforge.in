@@ -1,30 +1,18 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { requirePermission } from "@/lib/auth/admin";
 import { getSiteSetting } from "@/lib/data";
+import { MAINTENANCE_KEY } from "@/lib/environment";
 import { MaintenanceModeCard } from "./MaintenanceModeCard";
 
 export const metadata: Metadata = { title: "Settings | KeebForge Admin", robots: { index: false, follow: false } };
 
-function detectEnvironment(host: string): { isProduction: boolean; siteName: string } {
-  const isProduction = !(
-    host === "" ||
-    host.includes("localhost") ||
-    host.startsWith("127.") ||
-    host.startsWith("192.168.") ||
-    host.startsWith("10.") ||
-    host.startsWith("0.0.0.0") ||
-    host.endsWith(".local")
-  );
-  return { isProduction, siteName: isProduction ? "keebforge.in" : host || "localhost:3000" };
-}
-
 export default async function AdminSettingsPage() {
   await requirePermission("setting", "view");
 
-  const host = (await headers()).get("host") ?? "";
-  const env = detectEnvironment(host);
-  const maintenanceMode = (await getSiteSetting("maintenanceMode")) === true;
+  const [productionEnabled, developmentEnabled] = await Promise.all([
+    (await getSiteSetting(MAINTENANCE_KEY.production)) === true,
+    (await getSiteSetting(MAINTENANCE_KEY.development)) === true,
+  ]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 960 }}>
@@ -38,15 +26,35 @@ export default async function AdminSettingsPage() {
         </p>
       </div>
 
-      <div className={`env-indicator ${env.isProduction ? "env-prod" : "env-dev"}`}>
-        <span className="env-dot" />
-        <div>
-          <div className="env-name">{env.isProduction ? "PRODUCTION" : "DEVELOPMENT"}</div>
-          <div className="env-host">{env.siteName}</div>
-        </div>
+      <div>
+        <h2 style={{ fontFamily: "var(--ff-display)", fontSize: "1.05rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 12 }}>
+          Maintenance Mode
+        </h2>
+        <p className="muted" style={{ marginTop: -6, marginBottom: 16 }}>
+          Control public access per environment. Production and local development are fully independent.
+        </p>
       </div>
 
-      <MaintenanceModeCard enabled={maintenanceMode} isProduction={env.isProduction} siteName={env.siteName} />
+      <MaintenanceModeCard
+        environment="production"
+        name="KEEBFORGE.IN"
+        url="https://keebforge.in"
+        enabled={productionEnabled}
+        prominent
+        confirmationTitle="Enable production maintenance?"
+        confirmationBody="Visitors to keebforge.in will temporarily be unable to access the website."
+        confirmationNote="This will NOT affect localhost:3000."
+      />
+
+      <MaintenanceModeCard
+        environment="development"
+        name="LOCALHOST:3000"
+        url="http://localhost:3000"
+        enabled={developmentEnabled}
+        confirmationTitle="Enable development maintenance?"
+        confirmationBody="localhost:3000 will temporarily show the maintenance page."
+        confirmationNote="This will NOT affect keebforge.in."
+      />
     </div>
   );
 }

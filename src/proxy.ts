@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { detectEnvironment, MAINTENANCE_KEY } from "@/lib/environment";
 
 // Next.js redirect() matches sources case-insensitively, so case-variant old
 // URLs are handled here instead of next.config to avoid shadowing real routes.
@@ -42,8 +43,11 @@ export async function proxy(request: NextRequest) {
 
   // Maintenance mode: redirect public routes to /maintenance.
   // Bypass admin, auth, maintenance itself, and API/static (excluded by matcher).
+  // Determine the environment FIRST from the host, then check ONLY that
+  // environment's maintenance setting so production and development are isolated.
   if (!isBypassPath(pathname)) {
-    const setting = await prisma.siteSetting.findUnique({ where: { key: "maintenanceMode" } });
+    const env = detectEnvironment(request.nextUrl.hostname);
+    const setting = await prisma.siteSetting.findUnique({ where: { key: MAINTENANCE_KEY[env] } });
     if (setting?.value === true) {
       const url = request.nextUrl.clone();
       url.pathname = "/maintenance";

@@ -3,38 +3,35 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
-import { getAdminOrders } from "@/lib/admin";
+import { getAdminOrders, COMPLETED_STATUSES } from "@/lib/admin";
 
 export const metadata: Metadata = {
-  title: "Orders | KeebForge Admin",
+  title: "Completed Orders | KeebForge Admin",
   robots: { index: false, follow: false },
 };
 
-const ORDER_STATUSES = Object.entries(ORDER_STATUS_LABELS) as [string, string][];
 const PAYMENT_STATUSES = ["PENDING", "PARTIALLY_PAID", "PAID", "FAILED", "REFUNDED"] as const;
 
-export default async function AdminOrdersPage({
+export default async function AdminCompletedOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; payment?: string; from?: string; to?: string; sort?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; payment?: string; from?: string; to?: string; sort?: string; page?: string }>;
 }) {
   await requirePermission("order", "view");
   const sp = await searchParams;
   const result = await getAdminOrders({
     q: sp.q,
-    status: sp.status as never,
     payment: sp.payment as never,
     from: sp.from,
     to: sp.to,
     sort: (sp.sort as never) || "newest",
     page: Math.max(1, Number(sp.page) || 1),
-    excludeCompleted: true,
+    completed: true,
   });
 
   const link = (extra: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
     if (sp.q) p.set("q", sp.q);
-    if (sp.status) p.set("status", sp.status);
     if (sp.payment) p.set("payment", sp.payment);
     if (sp.from) p.set("from", sp.from);
     if (sp.to) p.set("to", sp.to);
@@ -44,27 +41,19 @@ export default async function AdminOrdersPage({
       else p.set(k, String(v));
     }
     const s = p.toString();
-    return s ? `/admin/orders?${s}` : "/admin/orders";
+    return s ? `/admin/orders/completed?${s}` : "/admin/orders/completed";
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <h1 style={{ fontFamily: "var(--ff-display)", fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
-          Orders <span className="muted num">({result.total})</span>
+          Completed Orders <span className="muted num">({result.total})</span>
         </h1>
       </div>
 
-      <form method="get" action="/admin/orders" style={{ display: "flex", flexWrap: "wrap", gap: 10 }} className="admin-card">
+      <form method="get" action="/admin/orders/completed" style={{ display: "flex", flexWrap: "wrap", gap: 10 }} className="admin-card">
         <input className="input" name="q" defaultValue={sp.q} placeholder="Search order #, name or email" style={{ flex: "1 1 200px" }} />
-        <select className="select" name="status" defaultValue={sp.status ?? ""} style={{ flex: "0 1 170px" }}>
-          <option value="">All statuses</option>
-          {ORDER_STATUSES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
         <select className="select" name="payment" defaultValue={sp.payment ?? ""} style={{ flex: "0 1 140px" }}>
           <option value="">All payments</option>
           {PAYMENT_STATUSES.map((p) => (
@@ -86,7 +75,7 @@ export default async function AdminOrdersPage({
             Filter
           </button>
           {Object.keys(sp).length > 0 && (
-            <Link href="/admin/orders" className="btn-admin">
+            <Link href="/admin/orders/completed" className="btn-admin">
               Clear
             </Link>
           )}
@@ -95,8 +84,8 @@ export default async function AdminOrdersPage({
 
       {result.items.length === 0 ? (
         <div className="empty">
-          <b>No orders match</b>
-          Try widening the filters — or new orders will appear here after checkout is live.
+          <b>No completed orders</b>
+          Orders with {COMPLETED_STATUSES.map((s) => ORDER_STATUS_LABELS[s]).join(" or ")} status will appear here.
         </div>
       ) : (
         <div className="admin-card" style={{ padding: 8 }}>
@@ -132,7 +121,7 @@ export default async function AdminOrdersPage({
                       <span className="badge badge-purple">{o.type}</span>
                     </td>
                     <td>
-                      <span className="badge">{ORDER_STATUS_LABELS[o.status]}</span>
+                      <span className="badge badge-ok">{ORDER_STATUS_LABELS[o.status]}</span>
                     </td>
                     <td>
                       <span className={`badge ${o.paymentStatus === "PAID" ? "badge-ok" : o.paymentStatus === "FAILED" ? "badge-err" : "badge-warn"}`}>

@@ -30,6 +30,7 @@ export function canAction(role: Role, resource: string, action: string): boolean
  */
 const NAV_PERMISSIONS: Record<string, [resource: string, action: string]> = {
   "/admin/orders": ["order", "view"],
+  "/admin/orders/completed": ["order", "view"],
   "/admin/products": ["product", "view"],
   "/admin/mods": ["service", "view"],
   "/admin/customers": ["customer", "view"],

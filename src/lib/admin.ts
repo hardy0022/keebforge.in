@@ -151,14 +151,27 @@ export type AdminOrdersQuery = {
   sort?: "newest" | "oldest" | "amount-desc" | "amount-asc";
   page?: number;
   pageSize?: number;
+  /** completed only, or excludeCompleted to hide them */
+  completed?: boolean;
+  excludeCompleted?: boolean;
 };
 
+/** Statuses treated as a finished/completed order. */
+export const COMPLETED_STATUSES: OrderStatus[] = ["DELIVERED", "ORDER_COMPLETED"];
+
 export const getAdminOrders = cache((params: AdminOrdersQuery) => {
-  const { q, status, payment, from, to, sort = "newest", page = 1, pageSize = 20 } = params;
+  const { q, status, payment, from, to, sort = "newest", page = 1, pageSize = 20, completed, excludeCompleted } = params;
+  const statusFilter = completed
+    ? { status: { in: COMPLETED_STATUSES } }
+    : excludeCompleted
+      ? { status: { notIn: COMPLETED_STATUSES } }
+      : status
+        ? { status }
+        : {};
   const where: Prisma.OrderWhereInput = {
     isDeleted: false,
+    ...statusFilter,
     ...(q ? { OR: [{ orderNumber: { contains: q, mode: "insensitive" } }, { customerName: { contains: q, mode: "insensitive" } }, { customerEmail: { contains: q, mode: "insensitive" } }] } : {}),
-    ...(status ? { status } : {}),
     ...(payment ? { paymentStatus: payment } : {}),
     ...(from || to ? { createdAt: { gte: from ? new Date(from) : undefined, lte: to ? new Date(`${to}T23:59:59`) : undefined } } : {}),
   };

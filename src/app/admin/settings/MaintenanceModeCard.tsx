@@ -3,16 +3,28 @@
 import { useRef, useState } from "react";
 import { ActionForm, Spinner, type ActionState } from "@/components/admin/ActionForm";
 import { toggleMaintenanceMode } from "@/app/admin/actions/settings";
+import type { Environment } from "@/lib/environment";
 
 export function MaintenanceModeCard({
+  environment,
+  name,
+  url,
   enabled: initialEnabled,
-  isProduction,
-  siteName,
+  prominent,
+  confirmationTitle,
+  confirmationBody,
+  confirmationNote,
 }: {
+  environment: Environment;
+  name: string;
+  url: string;
   enabled: boolean;
-  isProduction: boolean;
-  siteName: string;
+  prominent?: boolean;
+  confirmationTitle: string;
+  confirmationBody: string;
+  confirmationNote: string;
 }) {
+  const isProduction = environment === "production";
   const [enabled, setEnabled] = useState(initialEnabled);
   const [confirming, setConfirming] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -26,33 +38,42 @@ export function MaintenanceModeCard({
     return result;
   };
 
+  const envColor = isProduction ? "var(--warn)" : "#5b8cff";
+
   return (
     <>
-      <div className="admin-card" style={{ maxWidth: "100%" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0 }}>
-            <h3 style={{ marginBottom: 6 }}>Website Maintenance</h3>
-            <p style={{ fontSize: "0.82rem", color: "var(--t2)", lineHeight: 1.5, marginBottom: 0 }}>
-              Control public access to KeebForge while maintenance or
-              <br />
-              updates are being performed.
-            </p>
+      <div
+        className="admin-card"
+        style={{
+          maxWidth: "100%",
+          ...(prominent
+            ? { borderColor: "var(--warn)", boxShadow: "0 0 0 1px var(--warn), 0 8px 30px -12px color-mix(in srgb, var(--warn) 40%, transparent)" }
+            : {}),
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+            <span
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                padding: "3px 8px",
+                borderRadius: "var(--r-sm)",
+                color: "#0b0e14",
+                background: envColor,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {isProduction ? "PRODUCTION" : "DEVELOPMENT"}
+            </span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--t1)", letterSpacing: "0.04em" }}>{name}</span>
           </div>
-          <span
-            className={`badge ${enabled ? "badge-lime" : ""}`}
-            style={
-              enabled
-                ? { fontSize: "0.72rem", padding: "4px 11px" }
-                : { fontSize: "0.72rem", padding: "4px 11px", color: "var(--t3)", borderColor: "var(--bdr)", background: "var(--bg3)" }
-            }
-          >
-            {enabled ? "● ON" : "● OFF"}
-          </span>
+          <span style={{ fontSize: "0.72rem", color: "var(--t3)" }}>{url}</span>
         </div>
 
         <div
           style={{
-            marginTop: 20,
             padding: "14px 16px",
             borderRadius: "var(--r-sm)",
             border: "1px solid var(--bdr)",
@@ -62,73 +83,42 @@ export function MaintenanceModeCard({
           <div className="kf-settings-status" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <div>
               <p style={{ fontSize: "0.78rem", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--t3)", marginBottom: 6 }}>
-                Website status
+                Current status
               </p>
-              <p style={{ fontSize: "0.85rem", color: enabled ? "var(--acc)" : "var(--t1)", fontWeight: 600, marginBottom: 0 }}>
-                {enabled ? "● Maintenance" : "● Online"}
+              <p style={{ fontSize: "0.9rem", fontWeight: 700, color: enabled ? "var(--acc)" : "var(--ok)", marginBottom: 0 }}>
+                {enabled ? "● MAINTENANCE" : "● ONLINE"}
               </p>
             </div>
 
-            <div style={{ textAlign: "right" }}>
-              <p style={{ fontSize: "0.78rem", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--t3)", marginBottom: 6 }}>
-                Environment
-              </p>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  marginBottom: 0,
-                  color: isProduction ? "var(--warn)" : "#5b8cff",
-                }}
-              >
-                {isProduction ? "PRODUCTION" : "DEVELOPMENT"} · {siteName}
-              </p>
-            </div>
+            <p style={{ fontSize: "0.72rem", color: "var(--t3)", marginBottom: 0, maxWidth: 240, lineHeight: 1.4, textAlign: "right" }}>
+              {isProduction
+                ? "Controls the live production website only."
+                : "Controls the local development website only."}
+            </p>
 
             <ActionForm action={runAction} toastLabel="Maintenance mode">
-              {(pending) =>
-                enabled ? (
-                  <button type="submit" className="btn-admin sm danger" disabled={pending} style={{ whiteSpace: "nowrap" }}>
-                    {pending ? <Spinner /> : "Disable Maintenance"}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-admin primary"
-                    disabled={pending}
-                    style={{ whiteSpace: "nowrap" }}
-                    onClick={() => setConfirming(true)}
-                  >
-                    Enable Maintenance
-                  </button>
-                )
-              }
+              {(pending) => (
+                <>
+                  <input type="hidden" name="environment" value={environment} />
+                  {enabled ? (
+                    <button type="submit" className="btn-admin sm danger" disabled={pending} style={{ whiteSpace: "nowrap" }}>
+                      {pending ? <Spinner /> : "Disable Maintenance"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-admin primary"
+                      disabled={pending}
+                      style={{ whiteSpace: "nowrap" }}
+                      onClick={() => setConfirming(true)}
+                    >
+                      Enable Maintenance
+                    </button>
+                  )}
+                </>
+              )}
             </ActionForm>
           </div>
-        </div>
-
-        <div
-          style={{
-            marginTop: 18,
-            display: "flex",
-            gap: 24,
-            flexWrap: "wrap",
-            fontSize: "0.78rem",
-            color: "var(--t2)",
-          }}
-        >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ color: "var(--t3)" }}>Public website</span>
-            <span className={`badge ${enabled ? "badge-warn" : "badge-ok"}`} style={{ fontSize: "0.62rem", padding: "2px 8px" }}>
-              {enabled ? "Maintenance" : "Available"}
-            </span>
-          </span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ color: "var(--t3)" }}>Admin panel</span>
-            <span className="badge badge-ok" style={{ fontSize: "0.62rem", padding: "2px 8px" }}>
-              Available
-            </span>
-          </span>
         </div>
       </div>
 
@@ -142,29 +132,26 @@ export function MaintenanceModeCard({
         >
           <div className="kf-settings-modal" onClick={(e) => e.stopPropagation()}>
             <h3 id="mm-modal-title" style={{ fontFamily: "var(--ff-display)", fontSize: "1rem", fontWeight: 700, marginBottom: 10 }}>
-              Enable maintenance mode?
+              {confirmationTitle}
             </h3>
-            <p style={{ fontSize: "0.84rem", color: "var(--t2)", lineHeight: 1.55, marginBottom: 20 }}>
-              Visitors will temporarily be unable to access{" "}
-              <span style={{ fontWeight: 600, color: isProduction ? "var(--warn)" : "#5b8cff" }}>
-                {isProduction ? "PRODUCTION" : "DEVELOPMENT"} · {siteName}
-              </span>
-              . Admins will still be able to access the admin panel.
+            <p style={{ fontSize: "0.84rem", color: "var(--t2)", lineHeight: 1.55, marginBottom: 8 }}>
+              {confirmationBody} Admins will still be able to access the admin panel.
+            </p>
+            <p style={{ fontSize: "0.84rem", fontWeight: 600, color: envColor, lineHeight: 1.5, marginBottom: 20 }}>
+              {confirmationNote}
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
-                ref={cancelRef}
-                type="button"
-                className="btn-admin sm"
-                onClick={() => setConfirming(false)}
-              >
+              <button ref={cancelRef} type="button" className="btn-admin sm" onClick={() => setConfirming(false)}>
                 Cancel
               </button>
               <ActionForm action={runAction} toastLabel="Maintenance mode">
                 {(pending) => (
-                  <button type="submit" className="btn-admin sm primary" disabled={pending}>
-                    {pending ? <Spinner /> : "Enable Maintenance"}
-                  </button>
+                  <>
+                    <input type="hidden" name="environment" value={environment} />
+                    <button type="submit" className="btn-admin sm primary" disabled={pending}>
+                      {pending ? <Spinner /> : "Enable Maintenance"}
+                    </button>
+                  </>
                 )}
               </ActionForm>
             </div>

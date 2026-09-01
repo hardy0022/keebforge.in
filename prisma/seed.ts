@@ -587,6 +587,8 @@ async function main() {
     "shipping.terms": "Buyer covers shipping costs in both directions.",
     "acceptingOrders": true,
     "maintenanceMode": false,
+    "maintenanceMode.production": false,
+    "maintenanceMode.development": false,
     "turnaround": "5–7 days depending on order complexity and queue.",
     "payment.terms": "Payment before work begins — it books any parts needed and secures your order.",
     "analytics.umamiId": "db504642-e075-4a18-9da3-02f971af33c5",
