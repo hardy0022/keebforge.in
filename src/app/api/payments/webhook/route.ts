@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { formatINR } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Razorpay payment webhook.
+ *
+ * Security: every request is authenticated with an HMAC-SHA256 signature over
+ * the RAW request body using RAZORPAY_WEBHOOK_SECRET. The body is consumed
+ * as text and hashed BEFORE any JSON parsing — re-serializing the payload
+ * would break the signature.
+ *
+ * Idempotency: Razorpay retries any event that does not return 2xx, and can
+ * deliver the same event twice. We therefore always answer 200 with
+ * `{received:true}` even when we choose to ignore the event, and the PAID
+ * transition is guarded so a captured payment can never be recorded twice
+ * (see the existingPayment / isAlreadyPaid checks below).
+ */
 export async function POST(req: NextRequest) {
   try {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -47,6 +62,7 @@ export async function POST(req: NextRequest) {
       where: { razorpayPaymentId: paymentId },
     });
 
+    // Duplicate delivery of an event we already actioned: acknowledge and stop.
     if (existingPayment) {
       if (existingPayment.status === "PAID" && (status === "captured" || status === "authorized")) {
         return NextResponse.json({ received: true });
@@ -58,6 +74,8 @@ export async function POST(req: NextRequest) {
       include: { payments: true },
     });
 
+    // Ack even when the order isn't found yet: a webhook can race with order
+    // creation. Returning non-2xx makes Razorpay retry, eventually timing out.
     if (!order) {
       console.warn(`Order not found for Razorpay order_id: ${orderId}`);
       return NextResponse.json({ received: true });
@@ -67,6 +85,8 @@ export async function POST(req: NextRequest) {
     const resolvedCustomerId = customerId ?? orderBilling.razorpayCustomerId ?? null;
 
     if (status === "captured" || status === "authorized") {
+      // The PAID path must be idempotent: the order-level guard makes the whole
+      // transition run at most once even if identical events arrive back-to-back.
       const isAlreadyPaid = existingPayment?.status === "PAID" || order.paymentStatus === "PAID";
 
       if (!isAlreadyPaid) {
@@ -147,6 +167,7 @@ export async function POST(req: NextRequest) {
     } else if (status === "refunded") {
       const refundAmount = payload.refund_amount ?? amount;
 
+      // refundAmount is integer paise; formatINR is the canonical display formatter.
       await prisma.payment.update({
         where: { razorpayPaymentId: paymentId },
         data: {
@@ -163,7 +184,7 @@ export async function POST(req: NextRequest) {
         data: {
           orderId: order.id,
           status: "ORDER_RECEIVED",
-          note: `Payment refunded: ${(refundAmount / 100).toFixed(2)} INR`,
+          note: `Payment refunded: ${formatINR(refundAmount)}`,
         },
       });
     }

@@ -94,3 +94,11 @@ The 200 manifest response is shaped `{packages:[{waybill, refnum, client,…}], 
 - Invoking the returned action outside a transition throws: "An async function with useActionState was called outside of a transition … isPending will not update correctly" (React 19 / Next 16 console error).
 - Only two legitimate call sites exist and they BOTH must be safe: (a) pass the function to a `<form action={…}>` / `<formAction>` prop (React owns it), (b) imperative calls inside `startTransition(() => formAction(fd))`.
 - Anti-pattern found & fixed in `src/components/support/TrackOrder.tsx`: an `onSubmit` handler did `e.preventDefault(); formAction(fd)`. Converted to `<form action={formAction}>` + hidden `waybill` input (dropped the manual `load` fn and a `loaded` state, label driven by `state.ok`). The auto-track on mount (`reTrack`) and the post-pay refresh both wrapped in `startTransition`. If you add a tracker/order lookup later, bind forms to the action prop rather than calling it in handlers.
+## G-028 — The 17 `no-img-element` lint warnings are intentional
+`@next/next/no-img-element` currently reports 17 warnings: tweet-card (third-party), ReviewForm blob previews, ReviewBody modal image, ReviewCard avatar. These are deliberately NOT `next/image` — no bandwidth/LCP payoff and converting risks breakage. Don't "clean up" them in a future pass without a real reason.
+
+## G-029 — `/checkout` (no path) redirects; the real page is `/shop/checkout`
+`src/app/checkout/page.tsx` is a one-line `redirect("/shop/checkout")` wrapper. A curl/health check of `/checkout` returns **307**, which is correct existing behavior — probe `/shop/checkout` instead (200).
+
+## G-030 — Action-state forms must bind via `form action`, never manual invocation
+Covered G-027 for `useActionState`. Applies to any wrapped action: if a form manually builds `FormData` and calls the action in `onSubmit`, React warns and `isPending` breaks. Bind `<form action={…}>` and drop the manual call. (One exception: JSON-orderAmounts-style conversions that pass `prevState` — those keep a single wrapped `formData → void` action.)

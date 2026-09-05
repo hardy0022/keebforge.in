@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateOrderAddress, type ActionState } from "@/app/admin/actions/orders";
+import { updateOrderAddress } from "@/app/admin/actions/orders";
 
 const Spinner = ({ light = false }: { light?: boolean }) => <span className={`spinner ${light ? "light" : ""}`} aria-hidden />;
 

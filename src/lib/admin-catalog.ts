@@ -6,11 +6,6 @@ import type { ProductStatus, ProductType } from "@/lib/product-labels";
 export type { ProductStatus, ProductType };
 export { PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/product-labels";
 
-/** Effective selling price for a product/variant (variant price wins when set). */
-export function sellingPrice(p: { price: number; compareAtPrice: number | null }, v?: { price: number | null; compareAtPrice: number | null } | null) {
-  return { price: v?.price ?? p.price, compareAtPrice: v?.compareAtPrice ?? p.compareAtPrice };
-}
-
 export function availableStock(stock: number, reserved: number) {
   return Math.max(0, stock - reserved);
 }
@@ -147,26 +142,6 @@ export const getInventoryMovements = cache((take = 50) =>
 );
 
 // ─── Dashboard metrics ───────────────────────────────────────────────────────
-
-export const getProductStats = cache(async () => {
-  const [total, active, archived, lowStock, inventoryValue, sold] = await Promise.all([
-    prisma.product.count(),
-    prisma.product.count({ where: { status: "ACTIVE" } }),
-    prisma.product.count({ where: { status: "ARCHIVED" } }),
-    prisma.product.count({ where: { status: { not: "ARCHIVED" }, stock: { lte: prisma.product.fields.lowStockThreshold } } }),
-    prisma.product.aggregate({ where: { status: { not: "ARCHIVED" } }, _sum: { stock: true, costPrice: true } }),
-    prisma.orderItem.aggregate({ _sum: { quantity: true } }),
-  ]);
-  return {
-    total,
-    active,
-    outOfStock: await prisma.product.count({ where: { status: { not: "ARCHIVED" }, AND: [{ stock: { lte: 0 } }, { variants: { none: { active: true, stock: { gt: 0 } } } }] } }),
-    archived,
-    lowStock,
-    inventoryValue: (inventoryValue._sum.stock ?? 0) * (inventoryValue._sum.costPrice ?? 0),
-    productsSold: sold._sum.quantity ?? 0,
-  };
-});
 
 export const getTopProducts = cache(async (take = 5) => {
   const sales = (await prisma.orderItem.groupBy({

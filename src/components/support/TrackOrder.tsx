@@ -221,7 +221,6 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
   const hasShipment = !!(shipment && (shipment.courier || shipment.trackingNumber || shipment.trackingUrl || shipment.status || shipment.estimatedDeliveryDate));
   const paid = data.paymentStatus === "PAID";
   const amountNotSet = data.total <= 0;
-  const canPay = !paid && !amountNotSet;
 
   useEffect(() => {
     if (!timelineOpen) return;

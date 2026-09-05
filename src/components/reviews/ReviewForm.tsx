@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState, useRef, useState, startTransition, type ReactElement } from "react";
+import { useActionState, useEffect, useState, startTransition, type ReactElement } from "react";
 import Link from "next/link";
 import { submitReview, type ReviewSubmitState } from "@/app/actions/review";
 import { sniffImageFile, IMAGE_ACCEPT, IMAGE_TYPES_MESSAGE } from "@/lib/image-validation";
 import { ReviewStars } from "./ReviewStars";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const MAX_IMAGES = 4;

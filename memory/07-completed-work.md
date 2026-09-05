@@ -280,3 +280,15 @@ Also in this session:
 - **Admin amounts timeline note now shows rupees**: `updateOrderAmounts` wrote `"subtotal 100, … paise"` → now `"subtotal ₹100, …"` via a `rupees()` helper (DB stays integer paise — only the note text changed).
 
 Verified after each fix: `npx tsx src/lib/delhivery/index.ts` self-check, `npx tsc --noEmit`, eslint — all green.
+
+## Production-grade codebase cleanup (2026-09-05)
+
+Conservative pass: no rewrites, no new deps, stability-first. Phase 0 baseline was typecheck/lint/build green (23 lint warnings); end state 0 errors / 17 warnings, build green, key public routes verified live.
+
+**Dead code removed (17 exports):** `getShopCategories`, `getShopBrands`, `getApprovedReviews`, `getFeaturedWork`, `ModsGroups` (`src/lib/data.ts`); `ADMIN_ROLES` (`src/lib/admin.ts`); `sellingPrice`, `getProductStats` (`src/lib/admin-catalog.ts`); `formatServicePriceText` + unused money import (`src/lib/orders.ts`); `hasVerifiedPurchase` (`src/lib/reviews.ts`); `buildKeyboardFaq`, `MOUSE_FAQ`, `PriceTextFn` (`src/lib/faq.ts`); `COUPON_CODE_MAX`, `normalizeCouponCode` (`src/lib/coupons.ts`); `PRODUCTION_HOST`, `DEVELOPMENT_HOST` (`src/lib/environment.ts`); `REVIEWS` (`scripts/seed-custom-product.ts`).
+
+**Dedup / hygiene:** `revenueTime` now exported from `src/lib/admin.ts` and imported by `admin-analytics.ts` (was redefined). CheckoutClient's two mount effects (prefill + boot) now share ONE server request via a module-level memoized `loadMe()` promise (typed `Me` matching `/api/auth/me`); boot guard uses `meRes.status === "fulfilled" && meRes.value`. Unused imports removed (`ActionState`, `ReactNode`, `useRef`, `canPay`); dead `formatINR` re-export dropped from `mods/pricing.ts` (kept `formatPaise` — different format by design). ReviewCard photo tiles moved to `next/image` `fill sizes="120px"` behind `isOptimizable()` host guard (Cloudinary + local `/`), with `.review-photo` `aspect-ratio: 4/3`.
+
+**Comments (Phase 3, business rules / payments / security only):** webhook route now documents HMAC signature over RAW body, always-200 idempotency contract, the `isAlreadyPaid` guard, and the race with order creation (ack even when order missing). Refund timeline note now uses `formatINR(refundAmount)` (was float `.toFixed(2)` + literal " INR"). `src/lib/money.ts` header expanded to state the paise rule + "round before formatting". Catalog save/setStatus site documents the `status`→`active` mirror (D-015). `create-order` and `cart.ts`/`product-options.ts` were already well-commented — untouched.
+
+**Deliberately left alone:** the 17 remaining `no-img-element` warnings (third-party tweet card, ReviewForm blob previews, ReviewBody modal image, ReviewCard avatar) — converting them has no LCP/bandwidth payoff and risks breakage. Not worth a spec-compliant image loader for edge <img>s.

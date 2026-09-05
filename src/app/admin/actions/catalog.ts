@@ -257,6 +257,9 @@ export async function saveProduct(_prev: CatalogActionState, formData: FormData)
   if (optionConfig.error) return { error: optionConfig.error };
   if (!slug) return { error: "A name is required to create a slug." };
   const status = d.status || "ACTIVE";
+  // `status` is the workflow field (DRAFT/ACTIVE/OUT_OF_STOCK/ARCHIVED);
+  // `active` mirrors it so the legacy public shop queries (`active: true`)
+  // keep working without re-filtering on status everywhere.
   const active = status !== "DRAFT" && status !== "ARCHIVED";
   const productType = ["CUSTOM", "NEW", "CLEARANCE"].includes(d.productType ?? "") ? (d.productType as never) : undefined;
   const condition = ["NEW", "OPEN_BOX", "USED", "REFURBISHED", "DISPLAY", "CLEARANCE"].includes(d.condition ?? "")

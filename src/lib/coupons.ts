@@ -13,8 +13,6 @@ export { evaluateCoupon, type CouponEligible, type CouponResult };
  * creation — never trust client-computed discounts.
  */
 
-export const COUPON_CODE_MAX = 40;
-
 const normalizeCode = (code: string) => code.trim().toUpperCase();
 
 /**
@@ -53,8 +51,6 @@ export async function validateCoupon(
 
   return evaluateCoupon(coupon, subtotalPaise, { usageCount, perCustomerUsage });
 }
-
-export const normalizeCouponCode = normalizeCode;
 
 /**
  * Order-create data for coupon snapshot + usage tracking. Spread into the

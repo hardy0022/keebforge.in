@@ -16,6 +16,21 @@ import { INDIAN_STATES } from "@/lib/indian-states";
 import { launchRazorpayPayment, type CreateOrderResponse } from "@/lib/razorpay-pay";
 import { CouponPanel, type AppliedCoupon } from "@/components/checkout/CouponPanel";
 
+// Both mount effects below fetch /api/auth/me (prefill + boot). Share one
+// module-scoped request so a page load makes a single round-trip. The result
+// is read-only — the same profile object is safe to reuse for the lifecycle
+// of the page.
+type Me = { user?: { name?: string; email?: string } | null; profile?: { name?: string | null; phone?: string | null } | null } | null;
+let mePromise: Promise<Me> | null = null;
+function loadMe(): Promise<Me> {
+  if (!mePromise) {
+    mePromise = fetch("/api/auth/me")
+      .then(async (r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+  }
+  return mePromise;
+}
+
 interface SavedAddress {
   id: string;
   label: string;
@@ -169,9 +184,8 @@ export function ServiceCheckout({
     let cancelled = false;
     async function prefill() {
       try {
-        const meRes = await fetch("/api/auth/me");
-        if (meRes.ok) {
-          const me = await meRes.json();
+        const me = await loadMe();
+        if (me) {
           if (!cancelled) {
             const parts = (me.profile?.name || me.user?.name || "").trim().split(/\s+/);
             setForm((f) => ({
@@ -783,7 +797,7 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [cartRes, meRes] = await Promise.allSettled([fetch("/api/cart"), fetch("/api/auth/me")]);
+      const [cartRes, meRes] = await Promise.allSettled([fetch("/api/cart"), loadMe()]);
 
       let nextLines: CheckoutLine[] = [];
       if (cartRes.status === "fulfilled" && cartRes.value.ok) {
@@ -793,8 +807,8 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
 
       let user: { name: string; email: string } | null = null;
       let addresses: SavedAddress[] = [];
-      if (meRes.status === "fulfilled" && meRes.value.ok) {
-        const me = await meRes.value.json().catch(() => null);
+      if (meRes.status === "fulfilled" && meRes.value) {
+        const me = meRes.value;
         if (me?.user?.email) user = { name: me.profile?.name ?? me.user.name ?? "", email: me.user.email };
         try {
           const ar = await fetch("/api/account/addresses");

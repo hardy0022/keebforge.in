@@ -17,24 +17,6 @@ export const getModsCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
   })
 );
 
-export type ModsGroups = Awaited<ReturnType<typeof getModsCatalog>>;
-
-export const getApprovedReviews = cache((take = 12) =>
-  prisma.review.findMany({
-    where: { status: "APPROVED" },
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    take,
-  })
-);
-
-export const getFeaturedWork = cache(() =>
-  prisma.workProject.findMany({
-    where: { active: true, featured: true },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-  })
-);
-
 export const getWorkProjectBySlug = cache((slug: string) =>
   prisma.workProject.findUnique({ where: { slug } })
 );
@@ -45,16 +27,8 @@ export const getSiteSetting = cache((key: string) =>
 
 // ─── Shop catalog ───────────────────────────────────────────────────────────
 
-export const getShopCategories = cache(() =>
-  prisma.category.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } })
-);
-
 export const getCategoryBySlug = cache((slug: string) =>
   prisma.category.findFirst({ where: { slug, active: true } })
-);
-
-export const getShopBrands = cache(() =>
-  prisma.brand.findMany({ where: { active: true }, orderBy: { name: "asc" } })
 );
 
 export type ShopSort = "newest" | "price-asc" | "price-desc" | "name-asc" | "name-desc";

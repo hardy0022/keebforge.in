@@ -25,12 +25,6 @@ const WHATS_INCLUDED = [
   "KeebForge warranty + build sheet",
 ];
 
-const REVIEWS = [
-  "Hands down the cleanest build I've owned. Stock sounded dead compared to this.",
-  "They walked me through every choice, built in a week, shipped insured. 10/10.",
-  "Gasket kit, hand-lubed linears, tuned stabs — a different board after tuning.",
-];
-
 async function main() {
   const category = await prisma.category.findUniqueOrThrow({ where: { slug: "keyboards" } });
   console.log(`Using category: ${category.name}`);

@@ -1,18 +1,15 @@
 import "server-only";
 import { cache } from "react";
-import type { Prisma, OrderStatus, PaymentStatus, ReviewStatus, ReviewType, Role } from "@prisma/client";
+import type { Prisma, OrderStatus, PaymentStatus, ReviewStatus, ReviewType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 import { fmtIST, istDayEnd, istDayKey, istDayStart, startOfTodayIST, endOfTodayIST, daysAgoISTDayStart } from "@/lib/ist";
-
-/** Admin role hierarchy. Profile.role stays the source of truth. */
-export const ADMIN_ROLES: Role[] = ["ADMIN", "STAFF", "DEVELOPER"];
 
 /** Terminal / non-active order statuses (used for pipeline + "active" counts). */
 const TERMINAL: OrderStatus[] = ["DELIVERED", "ORDER_COMPLETED"];
 
 /** Revenue timestamp for a paid order: the actual capture, else order creation. */
-const revenueTime = (o: { createdAt: Date; payments?: { status: PaymentStatus; paidAt: Date | null }[] | null }) => {
+export const revenueTime = (o: { createdAt: Date; payments?: { status: PaymentStatus; paidAt: Date | null }[] | null }) => {
   const captured = (o.payments ?? [])
     .filter((p) => p.status === "PAID" && p.paidAt)
     .map((p) => p.paidAt as Date)

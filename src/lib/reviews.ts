@@ -117,11 +117,6 @@ export async function verifiedProfileIds(productId: string, profileIds: string[]
   return new Set(rows.map((r) => r.profileId).filter((p): p is string => !!p));
 }
 
-/** Is the signed-in profile a verified purchaser of this product? */
-export function hasVerifiedPurchase(profileId: string, verified: Set<string>): boolean {
-  return verified.has(profileId);
-}
-
 /**
  * Recompute the product's real ratingAverage/ratingCount from APPROVED product
  * reviews. Never fabricated — always derived from live rows.

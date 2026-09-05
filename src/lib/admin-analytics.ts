@@ -1,17 +1,8 @@
 import "server-only";
 import { cache } from "react";
-import type { PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { daysAgoISTDayStart, fmtIST, istDayKey } from "@/lib/ist";
-
-/** Revenue timestamp for a paid order: the actual capture, else order creation. */
-const revenueTime = (o: { createdAt: Date; payments?: { status: PaymentStatus; paidAt: Date | null }[] | null }) => {
-  const captured = (o.payments ?? [])
-    .filter((p) => p.status === "PAID" && p.paidAt)
-    .map((p) => p.paidAt as Date)
-    .sort((a, b) => a.getTime() - b.getTime())[0];
-  return captured ?? o.createdAt;
-};
+import { revenueTime } from "@/lib/admin";
 
 /** Human buckets mapping the 18-status pipeline to a compact analytics view. */
 export const ORDER_BUCKET_LABELS: Record<string, string> = {

@@ -1,8 +1,5 @@
 export type Environment = "production" | "development";
 
-export const PRODUCTION_HOST = "keebforge.in";
-export const DEVELOPMENT_HOST = "localhost:3000";
-
 export const MAINTENANCE_KEY: Record<Environment, string> = {
   production: "maintenanceMode.production",
   development: "maintenanceMode.development",

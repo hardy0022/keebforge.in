@@ -2860,6 +2860,7 @@ ul {
   border-radius: var(--r-sm);
   overflow: hidden;
   max-width: 120px;
+  aspect-ratio: 4 / 3;
 }
 .review-photo img {
   display: block;

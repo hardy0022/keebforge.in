@@ -1,8 +1,14 @@
+import Image from "next/image";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
 import { ReviewBody } from "@/components/reviews/ReviewBody";
 
 /** Photos shown per review before the "+N more" tile takes over. */
 const PHOTOS_SHOWN = 4;
+
+// next/image only for hosts whitelisted in next.config (Cloudinary) or local
+// /public assets. Other CDN URLs keep a plain <img> so nothing breaks.
+const isOptimizable = (url: string) =>
+  url.startsWith("/") || url.startsWith("https://res.cloudinary.com/");
 
 export type ReviewCardItem = {
   id: string;
@@ -41,7 +47,12 @@ export function ReviewCard({ review, verified }: { review: ReviewCardItem; verif
         <div className="review-photos">
           {shownPhotos.map((img) => (
             <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="review-photo">
-              <img src={img.url} alt="" loading="lazy" />
+              {isOptimizable(img.url) ? (
+                <Image src={img.url} alt="" fill sizes="120px" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={img.url} alt="" loading="lazy" />
+              )}
             </a>
           ))}
           {morePhotos > 0 && (

@@ -180,8 +180,3 @@ export function calculateServiceOrder(
     selectedCount: services.length,
   };
 }
-
-/** Format paise to an INR string without the ₹ glyph (for compact panels). */
-export function formatINR(paise: number): string {
-  return formatPaise(paise);
-}

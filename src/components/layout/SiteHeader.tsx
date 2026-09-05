@@ -72,7 +72,7 @@ export function SiteHeader() {
             setCartCount(d.items.reduce((n: number, i: { quantity?: number }) => n + (i.quantity ?? 1), 0));
           }
         })
-        .catch(() => {});
+        .catch((err) => console.error("cart count refresh failed", err));
     load();
     window.addEventListener("kf-cart-changed", load);
     return () => {

@@ -1,6 +1,5 @@
 import { randomBytes } from "node:crypto";
 import type { OrderStatus, OrderType, ServiceUnit } from "@prisma/client";
-import { formatINR, formatINRRange } from "@/lib/money";
 
 /** Canonical human labels for the machine OrderType enum. Single source of truth. */
 export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
@@ -82,21 +81,6 @@ export const SERVICE_UNIT_LABELS: Record<ServiceUnit, string> = {
   FLAT: "flat",
   QUOTE: "quote",
 };
-
-/** Server-side price text for a service, derived from the DB (never hardcoded). */
-export function formatServicePriceText(s: {
-  price: number | null;
-  priceMin: number | null;
-  priceMax: number | null;
-  priceLabel: string | null;
-  unit: ServiceUnit;
-} | null | undefined): string | null {
-  if (!s) return null;
-  if (s.priceLabel) return s.priceLabel;
-  if (s.price != null) return `${formatINR(s.price)} ${SERVICE_UNIT_LABELS[s.unit]}`;
-  if (s.priceMin != null && s.priceMax != null) return formatINRRange(s.priceMin, s.priceMax);
-  return null;
-}
 
 /** KF + 6 alphanumeric characters, like the existing system. */
 export function generateOrderNumber(): string {
