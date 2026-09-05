@@ -492,7 +492,7 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
   const restored = useRef(false);
 
   // ── Shipping / Pickup (Step 03) + Package Details (Step 04) ────────────────
-  const [shipMethod, setShipMethod] = useState<ModsShippingMethod>("undecided");
+  const [shipMethod, setShipMethod] = useState<ModsShippingMethod>("customer_shipping");
   const [shipMode, setShipMode] = useState<ModsShipMode>(defaultShipMode ?? "express");
   const [contact, setContact] = useState<ModsContactInput>({ firstName: "", lastName: "", phone: "", email: "", alt: "" });
   const nameOk = contact.firstName.trim().length >= 1 && contact.lastName.trim().length >= 1;
@@ -1435,18 +1435,20 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
               </div>
             )}
 
-            <button
-              type="button"
-              className="btn-prime kf-checkout-btn"
-              onClick={payAndConfirm}
-              disabled={!canCheckout || adding}
-              style={!canCheckout || adding ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
-            >
-              {adding ? "Preparing…" : "Pay & Confirm"}
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3 13L13 3M13 3H6M13 3V10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+            {canCheckout && (
+              <button
+                type="button"
+                className="btn-prime kf-checkout-btn"
+                onClick={payAndConfirm}
+                disabled={adding}
+                style={adding ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+              >
+                {adding ? "Preparing…" : "Pay & Confirm"}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 13L13 3M13 3H6M13 3V10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>

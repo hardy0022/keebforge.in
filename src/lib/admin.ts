@@ -3,28 +3,32 @@ import { cache } from "react";
 import type { Prisma, OrderStatus, PaymentStatus, ReviewStatus, ReviewType, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+import { fmtIST, istDayEnd, istDayKey, istDayStart, startOfTodayIST, endOfTodayIST, daysAgoISTDayStart } from "@/lib/ist";
+
 /** Admin role hierarchy. Profile.role stays the source of truth. */
 export const ADMIN_ROLES: Role[] = ["ADMIN", "STAFF", "DEVELOPER"];
 
 /** Terminal / non-active order statuses (used for pipeline + "active" counts). */
 const TERMINAL: OrderStatus[] = ["DELIVERED", "ORDER_COMPLETED"];
 
-const dayStart = (offsetDays = 0) => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - offsetDays);
-  return d;
+/** Revenue timestamp for a paid order: the actual capture, else order creation. */
+const revenueTime = (o: { createdAt: Date; payments?: { status: PaymentStatus; paidAt: Date | null }[] | null }) => {
+  const captured = (o.payments ?? [])
+    .filter((p) => p.status === "PAID" && p.paidAt)
+    .map((p) => p.paidAt as Date)
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+  return captured ?? o.createdAt;
 };
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 
 export const getAdminStats = cache(async () => {
-  const today = dayStart();
+  const [startToday, endToday] = [startOfTodayIST(), endOfTodayIST()];
   const [todayOrders, todayRevenue, pendingOrders, pendingPayments, totalCustomers, activeProducts, lowStock] =
     await Promise.all([
-      prisma.order.count({ where: { isDeleted: false, createdAt: { gte: today } } }),
+      prisma.order.count({ where: { isDeleted: false, createdAt: { gte: startToday, lt: endToday } } }),
       prisma.order.aggregate({
-        where: { isDeleted: false, paymentStatus: "PAID", createdAt: { gte: today } },
+        where: { isDeleted: false, paymentStatus: "PAID", createdAt: { gte: startToday, lt: endToday } },
         _sum: { total: true },
       }),
       prisma.order.count({ where: { isDeleted: false, status: "PAYMENT_PENDING" } }),
@@ -58,23 +62,28 @@ export const getAdminStats = cache(async () => {
 
 /** Daily revenue (PAID orders) for the trailing N days, oldest first. */
 export const getRevenueSeries = cache(async (days: number) => {
-  const from = dayStart(days - 1);
+  const from = daysAgoISTDayStart(days - 1);
   const orders = await prisma.order.findMany({
     where: { isDeleted: false, paymentStatus: "PAID", createdAt: { gte: from } },
-    select: { createdAt: true, total: true },
+    select: {
+      createdAt: true,
+      total: true,
+      payments: { where: { status: "PAID" }, select: { status: true, paidAt: true } },
+    },
   });
   const buckets: { date: string; label: string; total: number }[] = [];
   for (let i = 0; i < days; i++) {
-    const d = dayStart(days - 1 - i);
+    const d = daysAgoISTDayStart(days - 1 - i);
     buckets.push({
-      date: d.toISOString().slice(0, 10),
-      label: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      date: istDayKey(d),
+      label: fmtIST(d, { day: "numeric", month: "short" }),
       total: 0,
     });
   }
+  const bucketByKey = new Map(buckets.map((b) => [b.date, b]));
   for (const o of orders) {
-    const key = o.createdAt.toISOString().slice(0, 10);
-    const b = buckets.find((x) => x.date === key);
+    const key = istDayKey(revenueTime(o));
+    const b = bucketByKey.get(key);
     if (b) b.total += o.total;
   }
   return buckets;
@@ -173,7 +182,7 @@ export const getAdminOrders = cache((params: AdminOrdersQuery) => {
     ...statusFilter,
     ...(q ? { OR: [{ orderNumber: { contains: q, mode: "insensitive" } }, { customerName: { contains: q, mode: "insensitive" } }, { customerEmail: { contains: q, mode: "insensitive" } }] } : {}),
     ...(payment ? { paymentStatus: payment } : {}),
-    ...(from || to ? { createdAt: { gte: from ? new Date(from) : undefined, lte: to ? new Date(`${to}T23:59:59`) : undefined } } : {}),
+    ...(from || to ? { createdAt: { gte: from ? istDayStart(from) : undefined, lte: to ? istDayEnd(to) : undefined } } : {}),
   };
   const orderBy =
     sort === "oldest"

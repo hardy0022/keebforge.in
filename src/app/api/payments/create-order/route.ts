@@ -12,8 +12,9 @@ import {
   isFreeShipping,
   quoteFingerprint,
   toShippingMode,
-} from "@/lib/shipping";
+} from "@/lib/delhivery";
 import { validateCoupon, couponOrderCreateData, incrementCouponUsage, type CouponEligible } from "@/lib/coupons";
+import { ensureRazorpayCustomer } from "@/lib/razorpay-customer";
 import { Prisma } from "@prisma/client";
 import Razorpay from "razorpay";
 
@@ -344,6 +345,12 @@ export async function POST(req: NextRequest) {
     });
 
     const razorpay = getRazorpay();
+    const razorpayCustomerId = await ensureRazorpayCustomer(razorpay, {
+      profile,
+      name: [addr.firstName, addr.lastName].filter(Boolean).join(" ") || profile?.name || user?.name || "Customer",
+      email,
+      contact: addr.phone,
+    });
     const rzpOrder = await razorpay.orders.create({
       amount: totalAmount,
       currency: "INR",
@@ -361,6 +368,7 @@ export async function POST(req: NextRequest) {
         billingDetails: {
           razorpayOrderId: rzpOrder.id,
           razorpayOrderAmount: rzpOrder.amount,
+          ...(razorpayCustomerId ? { razorpayCustomerId } : {}),
           ...(shippingSnapshot ? { shippingFingerprint: shippingSnapshot.fingerprint } : {}),
           ...(billingAddr
             ? {

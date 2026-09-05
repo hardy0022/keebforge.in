@@ -495,9 +495,6 @@ const categorySchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(1, "Name is required.").max(120),
   slug: z.string().trim().optional(),
-  description: z.string().trim().optional(),
-  parentId: z.string().optional(),
-  image: z.string().trim().optional(),
   sortOrder: z.coerce.number().int().min(0).optional(),
   active: z.string().optional(),
 });
@@ -508,9 +505,6 @@ export async function saveCategory(_prev: CatalogActionState, formData: FormData
     id: formData.get("id") || undefined,
     name: formData.get("name"),
     slug: formData.get("slug") || undefined,
-    description: formData.get("description") || undefined,
-    parentId: formData.get("parentId") || undefined,
-    image: formData.get("image") || undefined,
     sortOrder: formData.get("sortOrder") || undefined,
     active: formData.get("active") || undefined,
   });
@@ -521,10 +515,11 @@ export async function saveCategory(_prev: CatalogActionState, formData: FormData
   try {
     const cat = await prisma.category.upsert({
       where: { id: d.id ?? "__new__" },
-      update: { name: d.name, slug, description: d.description || null, parentId: d.parentId || null, image: d.image || null, sortOrder: d.sortOrder ?? 0, active: d.active === "on" || d.active === undefined },
-      create: { name: d.name, slug, description: d.description || null, parentId: d.parentId || null, image: d.image || null, sortOrder: d.sortOrder ?? 0, active: d.active === "on" || d.active === undefined },
+      update: { name: d.name, slug, sortOrder: d.sortOrder ?? 0, active: d.active === "on" || d.active === undefined },
+      create: { name: d.name, slug, sortOrder: d.sortOrder ?? 0, active: d.active === "on" || d.active === undefined },
     });
     revalidatePath("/admin/products/categories");
+    revalidatePath("/admin/settings/categories");
     return { ok: true, id: cat.id };
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: "A category with this slug already exists." };
@@ -567,7 +562,7 @@ export async function saveBrand(_prev: CatalogActionState, formData: FormData): 
       update: { name: d.name, slug, logoUrl: d.logoUrl || null, description: d.description || null, website: d.website || null, seoTitle: d.seoTitle || null, seoDescription: d.seoDescription || null, active: d.active === "on" || d.active === undefined },
       create: { name: d.name, slug, logoUrl: d.logoUrl || null, description: d.description || null, website: d.website || null, seoTitle: d.seoTitle || null, seoDescription: d.seoDescription || null, active: d.active === "on" || d.active === undefined },
     });
-    revalidatePath("/admin/brands");
+    revalidatePath("/admin/settings/brands");
     revalidatePath("/shop");
     return { ok: true, id: brand.id };
   } catch (e) {

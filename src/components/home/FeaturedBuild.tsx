@@ -13,6 +13,8 @@ import {
 import { cldUrl } from "@/lib/cloudinary-url";
 import { formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import ArrowBigLeftIcon from "@/components/ui/arrow-big-left-icon";
+import ArrowBigRightIcon from "@/components/ui/arrow-big-right-icon";
 import type { HomeProduct } from "@/lib/home";
 
 const WORDS = 30;
@@ -40,7 +42,10 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
     if (products.length < 2 || reduced) return;
     const id = setInterval(() => setIndex((i) => (i + 1) % products.length), SLIDE_MS);
     return () => clearInterval(id);
-  }, [products.length, reduced]);
+  }, [products.length, reduced, index]);
+
+  const goto = (dir: number) =>
+    setIndex((i) => (i + dir + products.length) % products.length);
 
   if (products.length === 0) return null;
 
@@ -51,6 +56,11 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
 
   return (
     <section ref={ref} className="hp-feature" aria-labelledby="featured-build">
+      <header className="hp-section-head">
+        <p className="hp-kicker">
+          <span className="hp-kicker-mark">{"//"}</span> Featured Build
+        </p>
+      </header>
       <div className="hp-feature-grid">
         <motion.div
           style={{ scale: reduced ? 1 : scale, y: reduced ? 0 : frameY }}
@@ -92,9 +102,6 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
               exit={{ opacity: 0, x: -12 }}
               transition={transition}
             >
-              <p className="hp-kicker">
-                <span className="hp-kicker-mark">{"//"}</span> Featured Build
-              </p>
               <h2 id="featured-build" className="hp-feature-title">
                 {product.name}
               </h2>
@@ -115,6 +122,14 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
 
       {products.length > 1 && (
         <div className="hp-feature-dots" role="group" aria-label="Featured products">
+          <button
+            type="button"
+            className="hp-feature-arrow hp-feature-arrow-prev"
+            aria-label="Previous featured build"
+            onClick={() => goto(-1)}
+          >
+            <ArrowBigLeftIcon size={18} />
+          </button>
           {products.map((p, i) => (
             <button
               key={p.id}
@@ -125,6 +140,14 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
               onClick={() => setIndex(i)}
             />
           ))}
+          <button
+            type="button"
+            className="hp-feature-arrow hp-feature-arrow-next"
+            aria-label="Next featured build"
+            onClick={() => goto(1)}
+          >
+            <ArrowBigRightIcon size={18} />
+          </button>
         </div>
       )}
     </section>

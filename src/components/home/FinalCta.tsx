@@ -15,7 +15,7 @@ export function FinalCta() {
           Build a keyboard. Tune your board. Send us your repair.
         </Reveal>
         <Reveal className="hp-final-cta" delay={220}>
-          <Link href="/shop/custom" className="btn-prime btn-prime-lg">
+          <Link href="/shop" className="btn-prime btn-prime-lg">
             Start a Build <span aria-hidden="true">→</span>
           </Link>
         </Reveal>

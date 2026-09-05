@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { getInventoryRows, getInventoryMovements, availableStock } from "@/lib/admin-catalog";
 import { InventoryForm } from "@/components/admin/products/ProductDetailClient";
+import { fmtIST } from "@/lib/ist";
 
 export const metadata: Metadata = { title: "Inventory | KeebForge Admin", robots: { index: false, follow: false } };
 
@@ -57,7 +58,7 @@ export default async function AdminInventoryPage() {
                     <td className="num" style={{ color: m.delta > 0 ? "var(--ok)" : "var(--err)" }}>{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
                     <td>{m.reason}</td>
                     <td className="muted">{m.profile?.name ?? m.profile?.email ?? "—"}</td>
-                    <td className="muted num">{m.createdAt.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                    <td className="muted num">{fmtIST(m.createdAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                   </tr>
                 ))}
               </tbody>

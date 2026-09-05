@@ -12,7 +12,7 @@ import {
   ShippingMode,
   toShippingMode,
   enabledShippingModes,
-} from "@/lib/shipping";
+} from "@/lib/delhivery";
 
 export const dynamic = "force-dynamic";
 

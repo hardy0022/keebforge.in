@@ -5,8 +5,10 @@ import Image from "next/image";
 import { formatINR } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAuth } from "@/lib/auth";
-import { ORDER_STATUS_LABELS, SERVICE_UNIT_LABELS } from "@/lib/orders";
+import { SERVICE_UNIT_LABELS } from "@/lib/orders";
 import { buildMetadata } from "@/lib/seo";
+import { CopyPaymentId } from "@/components/order/CopyPaymentId";
+import { OrderPaymentSummary } from "@/components/order/OrderPaymentSummary";
 
 export async function generateMetadata({ params }: { params: Promise<{ orderNumber: string }> }): Promise<Metadata> {
   const { orderNumber } = await params;
@@ -72,189 +74,272 @@ export default async function OrderSuccessPage({ params }: { params: Promise<{ o
   const isQuoteLine = (slug: string) =>
     summaryServices.some((l) => typeof l.serviceName === "string" && l.isQuote && l.serviceName === slug);
 
-  const headline = paid ? "Payment Successful" : quoteRequest ? "Quote Request Received" : "Order Received";
-  const subline = paid
-    ? "Your service order has been received. We'll email your receipt shortly."
-    : quoteRequest
-      ? "We've received your configuration. Final pricing will be confirmed after inspection — no payment was taken."
-      : "Your order has been received.";
+  const headline = paid ? "Payment successful!" : quoteRequest ? "Quote request received" : "Order received";
+  const subline = quoteRequest
+    ? "We've received your configuration. Final pricing will be confirmed after inspection — no payment was taken."
+    : null;
+
+  const deviceRowsOut = deviceRows(order.summary);
+
+  const grandLabel = paid ? "Total Paid" : quoteRequest ? "Due Now" : "Total";
 
   return (
     <main>
-      <section className="svc-section">
+      <section className="svc-section order-success-page">
         <div className="wrap">
-          <div className="text-center mb-12">
+          <header className="order-success-hero">
+            <p className="order-success-eyebrow">{"// Order Confirmed"}</p>
             <div
-              className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[var(--acc-dim)] border border-[var(--acc)] mb-6"
+              className="order-success-check"
               aria-hidden="true"
               style={paid ? undefined : { borderColor: "var(--bdr-h)" }}
             >
               {paid ? (
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               ) : (
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="12" />
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
               )}
             </div>
-            <h1 className="font-display text-3xl font-bold text-[var(--t1)] mb-2">✓ {headline}</h1>
-            <p className="text-[var(--t2)]">
-              Order <span className="font-display font-mono text-[var(--acc)]">{order.orderNumber}</span> — {subline}
+            <h1 className="order-success-title">{headline}</h1>
+            <p className="order-success-sub">{subline}</p>
+            <p className="order-success-order">
+              <span className="order-success-order-label">Order number</span>
+              <b>{order.orderNumber}</b>
             </p>
+          </header>
+
+          <div className="os-section-head">
+            <h2 className="os-section-title">Your Order</h2>
+            <span className="os-section-rule" aria-hidden="true" />
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* Device configuration (service orders) */}
-            {isService && (
-              <div className="card p-6">
-                <h2 className="font-display text-xl font-bold text-[var(--t1)] mb-4">Device</h2>
-                <dl className="space-y-3">
-                  {deviceRows(order.summary).map(([k, v]) => (
-                    <div key={k} className="flex justify-between gap-6">
-                      <dt className="text-[var(--t3)]">{k}</dt>
-                      <dd className="text-[var(--t1)] text-right">{v}</dd>
+          <div className="os-grid">
+            <div className="os-col">
+              {order.shippingAddress ? (
+                <div className="card p-6 os-card-fill">
+                  <div className="os-card-head">
+                    <h2 className="os-card-title">Delivery Address</h2>
+                  </div>
+                  <div className="os-addr-block">
+                    <div className="os-addr-recipient">
+                      <svg className="os-addr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                      <span className="os-addr-name">{order.customerName}</span>
                     </div>
-                  ))}
-                </dl>
-              </div>
-            )}
-
-            {/* Services / products */}
-            <div className="card p-6">
-              <h2 className="font-display text-xl font-bold text-[var(--t1)] mb-4">
-                {isService ? "Services" : "Items"}
-              </h2>
-              <div className="space-y-3 mb-4">
-                {order.services.map((svc) => {
-                  const quote = svc.lineTotal === 0 && isQuoteLine(svc.slug);
-                  return (
-                    <div key={svc.id} className="flex justify-between gap-3">
-                      <div>
-                        <p className="text-[var(--t1)]">{svc.name}</p>
-                        <p className="text-xs text-[var(--t3)]">
-                          {quote ? "QUOTE REQUIRED" : `${svc.quantity} × ${formatINR(svc.unitPrice)} ${SERVICE_UNIT_LABELS[svc.unit]}`}
-                        </p>
-                      </div>
-                      <span className="font-display font-bold text-[var(--t1)] whitespace-nowrap">
-                        {quote ? <span className="quote-chip">QUOTE</span> : formatINR(svc.lineTotal)}
+                    <address className="os-address">
+                      {order.shippingAddress.apartment && <span>{order.shippingAddress.apartment}</span>}
+                      <span className="os-addr-home">{order.shippingAddress.streetAddress}</span>
+                      <span>
+                        {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
                       </span>
-                    </div>
-                  );
-                })}
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {item.product?.images?.[0] && (
-                        <Image src={item.product.images[0].url} alt={item.product.name} width={48} height={48} className="rounded-lg object-cover" sizes="48px" />
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-medium text-[var(--t1)] truncate">{item.product?.name ?? item.name}</p>
-                        <p className="text-xs text-[var(--t3)]">Qty {item.quantity}</p>
+                      <span>{order.shippingAddress.country}</span>
+                    </address>
+                    {(order.shippingAddress.phone || order.customerPhone) && (
+                      <div className="os-addr-contact">
+                        <span className="os-addr-contact-label">Phone</span>
+                        <span className="os-addr-contact-value">{order.shippingAddress.phone ?? order.customerPhone}</span>
                       </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="card p-6 os-card-fill">
+                  <div className="os-card-head">
+                    <h2 className="os-card-title">Customer</h2>
+                  </div>
+                  <dl className="os-customer">
+                    <div>
+                      <dt>Name</dt>
+                      <dd>{order.customerName}</dd>
                     </div>
-                    <span className="font-display font-bold text-[var(--t1)] whitespace-nowrap">
-                      {formatINR(item.lineTotal)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="border-t border-[var(--bdr)] pt-4 space-y-2">
-                <div className="flex justify-between text-sm text-[var(--t3)]">
-                  <span>Subtotal</span>
-                  <span className="text-[var(--t1)]">{order.subtotal === 0 ? "—" : formatINR(order.subtotal)}</span>
+                    <div>
+                      <dt>Email</dt>
+                      <dd>{order.customerEmail}</dd>
+                    </div>
+                    {order.customerPhone && (
+                      <div>
+                        <dt>Phone</dt>
+                        <dd>{order.customerPhone}</dd>
+                      </div>
+                    )}
+                  </dl>
                 </div>
-                {order.discount > 0 && (
-                  <div className="flex justify-between text-sm text-[var(--ok)]">
-                    <span>Discount</span>
-                    <span>−{formatINR(order.discount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm text-[var(--t3)]">
-                  <span>Shipping</span>
-                  <span>{order.shipping === 0 ? (order.type === "PRODUCT" && !quoteRequest ? "FREE" : "Calculated later") : formatINR(order.shipping)}</span>
-                </div>
-                <div className="flex justify-between font-display font-bold text-[var(--t1)]">
-                  <span>{paid || !quoteRequest ? "Total" : "Due Now"}</span>
-                  <span>{paid ? formatINR(order.total) : quoteRequest ? "₹0" : formatINR(order.total)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Delivery address (product orders) */}
-            {order.shippingAddress && (
-              <div className="card p-6">
-                <h2 className="font-display text-xl font-bold text-[var(--t1)] mb-4">Delivery Address</h2>
-                <address className="not-italic text-sm text-[var(--t2)] leading-6">
-                  {order.shippingAddress.apartment && <>{order.shippingAddress.apartment}<br /></>}
-                  {order.shippingAddress.streetAddress}<br />
-                  {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}<br />
-                  {order.shippingAddress.country}
-                  {order.customerPhone && <><br />{order.customerPhone}</>}
-                </address>
-              </div>
-            )}
-
-            {/* Payment + status */}
-            <div className="card p-6 lg:col-span-2">
-              <h2 className="font-display text-xl font-bold text-[var(--t1)] mb-4">Payment & Status</h2>
-              <dl className="grid gap-3 md:grid-cols-2">
-                <div className="flex justify-between md:block">
-                  <dt className="text-[var(--t3)]">Order Status</dt>
-                  <dd><span className="badge badge-lime">{ORDER_STATUS_LABELS[order.status]}</span></dd>
-                </div>
-                <div className="flex justify-between md:block">
-                  <dt className="text-[var(--t3)]">Payment Status</dt>
-                  <dd>
-                    <span className={`badge ${order.paymentStatus === "PAID" ? "badge-ok" : order.paymentStatus === "FAILED" ? "badge-err" : "badge-warn"}`}>
-                      {order.paymentStatus}
-                    </span>
-                  </dd>
-                </div>
-                {payment?.razorpayPaymentId && (
-                  <div className="flex justify-between md:block">
-                    <dt className="text-[var(--t3)]">Razorpay Payment ID</dt>
-                    <dd className="font-mono text-xs text-[var(--t2)] break-all">{payment.razorpayPaymentId}</dd>
-                  </div>
-                )}
-                {payment?.method && (
-                  <div className="flex justify-between md:block">
-                    <dt className="text-[var(--t3)]">Method</dt>
-                    <dd className="text-[var(--t1)] capitalize">{payment.method}</dd>
-                  </div>
-                )}
-              </dl>
-              {quoteRequest && (
-                <p className="text-sm text-[var(--warn)] mt-4">
-                  A quote covers inspection-based work. Once we confirm pricing you&apos;ll receive a payment link for the agreed amount.
-                </p>
               )}
             </div>
+
+            <div className="os-col">
+              <div className="card p-6 os-card-fill">
+                <div className="os-card-head">
+                  <h2 className="os-card-title">Order Summary</h2>
+                </div>
+                {isService && deviceRowsOut.length > 0 && (
+                  <div className="os-device">
+                    <h3 className="os-device-title">Device</h3>
+                    <dl className="os-device-rows">
+                      {deviceRowsOut.map(([k, v]) => (
+                        <div key={k} className="os-device-row">
+                          <dt>{k}</dt>
+                          <dd>{v}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
+                <ul className="os-lines">
+                  {order.services.map((svc) => {
+                    const quote = svc.lineTotal === 0 && isQuoteLine(svc.slug);
+                    return (
+                      <li key={svc.id} className="os-line">
+                        <div className="os-line-main">
+                          <div className="min-w-0">
+                            <p className="os-line-name">{svc.name}</p>
+                            <p className="os-line-meta">
+                              {quote ? "QUOTE REQUIRED" : `${svc.quantity} × ${formatINR(svc.unitPrice)} ${SERVICE_UNIT_LABELS[svc.unit]}`}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="os-line-total">
+                          {quote ? <span className="quote-chip">QUOTE</span> : formatINR(svc.lineTotal)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                  {order.items.map((item) => (
+                    <li key={item.id} className="os-line">
+                      <div className="os-line-main">
+                        {item.product?.images?.[0] ? (
+                          <Image
+                            src={item.product.images[0].url}
+                            alt={item.product.name}
+                            width={46}
+                            height={46}
+                            className="os-line-thumb"
+                            sizes="46px"
+                          />
+                        ) : (
+                          <span className="os-line-thumb os-line-thumb-fallback" aria-hidden="true">
+                            ⌨
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <p className="os-line-name">{item.product?.name ?? item.name}</p>
+                          <p className="os-line-meta">
+                            Qty {item.quantity} · {formatINR(item.unitPrice)} each
+                          </p>
+                        </div>
+                      </div>
+                      <span className="os-line-total">{formatINR(item.lineTotal)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <dl className="os-totals">
+                  <div className="os-total-row">
+                    <dt>Subtotal</dt>
+                    <dd>{order.subtotal === 0 ? "—" : formatINR(order.subtotal)}</dd>
+                  </div>
+                  {order.discount > 0 && (
+                    <div className="os-total-row os-total-discount">
+                      <dt>Discount</dt>
+                      <dd>−{formatINR(order.discount)}</dd>
+                    </div>
+                  )}
+                  <div className="os-total-row">
+                    <dt>Shipping</dt>
+                    <dd>{order.shipping === 0 ? (order.type === "PRODUCT" && !quoteRequest ? "FREE" : "Calculated later") : formatINR(order.shipping)}</dd>
+                  </div>
+                  <div className="os-total-grand">
+                    <dt>{grandLabel}</dt>
+                    <dd>{paid ? formatINR(order.total) : quoteRequest ? "—" : formatINR(order.total)}</dd>
+                  </div>
+                </dl>
+                <div className="os-pay-block">
+                  {paid ? (
+                    <div className="os-pay-line">
+                      <span className="os-pay-line-label">Payment</span>
+                      <span className="badge badge-lime">Paid ✓</span>
+                      {payment?.razorpayPaymentId && (
+                        <>
+                          <span className="os-pay-grow" aria-hidden="true" />
+                          <span className="os-pay-id">{payment.razorpayPaymentId}</span>
+                          <CopyPaymentId value={payment.razorpayPaymentId} />
+                        </>
+                      )}
+                    </div>
+                  ) : quoteRequest ? (
+                    <div className="os-pay-line">
+                      <span className="os-pay-line-label">Payment</span>
+                      <span className="os-pay-line-pending">Pending</span>
+                      <p className="os-pay-note">Amount will be confirmed shortly.</p>
+                    </div>
+                  ) : (
+                    <OrderPaymentSummary orderNumber={order.orderNumber} total={order.total} />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-10 flex flex-wrap gap-4 justify-center">
+          <div className="os-section-head">
+            <h2 className="os-section-title">What happens next?</h2>
+            <span className="os-section-rule" aria-hidden="true" />
+          </div>
+
+          <div className="os-process-box">
+            <ol className="os-process">
+              <li className="os-process-step">
+                <span className="os-process-num">01</span>
+                <h3 className="os-process-title">Confirmation</h3>
+                <p className="os-process-text">
+                  We&apos;ll email your order confirmation &amp; receipt to <b>{order.customerEmail}</b>.
+                </p>
+              </li>
+              <li className="os-process-step">
+                <span className="os-process-num">02</span>
+                <h3 className="os-process-title">Processing</h3>
+                <p className="os-process-text">Our team reviews your order and starts working on it.</p>
+              </li>
+              <li className="os-process-step">
+                <span className="os-process-num">03</span>
+                <h3 className="os-process-title">Tracking</h3>
+                <p className="os-process-text">
+                  Track your order from your KeebForge account.
+                </p>
+              </li>
+            </ol>
+          </div>
+
+          <div className="os-actions">
             {user ? (
-              <Link href="/account/orders" className="btn-prime">
-                View Order
+              <Link href="/account/orders" className="btn-prime btn-sm">
+                View Order <span aria-hidden="true">&rarr;</span>
               </Link>
             ) : (
-              <Link href="/contact" className="btn-prime">
+              <Link href="/contact" className="btn-prime btn-sm">
                 Contact Us
               </Link>
             )}
-            <Link href="/" className="btn-ghost">
+            <Link href="/" className="btn-ghost btn-sm">
               Back to Home
             </Link>
           </div>
           {!user && (
-            <p className="text-center text-sm text-[var(--t3)] mt-4">
-              <Link href="/auth/login" style={{ color: "var(--acc)" }}>Sign in or create an account</Link> with this email to track the order.
+            <p className="os-cta-note">
+              <Link href="/auth/login" style={{ color: "var(--acc)" }}>Sign in or create an account</Link> with this email to get the full order view.
             </p>
           )}
+
+          <p className="os-support">
+            Need help? <Link href="/contact">Contact our support team</Link>.
+          </p>
         </div>
       </section>
     </main>

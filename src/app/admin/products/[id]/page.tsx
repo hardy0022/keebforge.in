@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { getAdminProduct, PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS, availableStock } from "@/lib/admin-catalog";
+import { fmtIST } from "@/lib/ist";
 import { ProductStatusBar, VariantsManager, InventoryForm } from "@/components/admin/products/ProductDetailClient";
 
 export const metadata: Metadata = { title: "Product | KeebForge Admin", robots: { index: false, follow: false } };
@@ -173,7 +174,7 @@ export default async function AdminProductDetail({ params }: { params: Promise<{
                     <td className="num">{oi.quantity}</td>
                     <td className="num">{formatINR(oi.unitPrice)}</td>
                     <td className="num">{formatINR(oi.lineTotal)}</td>
-                    <td className="muted num">{oi.order.createdAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                    <td className="muted num">{fmtIST(oi.order.createdAt, { day: "2-digit", month: "short" })}</td>
                     <td><span className="badge">{oi.order.status}</span></td>
                   </tr>
                 ))}

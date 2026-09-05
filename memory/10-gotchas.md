@@ -70,3 +70,27 @@ The auth route is `app/api/auth/[...all]/route.ts`; a catch-all requires ≥1 se
 
 ## G-020 — `NEXT_PUBLIC_*` is inlined at build time
 Changing `NEXT_PUBLIC_APP_URL` on Vercel requires a **redeploy** to take effect; server-only vars (`BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, API keys) are read at runtime and don't need a rebuild. If prod canonicals/OG URLs look wrong after an env change, the build didn't pick up the new value.
+
+## G-022 — Delhivery cmu body is URL-encoded form data, NOT JSON
+`/api/cmu/create.json` wants `Content-Type: application/x-www-form-urlencoded` with body `format=json&data=<JSON>`. Sending `application/json` with `JSON.stringify("format=json&data=…")` (a double-serialized string) → Delhivery: `{"rmk":"format key missing in POST"}`. The odd-but-working path is `body: buildCreateShipmentBody(input)` raw. Special chars `& # % ; \` must be stripped from string fields first — `clean()` in the builder exists exactly for this.
+
+## G-023 — "ClientWarehouse matching query does not exist" is a config error, not code
+When manifesting, `pickup_location.name` must exactly match a warehouse already registered in the Delhivery system for the account. Empty/wrong name produces this `rmk`. There's no way to guess it — register via `clientwarehouse/create/` (or the admin Settings → Shipping Pickup Location card, which does create+edit). Before: `DELHIVERY_PICKUP_*` env was missing entirely, so the manifest failed here even though the API call "worked".
+
+## G-024 — Successful cmu responses put the waybill in `packages[].waybill`
+The 200 manifest response is shaped `{packages:[{waybill, refnum, client,…}], upload_wbn:"UPL…", …}` — the tracking number is per-package `packages[0].waybill`, NOT the `upload_wbn` (which starts with `UPL`). `parseCreateShipmentResponse` reads both `packages[]` and `shipments[]` because older/other API surfaces use the `shipments` key. If you see "cmu response without waybill" after a 200, check which key actually carries it.
+
+## G-025 — Pickup location is stored in the DB (Settings), env vars are just fallback
+`createShipmentDelivery` reads `SiteSetting` key `delhivery_pickup` first (set from Admin → Settings → Shipping), then `DELHIVERY_PICKUP_*` env, then `DELHIVERY_ORIGIN_PINCODE`. If a manifest suddenly fails with warehouse errors after the env changed, the Settings card value is the source of truth — check Settings, not `.env`.
+
+## G-026 — Delhivery cmu payload traps that make manifests "work but look broken"
+- **Every** address string in the cmu `data` payload must be `clean()`ed (strips `& # % ; \`) — the body is `format=json&data=…` form-encoded, so an unescaped `&` (e.g. state "Jammu & Kashmir") breaks JSON parsing → Delhivery returns `rmk: "Unterminated string starting at: line 1 column … / Package might be saved …"`. This bit the `return_*` fields and `pickup_location` (originally added NOT cleaned, after the rest already was). Never add a new address field to the builder without running it through `clean()`, and keep the `no form-breaking chars in data payload` self-check assertion true.
+- Even on this parse error Delhivery can **save the package anyway** ("Package might be saved"). Combine tolerance for `error:true`+`rmk` with the double-manifest guard in `createShipmentDelivery` (`order.shipment.trackingNumber` → refuse early). The action surfaces Delhivery's own `rmk` in the error toast so the operator decides, instead of the old generic "no waybill" + blind re-click.
+- Must send **all three** dimensions (`shipment_length/width/height`). Omitting length makes the Delhivery dashboard render `0 x W x H`. Both dims and `weight` must be positive; defaults 20cm / order's `shippingWeightGrams`.
+- **Never send `total_amount` 0 for REPAIR orders** — `Order.total` is 0 until invoiced. `createShipmentDelivery` derived declared value = `max(order.total, repair.quotePrice, summary.budget)`. A `₹0` manifest means a REPAIR with no budget/quote and no manual value entered.
+- **`weight` must be the `"<n> gm"` string format**; bare `"55"` shows as "NA" weight in the Spend/transaction view.
+
+## G-027 — Calling `useActionState`'s `formAction(fd)` imperatively must use `startTransition`
+- Invoking the returned action outside a transition throws: "An async function with useActionState was called outside of a transition … isPending will not update correctly" (React 19 / Next 16 console error).
+- Only two legitimate call sites exist and they BOTH must be safe: (a) pass the function to a `<form action={…}>` / `<formAction>` prop (React owns it), (b) imperative calls inside `startTransition(() => formAction(fd))`.
+- Anti-pattern found & fixed in `src/components/support/TrackOrder.tsx`: an `onSubmit` handler did `e.preventDefault(); formAction(fd)`. Converted to `<form action={formAction}>` + hidden `waybill` input (dropped the manual `load` fn and a `loaded` state, label driven by `state.ok`). The auto-track on mount (`reTrack`) and the post-pay refresh both wrapped in `startTransition`. If you add a tracker/order lookup later, bind forms to the action prop rather than calling it in handlers.

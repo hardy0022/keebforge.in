@@ -119,20 +119,23 @@ export default async function ProductPage({ params, searchParams }: Props & { se
                 <h1 id="product-heading" className="product-title">{product.name}</h1>
               </div>
 
-              <div className="product-price-section">
-                <div className="product-price">
-                  <span className="product-price-amount">
-                    {showRange ? formatINRRange(minPrice, maxPrice) : formatINR(minPrice)}
-                  </span>
-                  {compareAt && <span className="product-price-compare">{formatINR(compareAt)}</span>}
-                  {savePct != null && <span className="product-discount-badge">Save {savePct}%</span>}
+              {!configurable && (
+                <div className="product-price-section">
+                  <div className="product-price">
+                    <span className="product-price-amount">
+                      {showRange ? formatINRRange(minPrice, maxPrice) : formatINR(minPrice)}
+                    </span>
+                    {compareAt && <span className="product-price-compare">{formatINR(compareAt)}</span>}
+                    {savePct != null && <span className="product-discount-badge">Save {savePct}%</span>}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {configurable ? (
                 <ProductConfigurator
                   productId={product.id}
                   groups={optionGroups}
+                  basePrice={product.price}
                   baseAvailable={available}
                 />
               ) : (
@@ -163,7 +166,7 @@ export default async function ProductPage({ params, searchParams }: Props & { se
               {!custom && (
                 <p className="product-custom-note">
                   Want this modified or part of a full build?{" "}
-                  <Link href="/contact">Start a custom build →</Link>
+                  <Link href="/workshop">Start a custom build →</Link>
                 </p>
               )}
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveWork } from "@/app/admin/actions/work";
@@ -30,6 +30,24 @@ function label(cat: string): string {
 
 function fmtDate(date: string | null): string {
   return date ? new Date(date).toISOString().slice(0, 10) : "";
+}
+
+/** Auto-growing textarea: box expands with its content instead of showing a scrollbar. */
+function AutoGrowTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const resize = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    resize();
+  }, []);
+
+  return <textarea {...props} ref={ref} onInput={(e) => { props.onInput?.(e); resize(); }} />;
 }
 
 export function WorkForm({ project }: { project?: WorkProjectProp }) {
@@ -181,8 +199,23 @@ export function WorkForm({ project }: { project?: WorkProjectProp }) {
         {removed.length > 0 && <div className="muted" style={{ fontSize: "0.75rem", marginTop: 6 }}>{removed.length} image(s) will be deleted on save.</div>}
       </div>
 
-      <textarea className="textarea" name="description" placeholder="Short description" defaultValue={project?.description ?? ""} required style={{ minHeight: 70 }} disabled={pending} />
-      <textarea className="textarea" name="workPerformed" placeholder="Work performed (optional)" defaultValue={project?.workPerformed ?? ""} style={{ minHeight: 70 }} disabled={pending} />
+      <AutoGrowTextarea
+        className="textarea"
+        name="description"
+        placeholder="Short description"
+        defaultValue={project?.description ?? ""}
+        required
+        style={{ minHeight: 70 }}
+        disabled={pending}
+      />
+      <AutoGrowTextarea
+        className="textarea"
+        name="workPerformed"
+        placeholder="Work performed (optional)"
+        defaultValue={project?.workPerformed ?? ""}
+        style={{ minHeight: 70 }}
+        disabled={pending}
+      />
 
       <div className="flex items-center gap-4" style={{ fontSize: "0.85rem" }}>
         <label className="flex items-center gap-2">

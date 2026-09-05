@@ -298,16 +298,16 @@ async function main() {
 
   // ─── Shop categories ───────────────────────────────────────────────────────
   const categories = [
-    { name: "Keyboards", slug: "keyboards", description: "Prebuilt and DIY mechanical keyboards.", sortOrder: 1 },
-    { name: "Mice", slug: "mice", description: "Gaming and productivity mice.", sortOrder: 2 },
-    { name: "Switches", slug: "switches", description: "Mechanical switches for every feel.", sortOrder: 3 },
-    { name: "Keycaps", slug: "keycaps", description: "Keycap sets and accent kits.", sortOrder: 4 },
-    { name: "Stabilizers", slug: "stabilizers", description: "Stabilizer kits and tuning supplies.", sortOrder: 5 },
-    { name: "PCBs", slug: "pcbs", description: "Keyboard PCBs and kits.", sortOrder: 6 },
-    { name: "Cases", slug: "cases", description: "Cases and plates.", sortOrder: 7 },
-    { name: "Cables", slug: "cables", description: "Coiled and custom cables.", sortOrder: 8 },
-    { name: "Accessories", slug: "accessories", description: "Tools, films, lube and more.", sortOrder: 9 },
-    { name: "Lubricants", slug: "lubricants", description: "Switch lubricants, oils and grease.", sortOrder: 10 },
+    { name: "Keyboards", slug: "keyboards", sortOrder: 1 },
+    { name: "Mice", slug: "mice", sortOrder: 2 },
+    { name: "Switches", slug: "switches", sortOrder: 3 },
+    { name: "Keycaps", slug: "keycaps", sortOrder: 4 },
+    { name: "Stabilizers", slug: "stabilizers", sortOrder: 5 },
+    { name: "PCBs", slug: "pcbs", sortOrder: 6 },
+    { name: "Cases", slug: "cases", sortOrder: 7 },
+    { name: "Cables", slug: "cables", sortOrder: 8 },
+    { name: "Accessories", slug: "accessories", sortOrder: 9 },
+    { name: "Lubricants", slug: "lubricants", sortOrder: 10 },
   ];
   for (const c of categories) {
     await prisma.category.upsert({ where: { slug: c.slug }, update: c, create: c });

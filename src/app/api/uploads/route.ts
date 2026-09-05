@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminContext } from "@/lib/auth/admin";
 import { canAction } from "@/lib/auth/roles";
-import { cloudinaryConfigured, deleteImage, mediaFolder, repairRoleFolder, uploadBuffer } from "@/lib/cloudinary";
+import { cloudinaryConfigured, deleteImage, mediaFolder, uploadBuffer } from "@/lib/cloudinary";
 import { IMAGE_TYPES_MESSAGE, isAllowedImageMime, sniffImageType } from "@/lib/image-validation";
 
 export const runtime = "nodejs";
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   const role = String(form.get("role") ?? "OTHER");
 
   if (!(file instanceof File)) return NextResponse.json({ error: "No file provided." }, { status: 400 });
-  if (!["PRODUCT", "REPAIR", "ORDER"].includes(entityType) || !entityId || entityId.length > 80) {
+  if (!["PRODUCT", "ORDER"].includes(entityType) || !entityId || entityId.length > 80) {
     return NextResponse.json({ error: "Invalid upload target." }, { status: 400 });
   }
   if (!isAllowedImageMime(file.type)) {
@@ -58,20 +58,9 @@ export async function POST(request: NextRequest) {
   if (buffer.length > MAX_BYTES) return NextResponse.json({ error: "Image exceeds the 8 MB limit." }, { status: 400 });
   if (!sniffImageType(buffer)) return NextResponse.json({ error: "That file isn't a valid image." }, { status: 400 });
 
-  // Repairs are keyed by their business order number (keebforge/repairs/
-  // KF1234567/<role>) so customer- and admin-uploaded photos share one folder;
-  // entityId stays the stable OrderRepair row id.
-  let folder: string;
-  if (entityType === "REPAIR") {
-    const repair = await prisma.orderRepair.findUnique({
-      where: { id: entityId },
-      select: { order: { select: { orderNumber: true } } },
-    });
-    if (!repair) return NextResponse.json({ error: "Repair not found." }, { status: 404 });
-    folder = repairRoleFolder(repair.order.orderNumber, role);
-  } else {
-    folder = mediaFolder(entityType as "PRODUCT" | "ORDER", entityId, role);
-  }
+  // The server decides the Cloudinary folder from the entity coordinates —
+  // the browser never picks storage paths.
+  const folder = mediaFolder(entityType as "PRODUCT" | "ORDER", entityId, role);
 
   try {
     const result = await uploadBuffer(buffer, { folder });
@@ -82,7 +71,7 @@ export async function POST(request: NextRequest) {
           data: {
             publicId: result.publicId,
             secureUrl: result.url,
-            entityType: entityType === "REPAIR" ? "REPAIR" : "ORDER",
+            entityType: "ORDER",
             entityId,
             folder,
             role: normalizeRole(role),

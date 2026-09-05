@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter } from "next/font/google";
 import { buildMetadata } from "@/lib/seo";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { SiteFooter } from "@/components/layout/Footer";
+import Analytics from "@/components/Analytics";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -32,9 +33,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <body className="antialiased page-layout">
         <SiteChrome footer={<SiteFooter />}>{children}</SiteChrome>
+        <Analytics />
       </body>
     </html>
   );

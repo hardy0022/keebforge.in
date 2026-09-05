@@ -19,6 +19,8 @@ See `.env.example` for the authoritative list with names only. Secrets live in `
 - `RESEND_API_KEY`, `EMAIL_FROM` — verified working (contact form returns 200).
 - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` — placeholders; Phase 6.
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — **NOT set; pending credentials.**
+- `DELHIVERY_API_TOKEN`, `DELHIVERY_API_URL` (default `https://staging-express.delhivery.com`), `DELHIVERY_ORIGIN_PINCODE`, `DELHIVERY_MODES`, `DELHIVERY_DEFAULT_MODE`, `DELHIVERY_EXPRESS_DAYS`/`DELHIVERY_SURFACE_DAYS`, `FREE_SHIPPING_THRESHOLD` — set; power quoting (kinko charges + TAT), tracking, waybill fetch, and manifesting (all in `src/lib/delhivery/index.ts`).
+- `DELHIVERY_PICKUP_*` (`NAME/ADDRESS/CITY/PIN/COUNTRY/PHONE`) — **optional fallback only.** The primary source is Admin → Settings → Shipping "Delhivery Pickup Location" (stored under SiteSetting key `delhivery_pickup`), which also registers/updates the warehouse via the ClientWarehouse create/edit APIs. `DELHIVERY_PICKUP_PIN` falls back to `DELHIVERY_ORIGIN_PINCODE` if unset.
 
 Rules: never log env values, never pass secrets to client components, never commit `.env`.
 

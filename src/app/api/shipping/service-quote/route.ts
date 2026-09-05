@@ -8,7 +8,7 @@ import {
   SHIPPING_ERROR_MESSAGES,
   toShippingMode,
   type ShippingErrorCode,
-} from "@/lib/shipping";
+} from "@/lib/delhivery";
 import { PACKAGE_LIMITS, isValidPackage } from "@/lib/package-limits";
 
 export const dynamic = "force-dynamic";

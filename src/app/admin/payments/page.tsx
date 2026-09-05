@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma";
 import { formatINR } from "@/lib/money";
+import { fmtIST } from "@/lib/ist";
 
 export const metadata: Metadata = {
   title: "Payments | KeebForge Admin",
@@ -92,6 +93,11 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
                 <td style={{ whiteSpace: "nowrap" }}>
                   <span className="num" style={{ fontFamily: "var(--ff-mono, monospace)" }}>#{p.id.slice(0, 8)}</span>
                   <div className="muted" style={{ fontSize: "0.68rem" }}>{p.razorpayPaymentId ?? ""}</div>
+                  {p.razorpayCustomerId && (
+                    <div className="muted" style={{ fontSize: "0.68rem" }} title={`Razorpay customer: ${p.razorpayCustomerId}`}>
+                      {p.razorpayCustomerId}
+                    </div>
+                  )}
                 </td>
                 <td>
                   <a href={`/admin/orders/${p.order.orderNumber}`} className="muted" style={{ textDecoration: "underline" }}>
@@ -105,7 +111,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
                   )}
                 </td>
                 <td className="muted" style={{ whiteSpace: "nowrap" }}>
-                  {new Date(p.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  {fmtIST(p.createdAt, { day: "2-digit", month: "short", year: "numeric" })}
                 </td>
                 <td>{methodLabel(p.method)}</td>
                 <td className="num" style={{ fontWeight: 600 }}>{formatINR(p.amount)}</td>

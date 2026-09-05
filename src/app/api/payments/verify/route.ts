@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     // The payment must belong to the Razorpay order we created for THIS order.
-    const billing = (order.billingDetails ?? {}) as { razorpayOrderId?: string };
+    const billing = (order.billingDetails ?? {}) as { razorpayOrderId?: string; razorpayCustomerId?: string };
     if (!billing.razorpayOrderId || billing.razorpayOrderId !== razorpay_order_id) {
       return NextResponse.json({ error: "Payment does not match this order" }, { status: 400 });
     }
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
             razorpayOrderId: razorpay_order_id,
             razorpayPaymentId: razorpay_payment_id,
             razorpaySignature: razorpay_signature,
+            ...(billing.razorpayCustomerId ? { razorpayCustomerId: billing.razorpayCustomerId } : {}),
             failureReason: "Signature verification failed",
           },
         }),
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
           razorpayOrderId: razorpay_order_id,
           razorpayPaymentId: razorpay_payment_id,
           razorpaySignature: razorpay_signature,
+          ...(billing.razorpayCustomerId ? { razorpayCustomerId: billing.razorpayCustomerId } : {}),
           paidAt: new Date(),
         },
       }),

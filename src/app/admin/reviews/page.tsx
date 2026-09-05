@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { getAdminReviews } from "@/lib/admin";
+import { fmtIST } from "@/lib/ist";
 import { moderateReview } from "@/app/admin/actions/reviews";
 import { ReviewDeleteButton } from "@/components/admin/reviews/ReviewDeleteButton";
 
@@ -180,7 +181,7 @@ export default async function AdminReviewsPage({
                       <td>
                         <span className={`badge ${STATUS_BADGE[r.status]}`}>{r.status}</span>
                         <div className="muted num" style={{ fontSize: "0.66rem" }}>
-                          {r.createdAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                          {fmtIST(r.createdAt, { day: "2-digit", month: "short", year: "numeric" })}
                         </div>
                       </td>
                       <td className="num muted">{r.images.length}</td>

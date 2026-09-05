@@ -29,7 +29,7 @@ const ROOT = "keebforge";
  * Products use their stable cuid (survives slug renames); repairs/orders use
  * their business ids. Never customer names/emails/phones.
  */
-export function mediaFolder(entityType: "PRODUCT" | "REPAIR" | "ORDER" | "REVIEW" | "WORK", entityId: string, role?: string): string {
+export function mediaFolder(entityType: "PRODUCT" | "ORDER" | "REVIEW" | "WORK", entityId: string, role?: string): string {
   switch (entityType) {
     case "PRODUCT": {
       // Drafts (new-product editor, before the row exists) get a staging folder
@@ -37,8 +37,6 @@ export function mediaFolder(entityType: "PRODUCT" | "REPAIR" | "ORDER" | "REVIEW
       if (role === "DRAFT") return `${ROOT}/products/drafts/${entityId}`;
       return `${ROOT}/products/${entityId}`;
     }
-    case "REPAIR":
-      return `${ROOT}/repairs/${entityId}`;
     case "ORDER":
       return `${ROOT}/orders/${entityId}`;
     case "REVIEW":
@@ -46,15 +44,6 @@ export function mediaFolder(entityType: "PRODUCT" | "REPAIR" | "ORDER" | "REVIEW
     case "WORK":
       return `${ROOT}/work/${entityId}`;
   }
-}
-
-/** Repair sub-folder for a role, e.g. keebforge/repairs/{id}/before. */
-export function repairRoleFolder(repairId: string, role: string): string {
-  const norm = role.toLowerCase().replace(/_/g, "-");
-  const sub = ["before", "after", "diagnostic", "work", "final", "customer-upload"].includes(norm)
-    ? norm
-    : "other";
-  return `${mediaFolder("REPAIR", repairId)}/${sub}`;
 }
 
 export type UploadedImage = { url: string; publicId: string; width: number; height: number };

@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS } from "@/lib/orders";
 import { getAdminOrders, COMPLETED_STATUSES } from "@/lib/admin";
+import { fmtIST } from "@/lib/ist";
 
 export const metadata: Metadata = {
   title: "Completed Orders | KeebForge Admin",
@@ -130,7 +131,7 @@ export default async function AdminCompletedOrdersPage({
                     </td>
                     <td className="num muted">{o._count.items + o._count.services + o._count.repairs}</td>
                     <td className="num">{formatINR(o.total)}</td>
-                    <td className="muted num">{o.createdAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                    <td className="muted num">{fmtIST(o.createdAt, { day: "2-digit", month: "short" })}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { ensureRazorpayCustomer } from "@/lib/razorpay-customer";
 import Razorpay from "razorpay";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
         orderNumber: true,
         total: true,
         paymentStatus: true,
+        profileId: true,
         customerName: true,
         customerEmail: true,
         customerPhone: true,
@@ -61,17 +63,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Online payments are temporarily unavailable. Please contact support." }, { status: 503 });
     }
 
-    const rzpOrder = await new Razorpay({ key_id: keyId, key_secret: keySecret }).orders.create({
+    const billing = (order.billingDetails ?? {}) as Record<string, unknown>;
+    const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+    const profile = order.profileId
+      ? await prisma.profile.findUnique({
+          where: { id: order.profileId },
+          select: { id: true, razorpayCustomerId: true },
+        })
+      : null;
+    const razorpayCustomerId = await ensureRazorpayCustomer(rzp, {
+      profile,
+      existingId: typeof billing.razorpayCustomerId === "string" ? billing.razorpayCustomerId : null,
+      name: order.customerName,
+      email: order.customerEmail,
+      contact: order.customerPhone,
+    });
+
+    const rzpOrder = await rzp.orders.create({
       amount: outstanding,
       currency: "INR",
       receipt: order.orderNumber,
       notes: { orderId: order.id, orderNumber: order.orderNumber, source: "track-order" },
     });
 
-    const billing = (order.billingDetails ?? {}) as Record<string, unknown>;
     await prisma.order.update({
       where: { id: order.id },
-      data: { billingDetails: { ...billing, razorpayOrderId: rzpOrder.id } as Prisma.InputJsonValue },
+      data: {
+        billingDetails: {
+          ...billing,
+          razorpayOrderId: rzpOrder.id,
+          ...(razorpayCustomerId ? { razorpayCustomerId } : {}),
+        } as Prisma.InputJsonValue,
+      },
     });
 
     return NextResponse.json({

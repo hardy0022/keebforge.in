@@ -5,6 +5,9 @@ import { getCurrentAuth, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatINR } from "@/lib/money";
 import { ORDER_STATUS_CHIP, ORDER_STATUS_LABELS, ORDER_TYPE_LABELS } from "@/lib/orders";
+import { ReviewStars } from "@/components/reviews/ReviewStars";
+import { DeleteReviewButton } from "@/components/account/DeleteReviewButton";
+import type { ReviewStatus } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "My Orders | KeebForge",
@@ -29,12 +32,46 @@ async function getOrders(profileId: string) {
   });
 }
 
+async function getReviews(profileId: string) {
+  return prisma.review.findMany({
+    where: { profileId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      type: true,
+      rating: true,
+      title: true,
+      body: true,
+      verified: true,
+      status: true,
+      createdAt: true,
+      productNameSnapshot: true,
+      productSlugSnapshot: true,
+    },
+  });
+}
+
+const REVIEW_STATUS_CHIP: Record<ReviewStatus, string> = {
+  PENDING: "status-warning",
+  APPROVED: "status-success",
+  REJECTED: "",
+};
+
+const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
+  PENDING: "Pending",
+  APPROVED: "Published",
+  REJECTED: "Rejected",
+};
+
 export default async function OrdersPage() {
   const { user } = await getCurrentAuth();
   if (!user) redirect("/auth/login");
 
   const auth = await requireUser();
-  const orders = await getOrders(auth.profile.id);
+  const [orders, reviews] = await Promise.all([getOrders(auth.profile.id), getReviews(auth.profile.id)]);
+
+  const formatDate = (d: Date) =>
+    new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
   return (
     <div className="account-stack">
@@ -96,12 +133,71 @@ export default async function OrdersPage() {
                     {ORDER_STATUS_LABELS[order.status]}
                   </span>
 
-                  <Link href={`/order/success/${order.orderNumber}`} className="btn-ghost btn-sm">
-                    Track
-                  </Link>
+                  <div className="account-order-actions">
+                    <Link href={`/order/success/${order.orderNumber}`} className="btn-ghost btn-sm">
+                      Summary
+                    </Link>
+                    <Link href={`/track-order?order=${order.orderNumber}`} className="btn-prime btn-sm">
+                      Track
+                    </Link>
+                  </div>
                 </div>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      <section className="account-section">
+        <header className="account-section-header">
+          <div>
+            <h2 className="account-section-title">Your Reviews</h2>
+            <p className="account-section-desc">Reviews you&apos;ve submitted and their status</p>
+          </div>
+          <Link href="/write-review" className="account-section-link">
+            Write a review
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </header>
+
+        {reviews.length === 0 ? (
+          <div className="account-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            <h3>No reviews yet</h3>
+            <p>Reviews you submit will appear here with their status.</p>
+          </div>
+        ) : (
+          <div className="account-review-list">
+            {reviews.map((review) => (
+              <div key={review.id} className="account-review-item">
+                <div className="account-review-head">
+                  <div>
+                    {review.productSlugSnapshot && review.type === "PRODUCT" ? (
+                      <Link href={`/product/${review.productSlugSnapshot}`} className="account-review-product is-link">
+                        {review.productNameSnapshot ?? "General review"}
+                      </Link>
+                    ) : (
+                      <span className="account-review-product">{review.productNameSnapshot ?? "General review"}</span>
+                    )}
+                    <ReviewStars rating={review.rating} />
+                  </div>
+                  <span className={`account-order-status ${REVIEW_STATUS_CHIP[review.status]}`}>
+                    {REVIEW_STATUS_LABELS[review.status]}
+                  </span>
+                </div>
+                {review.verified && <span className="account-review-verified">✔ Verified purchase</span>}
+                {review.title && <p className="account-review-title">{review.title}</p>}
+                <p className="account-review-body">{review.body}</p>
+                <div className="account-review-foot">
+                  <p className="account-review-date">{formatDate(review.createdAt)}</p>
+                  <DeleteReviewButton reviewId={review.id} />
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>

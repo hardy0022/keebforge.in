@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma";
 import { formatINR } from "@/lib/money";
+import { fmtIST } from "@/lib/ist";
 
 export const metadata: Metadata = {
   title: "Customers | KeebForge Admin",
@@ -29,7 +30,7 @@ export default async function AdminCustomersPage() {
   const totalPaid = customers.reduce((sum, c) => sum + c.orders.reduce((s, o) => s + o.total, 0), 0);
 
   const join = (d: Date) =>
-    new Date(d).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
+    fmtIST(d, { year: "numeric", month: "short", day: "numeric" });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

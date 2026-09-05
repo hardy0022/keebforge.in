@@ -20,10 +20,12 @@ import type { AnimatedIconHandle } from "@/components/icons/types";
 export function ProductConfigurator({
   productId,
   groups,
+  basePrice,
   baseAvailable,
 }: {
   productId: string;
   groups: OptionGroupLike[];
+  basePrice: number;
   baseAvailable: number;
 }) {
   const router = useRouter();
@@ -45,6 +47,11 @@ export function ProductConfigurator({
 
   const complete = active.every((g) => !g.required || picks[g.id]);
   const optionIds = Object.values(picks);
+  const addons = active.reduce((sum, g) => {
+    const opt = g.options.find((o) => o.id === picks[g.id]);
+    return sum + (opt?.priceAddon ?? 0);
+  }, 0);
+  const configuredPrice = basePrice + addons;
   const out = baseAvailable <= 0;
 
   useEffect(() => {
@@ -56,6 +63,12 @@ export function ProductConfigurator({
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="quantity" value={qty} />
       <input type="hidden" name="optionIds" value={JSON.stringify(optionIds)} />
+
+      <div className="product-price-section">
+        <div className="product-price">
+          <span className="product-price-amount">{formatINR(configuredPrice)}</span>
+        </div>
+      </div>
 
       <div className="option-groups">
         {active.map((g) => (

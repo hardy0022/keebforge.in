@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { buildMetadata } from "@/lib/seo";
-import { enabledShippingModes } from "@/lib/shipping";
+import { enabledShippingModes } from "@/lib/delhivery";
 import ShopCheckoutClient from "./ShopCheckoutClient";
 
 export const metadata: Metadata = buildMetadata({

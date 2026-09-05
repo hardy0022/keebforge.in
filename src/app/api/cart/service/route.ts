@@ -11,7 +11,7 @@ import {
   enabledShippingModes,
   isValidPincode,
   toShippingMode,
-} from "@/lib/shipping";
+} from "@/lib/delhivery";
 import { deriveLegs } from "@/lib/shipping-estimate";
 
 export const dynamic = "force-dynamic";

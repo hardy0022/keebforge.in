@@ -289,6 +289,7 @@ model Profile {
   phone     String?
   avatarUrl String?
   username  String?  @unique
+  razorpayCustomerId String? @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -338,22 +339,16 @@ model Address {
 // ─── Catalog ────────────────────────────────────────────────────────────────
 
 model Category {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
-  image       String?
-  parentId    String?
-  sortOrder   Int      @default(0)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
 
-  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children Category[] @relation("CategoryTree")
   products Product[]
 
   @@index([active, sortOrder])
-  @@index([parentId])
 }
 
 model Brand {
@@ -727,6 +722,7 @@ model Payment {
   razorpayOrderId   String?
   razorpayPaymentId String?       @unique
   razorpaySignature String?
+  razorpayCustomerId String?
   paidAt            DateTime?
   failureReason     String?
   createdAt         DateTime      @default(now())
@@ -737,6 +733,7 @@ model Payment {
   @@index([orderId])
   @@index([razorpayOrderId])
   @@index([razorpayPaymentId])
+  @@index([razorpayCustomerId])
 }
 
 model Shipment {
@@ -971,7 +968,6 @@ model SiteSetting {
 // ── Cloudinary media (non-product entities) ──────────────────────────────────
 
 enum MediaEntityType {
-  REPAIR
   ORDER
   SERVICE
   REVIEW

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHero } from "@/components/ui/PageHero";
 import { TrackOrder } from "@/components/support/TrackOrder";
-import { CtaSection } from "@/components/ui/CtaSection";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildMetadata({
@@ -11,22 +11,29 @@ export const metadata: Metadata = buildMetadata({
   path: "/track-order",
 });
 
-export default function TrackOrderPage() {
+export default async function TrackOrderPage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
+  const { order } = await searchParams;
   return (
     <main className="track-page">
       <PageHero
-        tag="SUPPORT"
+        tag="// SUPPORT"
         title="Track your order."
         desc="Enter your order number below to see the latest status of your KeebForge order — from order placed to delivered."
       />
-      <TrackOrder />
-      <CtaSection
-        tag="// Need Help?"
-        title={<>Need help with your order?</>}
-        desc="Can't find your order number, or something doesn't look right? Send us a message and we'll look it up for you."
-        primaryLabel="Contact Us"
-        primaryHref="/contact"
-      />
+      <TrackOrder initialOrder={order} />
+      <div className="track-help-panel wrap">
+        <div className="track-help-card">
+          <div>
+            <p className="track-help-title">Need help?</p>
+            <p className="track-help-desc">
+              Something wrong with your order, or can&apos;t find what you&apos;re looking for?
+            </p>
+          </div>
+          <Link href="/contact" className="btn-prime">
+            Contact Us
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }

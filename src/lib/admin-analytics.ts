@@ -1,13 +1,16 @@
 import "server-only";
 import { cache } from "react";
-import type { Prisma } from "@prisma/client";
+import type { PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { daysAgoISTDayStart, fmtIST, istDayKey } from "@/lib/ist";
 
-const dayStart = (offsetDays = 0) => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - offsetDays);
-  return d;
+/** Revenue timestamp for a paid order: the actual capture, else order creation. */
+const revenueTime = (o: { createdAt: Date; payments?: { status: PaymentStatus; paidAt: Date | null }[] | null }) => {
+  const captured = (o.payments ?? [])
+    .filter((p) => p.status === "PAID" && p.paidAt)
+    .map((p) => p.paidAt as Date)
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+  return captured ?? o.createdAt;
 };
 
 /** Human buckets mapping the 18-status pipeline to a compact analytics view. */
@@ -31,9 +34,9 @@ const STATUS_BUCKETS: Record<string, string[]> = {
 
 export const getAnalyticsKPIs = cache(async (rangeDays: number) => {
   const allTime = rangeDays <= 0;
-  const from = allTime ? undefined : dayStart(rangeDays - 1);
-  const prevFrom = allTime ? undefined : dayStart(rangeDays * 2 - 1);
-  const prevTo = allTime ? undefined : dayStart(rangeDays - 1);
+  const from = allTime ? undefined : daysAgoISTDayStart(rangeDays - 1);
+  const prevFrom = allTime ? undefined : daysAgoISTDayStart(rangeDays * 2 - 1);
+  const prevTo = allTime ? undefined : daysAgoISTDayStart(rangeDays - 1);
   const timeFilter = (gte: Date | undefined, lt?: Date) => ({
     ...(gte ? { gte } : {}),
     ...(lt ? { lt } : {}),
@@ -78,24 +81,28 @@ export const getAnalyticsKPIs = cache(async (rangeDays: number) => {
 
 export const getAnalyticsSeries = cache(async (rangeDays: number) => {
   const days = rangeDays > 0 ? rangeDays : 365;
-  const from = dayStart(days - 1);
+  const from = daysAgoISTDayStart(days - 1);
   const orders = await prisma.order.findMany({
     where: { isDeleted: false, paymentStatus: "PAID", createdAt: { gte: from } },
-    select: { createdAt: true, total: true },
+    select: {
+      createdAt: true,
+      total: true,
+      payments: { where: { status: "PAID" }, select: { status: true, paidAt: true } },
+    },
   });
   const series: { date: string; label: string; revenue: number; orders: number }[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const d = dayStart(i);
+    const d = daysAgoISTDayStart(i);
     series.push({
-      date: d.toISOString().slice(0, 10),
-      label: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      date: istDayKey(d),
+      label: fmtIST(d, { day: "numeric", month: "short" }),
       revenue: 0,
       orders: 0,
     });
   }
+  const bucketByKey = new Map(series.map((b) => [b.date, b]));
   for (const o of orders) {
-    const key = o.createdAt.toISOString().slice(0, 10);
-    const b = series.find((x) => x.date === key);
+    const b = bucketByKey.get(istDayKey(revenueTime(o)));
     if (b) {
       b.revenue += o.total;
       b.orders += 1;
@@ -126,7 +133,7 @@ export const getOrderStatusBreakdown = cache(async () => {
 // ─── Workshop mods (most requested) ────────────────────────────────────────
 
 export const getWorkshopMods = cache(async (rangeDays: number, take = 6) => {
-  const from = rangeDays > 0 ? dayStart(rangeDays - 1) : undefined;
+  const from = rangeDays > 0 ? daysAgoISTDayStart(rangeDays - 1) : undefined;
   const rows = await prisma.orderService.findMany({
     where: { ...(from ? { createdAt: { gte: from } } : {}) },
     select: { lineTotal: true, service: { select: { group: { select: { name: true } } } } },

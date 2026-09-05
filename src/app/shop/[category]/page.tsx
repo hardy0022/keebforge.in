@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!cat) return {};
   return buildMetadata({
     title: `${cat.name} — Shop | KeebForge`,
-    description: cat.description ?? `Shop ${cat.name.toLowerCase()} at KeebForge.`,
+    description: `Shop ${cat.name.toLowerCase()} at KeebForge.`,
     path: `/shop/${cat.slug}`,
   });
 }
@@ -75,7 +75,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <PageHero
         tag="Shop"
         title={cat.name}
-        desc={cat.description ?? `Browse ${cat.name.toLowerCase()} at KeebForge.`}
+        desc={`Browse ${cat.name.toLowerCase()} at KeebForge.`}
         pills={["Category"]}
       />
       <section className="svc-section">

@@ -6,6 +6,7 @@ import { CouponType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import type { ActionState } from "@/components/admin/ActionForm";
+import { parseISTDateKeyStart, parseISTDateKeyEnd } from "@/lib/ist";
 
 const couponSchema = z.object({
   id: z.string().optional(),
@@ -64,8 +65,8 @@ export async function saveCoupon(_prev: ActionState, formData: FormData): Promis
     maxDiscount: toPaiseOrNull(d.maxDiscount),
     usageLimit: toIntOrNull(d.usageLimit),
     perCustomerLimit: toIntOrNull(d.perCustomerLimit),
-    startsAt: d.startsAt ? new Date(d.startsAt) : null,
-    expiresAt: d.expiresAt ? new Date(d.expiresAt) : null,
+    startsAt: d.startsAt ? parseISTDateKeyStart(d.startsAt) : null,
+    expiresAt: d.expiresAt ? parseISTDateKeyEnd(d.expiresAt) : null,
   };
 
   if (data.startsAt && data.expiresAt && data.startsAt > data.expiresAt) {

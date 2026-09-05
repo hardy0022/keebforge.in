@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     const amount = payload.amount;
     const status = payload.status;
     const method = payload.method;
+    const customerId = typeof payload.customer_id === "string" ? payload.customer_id : null;
 
     const existingPayment = await prisma.payment.findUnique({
       where: { razorpayPaymentId: paymentId },
@@ -62,6 +63,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    const orderBilling = (order.billingDetails ?? {}) as { razorpayCustomerId?: string };
+    const resolvedCustomerId = customerId ?? orderBilling.razorpayCustomerId ?? null;
+
     if (status === "captured" || status === "authorized") {
       const isAlreadyPaid = existingPayment?.status === "PAID" || order.paymentStatus === "PAID";
 
@@ -73,6 +77,7 @@ export async function POST(req: NextRequest) {
               status: "PAID",
               method: method ?? "razorpay",
               paidAt: new Date(),
+              ...(resolvedCustomerId ? { razorpayCustomerId: resolvedCustomerId } : {}),
             },
             create: {
               orderId: order.id,
@@ -83,6 +88,7 @@ export async function POST(req: NextRequest) {
               razorpayOrderId: orderId,
               razorpayPaymentId: paymentId,
               razorpaySignature: "",
+              ...(resolvedCustomerId ? { razorpayCustomerId: resolvedCustomerId } : {}),
               paidAt: new Date(),
             },
           });
@@ -110,6 +116,7 @@ export async function POST(req: NextRequest) {
         update: {
           status: "FAILED",
           failureReason: payload.error_description ?? "Payment failed",
+          ...(resolvedCustomerId ? { razorpayCustomerId: resolvedCustomerId } : {}),
         },
         create: {
           orderId: order.id,
@@ -120,6 +127,7 @@ export async function POST(req: NextRequest) {
           razorpayOrderId: orderId,
           razorpayPaymentId: paymentId,
           razorpaySignature: "",
+          ...(resolvedCustomerId ? { razorpayCustomerId: resolvedCustomerId } : {}),
           failureReason: payload.error_description ?? "Payment failed",
         },
       });

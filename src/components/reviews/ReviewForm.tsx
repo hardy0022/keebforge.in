@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState, type ReactElement } from "react";
+import { useActionState, useRef, useState, startTransition, type ReactElement } from "react";
 import Link from "next/link";
 import { submitReview, type ReviewSubmitState } from "@/app/actions/review";
 import { sniffImageFile, IMAGE_ACCEPT, IMAGE_TYPES_MESSAGE } from "@/lib/image-validation";
@@ -85,7 +85,7 @@ export function ReviewForm({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     for (const p of newPhotos) fd.append("images", p.file);
-    formAction(fd);
+    startTransition(() => formAction(fd));
   }
 
   return (

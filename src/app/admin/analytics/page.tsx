@@ -3,9 +3,11 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { ORDER_BUCKET_LABELS, getAnalyticsKPIs, getAnalyticsSeries, getOrderStatusBreakdown, getWorkshopMods } from "@/lib/admin-analytics";
-import { getRecentActivity, getRecentOrders } from "@/lib/admin";
+import { getRecentActivity, getRecentOrders, getLowStockProducts } from "@/lib/admin";
+import { getTopProducts } from "@/lib/admin-catalog";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
 import { RevenueOrdersChart } from "@/components/admin/RevenueOrdersChart";
+import { fmtIST } from "@/lib/ist";
 
 export const metadata: Metadata = { title: "Analytics | KeebForge Admin", robots: { index: false, follow: false } };
 
@@ -31,13 +33,15 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
   const { range } = await searchParams;
   const rangeDays = range === "0" ? 0 : Math.min(90, Math.max(7, Number(range) || 30));
 
-  const [kpis, series, statusBreakdown, workshop, activity, recentOrders] = await Promise.all([
+  const [kpis, series, statusBreakdown, workshop, activity, recentOrders, topProducts, lowStock] = await Promise.all([
     getAnalyticsKPIs(rangeDays),
     getAnalyticsSeries(rangeDays),
     getOrderStatusBreakdown(),
     getWorkshopMods(rangeDays),
     getRecentActivity(8),
     getRecentOrders(8),
+    getTopProducts(5),
+    getLowStockProducts(),
   ]);
 
   const maxRevenue = Math.max(1, ...series.map((b) => b.revenue));
@@ -117,6 +121,58 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
         ) : (
           <RevenueOrdersChart data={series} maxRevenue={maxRevenue} maxOrders={maxOrders} />
         )}
+      </div>
+
+      <div className="admin-grid cols-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <div className="admin-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <h3 style={{ marginBottom: 0 }}>Top products</h3>
+            <Link href="/admin/products" className="muted" style={{ fontSize: "0.75rem" }}>
+              Manage →
+            </Link>
+          </div>
+          {topProducts.length === 0 ? (
+            <div className="empty">
+              <b>No sales yet</b>
+              Best sellers appear here once orders are placed.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {topProducts.map((p, i) => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                    <span className="muted num">{i + 1}.</span>{" "}
+                    <Link href={`/admin/products/${p.id}`} style={{ color: "inherit" }}>{p.name}</Link>
+                  </span>
+                  <span className="num muted" style={{ flexShrink: 0 }}>{p.units} × {formatINR(p.revenue)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="admin-card">
+          <h3>Low stock</h3>
+          {lowStock.length === 0 ? (
+            <div className="empty">
+              <b>All stocked</b>
+              Nothing below its low-stock threshold.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {lowStock.map((p) => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                  <span style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.name}
+                  </span>
+                  <span className={`badge ${p.stock === 0 ? "badge-err" : "badge-warn"}`} style={{ flexShrink: 0 }}>
+                    {p.stock} left
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="admin-grid cols-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -217,7 +273,7 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
                     </td>
                     <td style={{ color: "var(--t2)" }}>{o.customerName}</td>
                     <td><span className="badge">{ORDER_STATUS_LABELS[o.status]}</span></td>
-                    <td className="muted num">{o.createdAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                    <td className="muted num">{fmtIST(o.createdAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                   </tr>
                 ))}
                 {activity
@@ -232,7 +288,7 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
                       </td>
                       <td className="muted">—</td>
                       <td><span className="badge">{ORDER_STATUS_LABELS[a.status]}</span></td>
-                      <td className="muted num">{a.createdAt.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                      <td className="muted num">{fmtIST(a.createdAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                     </tr>
                   ))}
               </tbody>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { buildMetadata } from "@/lib/seo";
 import { getModsCatalog } from "@/lib/data";
-import { DEFAULT_SHIPPING_MODE, enabledShippingModes } from "@/lib/shipping";
+import { DEFAULT_SHIPPING_MODE, enabledShippingModes } from "@/lib/delhivery";
 import { ModConfigurator, type ConfigService } from "@/components/mods/ModConfigurator";
 import { WhyForge } from "@/components/home/WhyForge";
 

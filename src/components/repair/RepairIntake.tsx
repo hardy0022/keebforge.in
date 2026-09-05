@@ -1,13 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { submitRepairRequest, type RepairRequestState } from "@/app/actions/repair-request";
 import { INDIAN_STATES } from "@/lib/indian-states";
-
-const ACCEPT = ["image/jpeg", "image/png", "image/webp"];
-const MAX_IMAGES = 4;
-const MAX_BYTES = 5 * 1024 * 1024;
 
 export type AddressDTO = {
   id: string;
@@ -95,47 +91,7 @@ export function RepairIntake({
   const [state_, setState_] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<File[]>([]);
-  const [imgError, setImgError] = useState<string | null>(null);
-  const [dropping, setDropping] = useState(false);
   const [gateError, setGateError] = useState<string | null>(null);
-
-  const setFiles = (files: File[]) => {
-    if (inputRef.current) {
-      const dt = new DataTransfer();
-      files.forEach((f) => dt.items.add(f));
-      inputRef.current.files = dt.files;
-    }
-    setImages(files);
-  };
-
-  const handleFiles = (incoming: File[]) => {
-    setImgError(null);
-    const existing = Array.from(inputRef.current?.files ?? []);
-    const seen = new Set(existing.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
-    const merged = [...existing];
-    let err: string | null = null;
-    for (const f of incoming) {
-      const key = `${f.name}:${f.size}:${f.lastModified}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (!ACCEPT.includes(f.type)) err = err ?? `"${f.name}" isn't a supported image. Use JPG, PNG or WEBP.`;
-      else if (f.size > MAX_BYTES) err = err ?? `"${f.name}" is over 5 MB. Compress it and try again.`;
-      else merged.push(f);
-    }
-    if (merged.length > MAX_IMAGES) {
-      setFiles(merged.slice(0, MAX_IMAGES));
-      setImgError(`You can attach up to ${MAX_IMAGES} photos — extra files were skipped.`);
-    } else {
-      setFiles(merged);
-      setImgError(err);
-    }
-  };
-
-  const removeImage = (idx: number) => {
-    setFiles(Array.from(inputRef.current?.files ?? []).filter((_, i) => i !== idx));
-  };
 
   const toggleWork = (w: string) =>
     setWorkTypes((cur) => (cur.includes(w) ? cur.filter((x) => x !== w) : [...cur, w]));
@@ -196,7 +152,6 @@ export function RepairIntake({
     ["Device", deviceLabel],
     ["Model", model.trim() ? `${brand} ${model}`.trim() : "—"],
     ["Work", workTypes.length > 0 ? workTypes.join(", ") : "—"],
-    ["Photos", images.length > 0 ? `${images.length} attached` : "None"],
   ];
 
   return (
@@ -238,7 +193,6 @@ export function RepairIntake({
               <div className="ri-span"><dt>Description</dt><dd>{description}</dd></div>
               <div><dt>Condition</dt><dd>{condition}</dd></div>
               <div><dt>Budget estimate</dt><dd>{budget.trim() || "—"}</dd></div>
-              <div className="ri-span"><dt>Photos</dt><dd>{images.length > 0 ? images.map((f) => f.name).join(", ") : "None attached"}</dd></div>
               <div><dt>Name</dt><dd>{`${firstName} ${lastName}`.trim()}</dd></div>
               <div><dt>Email</dt><dd>{email}</dd></div>
               <div><dt>WhatsApp / Phone</dt><dd>{phone}</dd></div>
@@ -353,51 +307,9 @@ export function RepairIntake({
               </div>
             </section>
 
-            {/* 04 — PHOTOS */}
+            {/* 04 — YOUR DETAILS */}
             <section className="panel ri-step">
-              <p className="panel-tag">04 — Photos</p>
-              <h2 className="panel-title">Show us what you&apos;re working with</h2>
-              <p className="ri-upload-hint">
-                Upload photos of the keyboard, PCB, damage, components, or anything that helps us understand the job.
-              </p>
-              <label
-                className={`upload-zone${dropping ? " dropping" : ""}${pending ? " disabled" : ""}`}
-                onDragOver={(e) => { e.preventDefault(); setDropping(true); }}
-                onDragLeave={() => setDropping(false)}
-                onDrop={(e) => { e.preventDefault(); setDropping(false); if (!pending) handleFiles(Array.from(e.dataTransfer.files)); }}
-              >
-                <input
-                  ref={inputRef}
-                  name="images"
-                  type="file"
-                  accept={ACCEPT.join(",")}
-                  multiple
-                  className="upload-input"
-                  disabled={pending}
-                  onChange={(e) => handleFiles(Array.from(e.target.files ?? []))}
-                />
-                <span className="upload-ico" aria-hidden="true">🖼️</span>
-                <span className="upload-title">Upload photos</span>
-                <span className="upload-sub">Drag &amp; drop images here</span>
-                <span className="upload-sub">PNG, JPG, WEBP · Up to {MAX_IMAGES} images</span>
-              </label>
-              {imgError && <p role="alert" className="upload-error">{imgError}</p>}
-              {images.length > 0 && (
-                <div className="upload-previews" role="list" aria-label="Selected photos">
-                  {images.map((f, i) => (
-                    <figure className="upload-thumb" role="listitem" key={`${f.name}:${f.size}:${i}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element -- blob previews can't use next/image */}
-                      <img src={URL.createObjectURL(f)} alt={`Photo ${i + 1}: ${f.name}`} />
-                      <button type="button" className="upload-remove" onClick={() => removeImage(i)} aria-label={`Remove image ${i + 1}`}>×</button>
-                    </figure>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* 05 — YOUR DETAILS */}
-            <section className="panel ri-step">
-              <p className="panel-tag">05 — Your Details</p>
+              <p className="panel-tag">04 — Your Details</p>
               <h2 className="panel-title">Your Details</h2>
               <div className="ri-field-row">
                 <div className="form-row">
@@ -429,7 +341,7 @@ export function RepairIntake({
 
             {/* 06 — SHIPPING */}
             <section className="panel ri-step">
-              <p className="panel-tag">06 — Shipping</p>
+              <p className="panel-tag">05 — Shipping</p>
               <h2 className="panel-title">Shipping / Pickup</h2>
               <div className="pill-radio-group ri-shipping-pills">
                 {SHIPPING.map((sm) => (
@@ -563,7 +475,7 @@ export function RepairIntake({
               {pending ? "Submitting…" : "Submit Request →"}
             </button>
           )}
-          <p className="ri-side-hint">Mail-in service across India · Photos speed up assessment</p>
+          <p className="ri-side-hint">Mail-in service across India</p>
         </div>
       </aside>
     </form>

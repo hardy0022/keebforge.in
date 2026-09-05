@@ -23,7 +23,7 @@ export default async function HomePage() {
       <HomeHero />
       <ServicesTicker />
       <WorkshopPin />
-      <FeaturedBuild products={products} />
+      {products.length > 0 && <FeaturedBuild products={products} />}
       <ModsWorkshop work={work} />
       <CustomerReviews reviews={reviews} />
       <FinalCta />

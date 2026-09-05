@@ -12,12 +12,13 @@ import {
   enabledShippingModes,
   isValidPincode,
   toShippingMode,
-} from "@/lib/shipping";
+} from "@/lib/delhivery";
 import { deriveLegs } from "@/lib/shipping-estimate";
 import { PACKAGE_LIMITS, isValidPackage } from "@/lib/package-limits";
 import { generateOrderNumber } from "@/lib/orders";
 import { syncTrackingCache } from "@/lib/tracking";
 import { validateCoupon, couponOrderCreateData, incrementCouponUsage, type CouponEligible } from "@/lib/coupons";
+import { ensureRazorpayCustomer } from "@/lib/razorpay-customer";
 
 export const dynamic = "force-dynamic";
 
@@ -234,6 +235,7 @@ export async function POST(req: NextRequest) {
       .join(", ");
 
     let rzpOrderId: string | null = null;
+    let rzpCustomerId: string | null = null;
     if (!quoteOnly) {
       const razorpay = getRazorpay();
       if (!razorpay) {
@@ -242,6 +244,12 @@ export async function POST(req: NextRequest) {
           { status: 503 }
         );
       }
+      const razorpayCustomerId = await ensureRazorpayCustomer(razorpay, {
+        profile,
+        name: customerName,
+        email: cfg.customer.email,
+        contact: cfg.customer.phone,
+      });
       const rzpOrder = await razorpay.orders.create({
         amount: totals.total, // server-calculated paise
         currency: "INR",
@@ -249,6 +257,7 @@ export async function POST(req: NextRequest) {
         notes: { orderNumber, type: "SERVICE", customerEmail: cfg.customer.email },
       });
       rzpOrderId = rzpOrder.id;
+      rzpCustomerId = razorpayCustomerId;
     }
 
     const order = await prisma.order.create({
@@ -282,7 +291,15 @@ export async function POST(req: NextRequest) {
             })
           : {}),
         summary,
-        ...(rzpOrderId ? { billingDetails: { razorpayOrderId: rzpOrderId, razorpayOrderAmount: totals.total } } : {}),
+        ...(rzpOrderId
+          ? {
+              billingDetails: {
+                razorpayOrderId: rzpOrderId,
+                razorpayOrderAmount: totals.total,
+                ...(rzpCustomerId ? { razorpayCustomerId: rzpCustomerId } : {}),
+              },
+            }
+          : {}),
         services: {
           create: totals.lines.map((l) => ({
             serviceId: l.serviceId,

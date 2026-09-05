@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_STAGES } from "@/lib/orders";
+import { trackShipment, type TrackingResult } from "@/lib/delhivery";
 
 /**
  * Reads the public-safe Tracking cache — never the raw Order tables (no
@@ -11,8 +12,7 @@ import { ORDER_STATUS_LABELS, ORDER_STATUS_STAGES } from "@/lib/orders";
  */
 export type TrackTimelineEntry = { status: string; label: string; note: string | null; createdAt: string | null };
 export type TrackLine = { name: string; quantity: number; unitPrice: number; lineTotal: number };
-export type TrackRepairImage = { url: string; altText: string | null; sortOrder: number; role: string };
-export type TrackRepair = { id: string; deviceType: string; deviceModel: string; issue: string; images: TrackRepairImage[] };
+export type TrackRepair = { id: string; deviceType: string; deviceModel: string; issue: string };
 export type TrackShipment = {
   courier: string | null;
   trackingNumber: string | null;
@@ -39,6 +39,32 @@ export type TrackData = {
 };
 
 export type TrackState = { ok: true; data: TrackData } | { ok: false; error: string };
+
+export type ShipmentScanState =
+  | { ok: true; awb: string; status: string; destination: string; scans: { location: string; status: string; instructions: string; scannedAt: string | null }[] }
+  | { ok: false; error: string };
+
+const waybillSchema = z
+  .string()
+  .trim()
+  .refine((s) => /^\d{10,20}$/.test(s), "That doesn't look like a tracking number.");
+
+/** Fetches live Delhivery scan data for a shipment waybill. */
+export async function fetchShipmentScans(_prev: ShipmentScanState, formData: FormData): Promise<ShipmentScanState> {
+  const parsed = waybillSchema.safeParse(formData.get("waybill"));
+  if (!parsed.success) return { ok: false, error: "Please enter a valid tracking number." };
+
+  const result: TrackingResult = await trackShipment(parsed.data);
+  if (!result.ok) return { ok: false, error: result.message };
+
+  return {
+    ok: true,
+    awb: result.data.awb,
+    status: result.data.status,
+    destination: result.data.destination,
+    scans: result.data.scans,
+  };
+}
 
 const orderNumberSchema = z
   .string()
@@ -82,11 +108,6 @@ export async function trackOrder(_prev: TrackState, formData: FormData): Promise
 
   const repairsRaw = asArray(row.repairs);
   const repairRows = repairsRaw.map((rp) => asRecord(rp));
-  const repairIds = repairRows.map((r) => str(r.id) ?? "").filter(Boolean);
-  const repairMedia =
-    repairIds.length > 0
-      ? await prisma.media.findMany({ where: { entityType: "REPAIR", entityId: { in: repairIds } }, orderBy: { sortOrder: "asc" } })
-      : [];
 
   return {
     ok: true,
@@ -110,9 +131,6 @@ export async function trackOrder(_prev: TrackState, formData: FormData): Promise
         deviceType: str(r.deviceType) ?? "",
         deviceModel: str(r.deviceModel) ?? "",
         issue: str(r.issue) ?? "",
-        images: repairMedia
-          .filter((m) => m.entityId === r.id)
-          .map((m) => ({ url: m.secureUrl, altText: m.altText, sortOrder: m.sortOrder, role: m.role })),
       })),
       timeline: asArray(row.timeline).map((t) => {
         const r = asRecord(t);

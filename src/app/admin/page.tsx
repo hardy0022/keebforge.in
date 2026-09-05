@@ -7,11 +7,10 @@ import {
   getAdminStats,
   getRevenueSeries,
   getRepairPipeline,
-  getLowStockProducts,
   getRecentOrders,
   getRecentActivity,
 } from "@/lib/admin";
-import { getTopProducts } from "@/lib/admin-catalog";
+import { fmtIST } from "@/lib/ist";
 
 export const metadata: Metadata = {
   title: "Dashboard | KeebForge Admin",
@@ -29,14 +28,12 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
   await requireAdmin();
   const { range } = await searchParams;
   const rangeDays = Math.max(7, Math.min(365, Number(range) || 7));
-  const [stats, revenue, pipeline, lowStock, recentOrders, activity, topProducts] = await Promise.all([
+  const [stats, revenue, pipeline, recentOrders, activity] = await Promise.all([
     getAdminStats(),
     getRevenueSeries(rangeDays),
     getRepairPipeline(),
-    getLowStockProducts(),
     getRecentOrders(),
     getRecentActivity(),
-    getTopProducts(5),
   ]);
 
   const maxTotal = Math.max(1, ...revenue.map((b) => b.total));
@@ -188,7 +185,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
                         <span className="badge">{ORDER_STATUS_LABELS[o.status]}</span>
                       </td>
                       <td className="num">{formatINR(o.total)}</td>
-                      <td className="muted num">{o.createdAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                      <td className="muted num">{fmtIST(o.createdAt, { day: "2-digit", month: "short" })}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -198,56 +195,6 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
         </div>
 
         <div className="admin-grid" style={{ gridTemplateColumns: "1fr", gap: 16 }}>
-          <div className="admin-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <h3 style={{ marginBottom: 0 }}>Top products</h3>
-              <Link href="/admin/products" className="muted" style={{ fontSize: "0.75rem" }}>
-                Manage →
-              </Link>
-            </div>
-            {topProducts.length === 0 ? (
-              <div className="empty">
-                <b>No sales yet</b>
-                Best sellers appear here once orders are placed.
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {topProducts.map((p, i) => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                      <span className="muted num">{i + 1}.</span>{" "}
-                      <Link href={`/admin/products/${p.id}`} style={{ color: "inherit" }}>{p.name}</Link>
-                    </span>
-                    <span className="num muted" style={{ flexShrink: 0 }}>{p.units} × {formatINR(p.revenue)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="admin-card">
-            <h3>Low stock</h3>
-            {lowStock.length === 0 ? (
-              <div className="empty">
-                <b>All stocked</b>
-                Nothing below its low-stock threshold.
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {lowStock.map((p) => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                    <span style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {p.name}
-                    </span>
-                    <span className={`badge ${p.stock === 0 ? "badge-err" : "badge-warn"}`} style={{ flexShrink: 0 }}>
-                      {p.stock} left
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className="admin-card">
             <h3>Recent activity</h3>
             {activity.length === 0 ? (
@@ -263,7 +210,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
                       {a.order.orderNumber}
                     </Link>{" "}
                     <span style={{ color: "var(--t2)" }}>→ {ORDER_STATUS_LABELS[a.status]}</span>
-                    <div className="muted num">{a.createdAt.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                    <div className="muted num">{fmtIST(a.createdAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
                   </div>
                 ))}
               </div>

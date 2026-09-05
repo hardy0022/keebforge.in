@@ -14,7 +14,7 @@ const SECTION_TYPE_OPTIONS = [
   { value: "CLEARANCE", label: "Clearance / Used" },
 ] as const;
 
-type CategoryProp = { id: string; name: string; parentId: string | null };
+type CategoryProp = { id: string; name: string };
 type BrandProp = { id: string; name: string };
 type ImageProp = { url: string; alt: string | null; sortOrder: number; primary: boolean; publicId?: string | null };
 type UploadedAsset = { publicId: string; url: string; width: number; height: number };
@@ -226,7 +226,7 @@ export function ProductForm({ product, optionGroups = [], categories, brands }: 
           <Field label="Category" hint="Database-driven — manage under Categories.">
             <select className="select" name="categoryId" defaultValue={product?.categoryId ?? ""} required disabled={pending}>
               <option value="">Select a category</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.parentId ? "↳ " : ""}{c.name}</option>)}
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
           <Field label="Product type">

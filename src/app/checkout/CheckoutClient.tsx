@@ -680,9 +680,16 @@ function CfgRow({ label, value }: { label: string; value: string }) {
 interface CheckoutLine {
   id: string;
   quantity: number;
-  config: { kind?: string; selections?: { optionName?: string }[] } | null;
+  config: { kind?: string; selections?: { optionName?: string; addon?: number }[] } | null;
   product: { name: string; slug: string; price: number; image?: string | null; freeShipping?: boolean };
   variant: { name: string; price: number | null } | null;
+}
+
+function lineUnitPrice(it: CheckoutLine): number {
+  if (it.config?.kind === "options" && it.config.selections?.length) {
+    return it.product.price + it.config.selections.reduce((s, sel) => s + (sel.addon ?? 0), 0);
+  }
+  return it.variant?.price ?? it.product.price;
 }
 
 interface DeliveryForm {
@@ -909,7 +916,7 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
   const fieldErrors = validateDelivery(form, !authUser);
   const billingErrors = validateBilling(billing);
   const shippingResolved = shipping.status === "quotes" || shipping.status === "free";
-  const subtotal = (lines ?? []).reduce((s, it) => s + (it.variant?.price ?? it.product.price) * it.quantity, 0);
+  const subtotal = (lines ?? []).reduce((s, it) => s + lineUnitPrice(it) * it.quantity, 0);
   const shipOptions = shipping.status === "quotes" ? shipping.options : null;
   const selectedOption = shipOptions?.find((o) => o.method === shipMode) ?? null;
   const shippingAmount = selectedOption ? selectedOption.amountPaise : shipping.status === "free" ? 0 : null;
@@ -1327,7 +1334,7 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
               <h2 className="panel-title" style={{ marginBottom: 16 }}>Order Summary</h2>
               <div className="flex flex-col gap-3 mb-4 pb-4 border-b border-[var(--bdr)]">
                 {lines.map((it) => {
-                  const unit = it.variant?.price ?? it.product.price;
+                  const unit = lineUnitPrice(it);
                   const configLine =
                     it.config?.kind === "options" && it.config.selections?.length
                       ? it.config.selections.map((sel) => sel.optionName).filter(Boolean).join(" · ")

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/money";
 import { getAdminProducts, getAdminCategories, getAdminBrands, PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/admin-catalog";
+import { fmtIST } from "@/lib/ist";
 
 export const metadata: Metadata = { title: "Products | KeebForge Admin", robots: { index: false, follow: false } };
 
@@ -153,7 +154,7 @@ export default async function AdminProductsPage({
                       <td><span className={`badge ${badge.cls}`}>{badge.label}</span></td>
                       <td><span className={`badge ${p.status === "ACTIVE" ? "badge-lime" : p.status === "DRAFT" ? "badge-warn" : "badge-err"}`}>{PRODUCT_STATUS_LABELS[p.status]}</span></td>
                       <td className="num muted">{p.sales.units} sold</td>
-                      <td className="muted num">{p.updatedAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                      <td className="muted num">{fmtIST(p.updatedAt, { day: "2-digit", month: "short" })}</td>
                       <td>
                         <div className="admin-actions" style={{ gap: 4 }}>
                           <Link href={`/admin/products/${p.id}`} className="btn-admin sm">View</Link>

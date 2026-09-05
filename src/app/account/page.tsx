@@ -131,61 +131,6 @@ export default async function AccountPage() {
           </div>
         )}
       </section>
-
-      <section className="account-section">
-        <header className="account-section-header">
-          <div>
-            <h2 className="account-section-title">Quick Actions</h2>
-            <p className="account-section-desc">Common tasks you might want to do</p>
-          </div>
-        </header>
-
-        <div className="account-actions">
-          <Link href="/account/profile" className="account-action-card">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <div>
-              <h3>Profile &amp; Addresses</h3>
-              <p>Info and shipping addresses</p>
-            </div>
-          </Link>
-
-          <Link href="/account/orders" className="account-action-card">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-            <div>
-              <h3>Orders</h3>
-              <p>Track and manage your orders</p>
-            </div>
-          </Link>
-
-          <Link href="/account/settings" className="account-action-card">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-            <div>
-              <h3>Settings</h3>
-              <p>Preferences, password, security</p>
-            </div>
-          </Link>
-
-          <Link href="/shop" className="account-action-card">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
-            <div>
-              <h3>Continue Shopping</h3>
-              <p>Keyboard parts &amp; mods</p>
-            </div>
-          </Link>
-        </div>
-      </section>
     </div>
   );
 }

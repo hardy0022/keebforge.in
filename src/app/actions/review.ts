@@ -196,14 +196,14 @@ const verified = product ? (await verifiedProfileIds(product.id, [profile.id])).
   return { ok: true, redirectTo: product ? `/product/${product.slug}?rv=submitted` : "/?rv=submitted" };
 }
 
-/** A customer deletes their own product review (kept private, not a hard-sell flow). */
+/** A customer deletes their own review (kept private, not a hard-sell flow). */
 export async function deleteOwnReview(formData: FormData): Promise<ReviewSubmitState> {
   const { user, profile } = await getCurrentAuth();
   if (!user || !profile) return { error: "Please sign in." };
 
   const id = String(formData.get("reviewId") ?? "");
   const review = await prisma.review.findUnique({ where: { id } });
-  if (!review || review.profileId !== profile.id || review.type !== "PRODUCT") {
+  if (!review || review.profileId !== profile.id) {
     return { error: "This review does not belong to your account." };
   }
 
@@ -215,6 +215,9 @@ export async function deleteOwnReview(formData: FormData): Promise<ReviewSubmitS
 
   const slug = review.productSlugSnapshot;
   if (slug) revalidatePath(`/product/${slug}`);
+  revalidatePath("/");
+  revalidatePath("/account");
+  revalidatePath("/account/orders");
   revalidatePath("/admin/reviews");
-  return { ok: true, redirectTo: slug ? `/product/${slug}?rv=deleted` : "/" };
+  return { ok: true, redirectTo: review.type === "PRODUCT" && slug ? `/product/${slug}?rv=deleted` : "/?rv=deleted" };
 }

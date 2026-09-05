@@ -1,4 +1,5 @@
 import { ReviewStars } from "@/components/reviews/ReviewStars";
+import { ReviewBody } from "@/components/reviews/ReviewBody";
 
 /** Photos shown per review before the "+N more" tile takes over. */
 const PHOTOS_SHOWN = 4;
@@ -35,7 +36,7 @@ export function ReviewCard({ review, verified }: { review: ReviewCardItem; verif
         {review.title && <h3 className="review-card-title">{review.title}</h3>}
         <ReviewStars rating={review.rating} />
       </div>
-      <p className="review-text">{review.body}</p>
+      <ReviewBody review={review} />
       {shownPhotos.length > 0 && (
         <div className="review-photos">
           {shownPhotos.map((img) => (

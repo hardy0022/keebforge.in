@@ -48,7 +48,7 @@ const EMPTY_FORM: FormState = {
 
 function toDateInput(iso: string | null): string {
   if (!iso) return "";
-  return iso.slice(0, 10);
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
 function formFromCoupon(c: CouponRow): FormState {
@@ -221,10 +221,10 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
                   <td>{c.usedCount}{c.usageLimit ? ` / ${c.usageLimit}` : ""}</td>
                   <td>
                     {notStarted
-                      ? `Starts ${started!.toLocaleDateString()}`
+                      ? `Starts ${started!.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}`
                       : valid
                         ? expiry
-                          ? `Until ${expiry.toLocaleDateString()}`
+                          ? `Until ${expiry.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}`
                           : "No expiry"
                         : "Expired"}
                   </td>
