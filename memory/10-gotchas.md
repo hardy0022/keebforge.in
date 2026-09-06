@@ -13,8 +13,11 @@ The **app itself** connects fine with the raw value — this only affects CLI in
 ## G-002 — Never `prisma migrate dev`
 The shadow-database flow fails in this setup (`auth` schema interference). Use the manual diff + deploy pattern (see `03-database.md`). `migrate status` should always show all migrations applied.
 
-## G-003 — `loading.tsx` causes soft-404 (HTTP 200 on `notFound()`)
-Never add a `loading.tsx` to `/shop` or `/product/[slug]` without re-verifying unknown slugs return 404. `error.tsx` is safe.
+## G-003 — `loading.tsx` causes soft-404 (HTTP 200 on `notFound()`) — resolved 2026-09-06
+A `loading.tsx` on `/shop` or `/product/[slug]` streams its skeleton shell **before** the page's `notFound()` resolves, so the response commits headers with HTTP **200** and only carries a client-side `NEXT_HTTP_ERROR_FALLBACK;404` template. Critically, **`notFound()` in `generateMetadata` does NOT rescue the status** — metadata also runs after the loading shell has already streamed (verified against Next 16.3.1 / Turbopack: 200 with the fallback template inside). The fix that actually works:
+1. Remove the `loading.tsx` (both `/product/[slug]/loading.tsx` and `src/app/shop/loading.tsx` are gone — their orphans `ProductPageSkeleton`/`ShopGridSkeleton` deleted).
+2. Keep `notFound()` in `generateMetadata` anyway (it still emits the correct 404 UI/fallback on the client).
+Verified after removal: `/product/does-not-exist-xyz` → **404**, `/shop/nope-category` → **404**, real products/categories stay 200. If a `loading.tsx` is ever re-added to a route that can 404, re-verify with a bogus slug. `error.tsx` is safe.
 
 ## G-004 — Next `redirect()` matching is case-insensitive
 `/About` in `next.config.ts` would shadow the real `/about` route. Case-variant old URLs are handled **only** in `src/proxy.ts` (`CASED_PATHS` map, 308). Keep it that way.
@@ -94,11 +97,23 @@ The 200 manifest response is shaped `{packages:[{waybill, refnum, client,…}], 
 - Invoking the returned action outside a transition throws: "An async function with useActionState was called outside of a transition … isPending will not update correctly" (React 19 / Next 16 console error).
 - Only two legitimate call sites exist and they BOTH must be safe: (a) pass the function to a `<form action={…}>` / `<formAction>` prop (React owns it), (b) imperative calls inside `startTransition(() => formAction(fd))`.
 - Anti-pattern found & fixed in `src/components/support/TrackOrder.tsx`: an `onSubmit` handler did `e.preventDefault(); formAction(fd)`. Converted to `<form action={formAction}>` + hidden `waybill` input (dropped the manual `load` fn and a `loaded` state, label driven by `state.ok`). The auto-track on mount (`reTrack`) and the post-pay refresh both wrapped in `startTransition`. If you add a tracker/order lookup later, bind forms to the action prop rather than calling it in handlers.
-## G-028 — The 17 `no-img-element` lint warnings are intentional
-`@next/next/no-img-element` currently reports 17 warnings: tweet-card (third-party), ReviewForm blob previews, ReviewBody modal image, ReviewCard avatar. These are deliberately NOT `next/image` — no bandwidth/LCP payoff and converting risks breakage. Don't "clean up" them in a future pass without a real reason.
+## G-028 — The no-img-element lint warnings are intentional (now 14)
+`@next/next/no-img-element` reports 14 warnings: ReviewForm blob previews, ReviewBody modal images, ReviewCard avatar (the tweet-card one disappeared when `tweet-card.tsx` was deleted 2026-09-06). Deliberately NOT `next/image` — no bandwidth/LCP payoff and converting risks breakage. Don't "clean up" them without a real reason.
 
 ## G-029 — `/checkout` (no path) redirects; the real page is `/shop/checkout`
 `src/app/checkout/page.tsx` is a one-line `redirect("/shop/checkout")` wrapper. A curl/health check of `/checkout` returns **307**, which is correct existing behavior — probe `/shop/checkout` instead (200).
 
 ## G-030 — Action-state forms must bind via `form action`, never manual invocation
 Covered G-027 for `useActionState`. Applies to any wrapped action: if a form manually builds `FormData` and calls the action in `onSubmit`, React warns and `isPending` breaks. Bind `<form action={…}>` and drop the manual call. (One exception: JSON-orderAmounts-style conversions that pass `prevState` — those keep a single wrapped `formData → void` action.)
+
+## G-031 — Prettier reformats the whole repo (only run when intended)
+`.prettierrc.json` (`printWidth: 80`, no single-quote, semis) + `npm run format` will touch ~239 files site-wide. It's wired as a one-shot `format` script, NOT a pre-commit hook. Run it only after the code is behavior-frozen. `memory/` and `.next/` are in `.prettierignore`. A stale `@/lib/cache` import path is a sure sign `git mv`-ing `src/lib/cache.ts` broke an importer (see G-032).
+
+## G-032 — `lib/cache.ts` lives at `@/lib/caching/cache`
+On 2026-09-06 `src/lib/cache.ts` was renamed to `src/lib/caching/cache.ts` (~11 importers updated to `@/lib/caching/cache`). Any new import must use the new path. Check here if a build error says a `cache` module can't be found.
+
+## G-033 — Formatting after bugs: `formatPaiseWhole`, `slugify`, `istDayKey` are the single sources
+The refactor merged several one-off formatters — reuse these before writing a new one:
+- `src/lib/money.ts` `formatPaiseWhole(paise)` — whole-rupee "123" (no ₹, no decimals) for `₹`-prefixed labels; drives `mods/pricing.ts`, `ModConfigurator`, `RevenueOrdersChart`. `formatINR()` (with ₹ + 2dp) is for headline money display. Business rule (D-001): integer paise everywhere, round before formatting.
+- `src/lib/slugify.ts` `slugify(s, {stripQuotes?, maxLength?, fallback?})` — combines the two old private fns; `stripQuotes` = admin product catalog, `maxLength`+`fallback` = work projects.
+- `src/lib/ist.ts` `istDayKey(d)` — the canonical en-CA "YYYY-MM-DD" IST day key; the coupon manager's duplicate inline copy was removed.

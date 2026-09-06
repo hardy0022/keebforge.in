@@ -11571,22 +11571,25 @@ a.reviews-page:hover {
 
 /* ─── Support pages: track order ───────────────────────────────────────────── */
 .track-section {
-  padding-top: clamp(20px, 2.5vw, 26px);
+  padding-top: clamp(16px, 2vw, 22px);
+  padding-bottom: clamp(40px, 5vw, 60px);
 }
 .track-wrap {
   width: 100%;
 }
-.track-form {
+
+/* ── Search card ────────────────────────────────────────────────────────────── */
+.track-search {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   border: 1px solid var(--bdr);
   background: var(--bg1);
   border-radius: var(--r-md);
-  padding: 15px 24px;
-  margin-bottom: 12px;
+  padding: 18px 22px;
+  margin-bottom: 14px;
 }
-.track-card-title {
+.track-search-label {
   font-family: var(--ff-display);
   font-size: 0.72rem;
   font-weight: 700;
@@ -11595,84 +11598,78 @@ a.reviews-page:hover {
   color: var(--acc);
   margin: 0;
 }
-.track-card-desc {
+.track-search-desc {
   font-size: 0.85rem;
   color: var(--t2);
-  margin: 0;
+  margin: 2px 0 0;
 }
-.track-label {
-  display: block;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--t3);
-  margin: 0 0 4px;
-}
-.track-row {
+.track-search-row {
   display: flex;
-  flex-direction: column;
   gap: 10px;
+  align-items: stretch;
 }
-@media (min-width: 640px) {
-  .track-row {
-    flex-direction: row;
-    gap: 12px;
-    align-items: stretch;
-  }
-  .track-row .btn-prime {
-    flex: 0 0 auto;
-  }
-}
-.track-field {
-  position: relative;
+.track-search-row .input {
   flex: 1;
-  min-width: 0;
-}
-.track-field-prefix {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: var(--ff-display);
+  min-height: 46px;
   font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--t3);
-  pointer-events: none;
-}
-.track-row .input {
-  flex: 1;
-  min-height: 50px;
-  font-size: 0.95rem;
-  padding: 13px 16px 13px 36px;
+  padding: 12px 16px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-.track-row .btn-prime {
-  min-height: 50px;
-  min-width: 128px;
-  white-space: nowrap;
+.btn-track {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  align-self: stretch;
+  gap: 8px;
+  min-height: 46px;
+  min-width: 120px;
+  padding: 0 22px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--acc);
+  color: #000;
+  font-family: var(--ff-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-.track-row .btn-prime:disabled {
+.btn-track:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(201, 243, 29, 0.3);
+}
+.btn-track:active {
+  transform: translateY(0);
+}
+.btn-track:disabled {
   opacity: 0.6;
   transform: none;
   box-shadow: none;
   cursor: not-allowed;
 }
+.track-search-hint {
+  font-size: 0.78rem;
+  color: var(--t3);
+  margin: 0;
+}
+.track-search-hint b {
+  color: var(--t2);
+  font-weight: 600;
+}
 @media (max-width: 639px) {
-  .track-row .btn-prime {
+  .track-search-row {
+    flex-direction: column;
+  }
+  .btn-track {
     width: 100%;
   }
 }
-.track-hint {
-  font-size: 0.78rem;
-  color: var(--t3);
-  margin: 1px 0 0;
-}
+
+/* ── Error ──────────────────────────────────────────────────────────────────── */
 .track-error {
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   padding: 12px 14px;
   border: 1px solid var(--err);
   border-radius: var(--r-sm);
@@ -11694,37 +11691,54 @@ a.reviews-page:hover {
   margin: 0;
   color: #f8b4b4;
 }
+
+/* ── Results wrapper ────────────────────────────────────────────────────────── */
 .track-results {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   margin-top: 10px;
 }
-.track-section-head {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin: 16px 0 0;
-  padding: 0 2px;
-}
-.track-section-head .os-section-title {
-  font-size: 0.72rem;
-}
-.track-section-head .os-section-rule {
-  height: 0;
-}
-.track-section-head:first-child {
-  margin-top: 0;
-}
+
+/* ── Generic card ───────────────────────────────────────────────────────────── */
 .track-card {
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
   background: var(--bg1);
   padding: clamp(16px, 2.6vw, 24px);
 }
+
+/* ── Status card ────────────────────────────────────────────────────────────── */
 .track-status-card {
   background: linear-gradient(180deg, var(--surf-h), var(--bg1));
   border-color: rgba(201, 243, 29, 0.28);
-  padding: clamp(18px, 2.8vw, 26px);
+}
+.track-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.track-status-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.track-number {
+  font-family: var(--ff-display);
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--acc);
+  margin: 6px 0 0;
+}
+
+/* ── Stepper timeline ───────────────────────────────────────────────────────── */
+.track-progress {
+  border-top: 1px solid var(--bdr);
+  padding-top: 16px;
+  margin-top: 18px;
 }
 .track-module-label {
   font-family: var(--ff-display);
@@ -11734,35 +11748,6 @@ a.reviews-page:hover {
   text-transform: uppercase;
   color: var(--t3);
   margin: 0 0 8px;
-}
-.track-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-.track-number {
-  font-family: var(--ff-display);
-  font-size: clamp(1.4rem, 3vw, 1.9rem);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--acc);
-  margin-top: 3px;
-}
-.track-badges {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-/* Stepper timeline */
-.track-progress {
-  border-top: 1px solid var(--bdr);
-  padding-top: 14px;
-  margin-top: 18px;
-}
-.track-module-label {
-  margin-bottom: 6px;
 }
 .track-steps {
   display: grid;
@@ -11777,7 +11762,6 @@ a.reviews-page:hover {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding-top: 0;
 }
 .track-step:not(:last-child)::before {
   content: "";
@@ -11792,7 +11776,6 @@ a.reviews-page:hover {
 .track-step.is-done:not(:last-child)::before,
 .track-step.is-current:not(:last-child)::before {
   background: var(--acc);
-  box-shadow: 0 0 8px rgba(201, 243, 29, 0.35);
 }
 .track-step-dot {
   position: relative;
@@ -11803,10 +11786,7 @@ a.reviews-page:hover {
   border: 1px solid var(--bdr);
   background: var(--bg2);
   box-shadow: 0 0 0 3px var(--bg1);
-  transition:
-    background-color 0.2s var(--ease-out),
-    border-color 0.2s var(--ease-out),
-    box-shadow 0.2s var(--ease-out);
+  transition: background-color 0.2s, border-color 0.2s;
 }
 .track-step.is-done .track-step-dot {
   background: var(--acc);
@@ -11818,7 +11798,7 @@ a.reviews-page:hover {
   box-shadow:
     0 0 0 3px var(--bg1),
     0 0 0 6px rgba(201, 243, 29, 0.16),
-    0 0 16px rgba(201, 243, 29, 0.45);
+    0 0 14px rgba(201, 243, 29, 0.4);
 }
 .track-step-body {
   display: flex;
@@ -11857,47 +11837,12 @@ a.reviews-page:hover {
 }
 .track-step-date {
   font-size: 0.66rem;
-  font-weight: 400;
   color: var(--t3);
   white-space: nowrap;
   margin-top: 2px;
 }
-@media (max-width: 640px) {
-  .track-steps {
-    grid-template-columns: 1fr;
-    gap: 0;
-    padding-top: 0;
-  }
-  .track-step {
-    flex-direction: row;
-    align-items: flex-start;
-    text-align: left;
-    gap: 14px;
-    padding: 1px 0 8px;
-  }
-  .track-step:not(:last-child)::before {
-    top: 16px;
-    bottom: -2px;
-    left: 5px;
-    right: auto;
-    width: 2px;
-    height: auto;
-    background: rgba(255, 255, 255, 0.08);
-  }
-  .track-step.is-done:not(:last-child)::before,
-  .track-step.is-current:not(:last-child)::before {
-    background: var(--acc);
-    box-shadow: none;
-  }
-  .track-step-dot {
-    margin-top: 4px;
-    flex: 0 0 auto;
-  }
-  .track-step-body {
-    align-items: flex-start;
-    margin-top: 4px;
-  }
-}
+
+/* ── Status card footer ─────────────────────────────────────────────────────── */
 .track-foot {
   display: flex;
   align-items: center;
@@ -11909,12 +11854,6 @@ a.reviews-page:hover {
   border-top: 1px solid var(--bdr);
   font-size: 0.85rem;
   color: var(--t3);
-}
-.track-foot strong {
-  font-family: var(--ff-display);
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--t1);
 }
 .track-timeline-btn {
   display: inline-flex;
@@ -11928,9 +11867,7 @@ a.reviews-page:hover {
   font-weight: 600;
   padding: 7px 12px;
   cursor: pointer;
-  transition:
-    border-color 0.2s,
-    color 0.2s;
+  transition: border-color 0.2s, color 0.2s;
 }
 .track-timeline-btn:hover,
 .track-timeline-btn[aria-expanded="true"] {
@@ -11945,6 +11882,8 @@ a.reviews-page:hover {
 .track-timeline-btn[aria-expanded="true"] .track-timeline-chevron {
   transform: rotate(180deg);
 }
+
+/* ── Expandable order history ───────────────────────────────────────────────── */
 .track-history {
   margin-top: 14px;
   border-top: 1px solid var(--bdr);
@@ -12012,92 +11951,203 @@ a.reviews-page:hover {
   color: var(--t3);
   margin: 4px 0 0;
 }
-.track-pay {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-top: 1px solid var(--bdr);
-  padding-top: 14px;
-  margin-top: 16px;
-}
-.track-pay-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.track-pay-amount {
+
+/* ── Section title (reused .os-section-title) ──────────────────────────────── */
+.os-section-title {
   font-family: var(--ff-display);
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--t1);
-  margin: 0;
-}
-.track-pay-due {
-  font-family: var(--ff-body);
-  font-weight: 500;
-  font-size: 0.8rem;
-  color: var(--t3);
-}
-.track-pay .btn-prime {
-  flex: 0 0 auto;
-}
-.track-pay-error {
-  font-size: 0.82rem;
-  color: #e5484d;
-  margin: 0;
-}
-.track-pay-error-inline {
-  font-size: 0.78rem;
-  color: #e5484d;
-  margin-left: 0.5rem;
-}
-.track-pay-hint {
-  font-size: 0.72rem;
-  color: var(--t3);
-  margin: 0;
-}
-/* Compact details panel */
-.track-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0;
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-md);
-  background: var(--bg1);
-  overflow: hidden;
-  margin: 0;
-}
-.track-detail {
-  padding: 12px 16px;
-}
-.track-detail + .track-detail {
-  border-left: 1px solid var(--bdr);
-}
-.track-detail dt {
   font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--t3);
-  margin-bottom: 5px;
 }
-.track-detail dd {
-  font-size: 0.88rem;
+
+/* ── Info grid ──────────────────────────────────────────────────────────────── */
+.track-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 700px) {
+  .track-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.track-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.track-info-primary {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--t1);
+  margin: 0;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.track-info-secondary {
+  font-size: 0.84rem;
   color: var(--t2);
   line-height: 1.55;
   margin: 0;
+  overflow-wrap: anywhere;
 }
-.track-detail dd b {
+.track-info-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+  margin-top: 6px;
+}
+@media (max-width: 500px) {
+  .track-info-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Device card ────────────────────────────────────────────────────────────── */
+.track-device-name {
+  font-family: var(--ff-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--t1);
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.track-device-model {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--t2);
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+.track-device-block-label {
+  display: block;
+  margin-top: 18px;
+}
+.track-device-desc {
+  margin-top: 6px;
+  max-width: 60ch;
+}
+.track-device-card {
+  padding-bottom: 6px;
+}
+
+/* ── Updates feed ───────────────────────────────────────────────────────────── */
+.track-messages-block {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--bdr);
+}
+.track-messages-empty {
+  margin: 10px 0 2px;
+  padding: 0;
+}
+.track-messages-empty p {
+  font-size: 0.84rem;
+  color: var(--t2);
+  line-height: 1.5;
+  margin: 0;
+}
+.track-messages-empty p + p {
+  color: var(--t3);
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+.track-feed {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid var(--bdr);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.track-feed-item {
+  position: relative;
+}
+.track-feed-dot {
+  position: absolute;
+  left: -21px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t3);
+  box-shadow: 0 0 0 3px var(--bg1);
+}
+.track-feed-item.is-latest .track-feed-dot {
+  background: var(--acc);
+  box-shadow:
+    0 0 0 3px var(--bg1),
+    0 0 9px rgba(201, 243, 29, 0.4);
+}
+.track-feed-body {
+  min-width: 0;
+}
+.track-feed-title {
+  font-size: 0.9rem;
   font-weight: 600;
+  color: var(--t2);
+  margin: 0;
+  overflow-wrap: anywhere;
 }
-.track-detail a {
+.track-feed-item.is-latest .track-feed-title {
+  color: var(--t1);
+}
+.track-feed-meta {
+  font-size: 0.74rem;
+  color: var(--t3);
+  margin: 3px 0 0;
+}
+.track-view-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 8px 0 2px;
   color: var(--acc);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
 }
+.track-view-more:hover {
+  text-decoration: underline;
+}
+
+/* ── Shipment card ──────────────────────────────────────────────────────────── */
+.track-shipment-card {
+  gap: 0;
+}
+.track-ship-field {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.track-tracking-num {
+  font-family: var(--ff-display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--t1);
+  overflow-wrap: anywhere;
+}
+.track-ship-link {
+  font-size: 0.82rem;
+  color: var(--acc);
+  font-weight: 600;
+  width: fit-content;
+}
+.track-ship-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Items card ─────────────────────────────────────────────────────────────── */
 .track-items-card {
-  padding: 4px 0;
+  padding: 0;
   overflow: hidden;
 }
 .track-item-row {
@@ -12144,26 +12194,92 @@ a.reviews-page:hover {
   color: var(--t1);
   white-space: nowrap;
 }
-@media (max-width: 640px) {
-  .track-item-row {
-    flex-wrap: wrap;
-  }
-  .track-item-total {
-    margin-left: 54px;
-  }
+
+/* ── Live tracking ──────────────────────────────────────────────────────────── */
+.track-live {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--bdr);
 }
-.track-detail dd a {
+.track-live-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.track-live-label {
+  font-family: var(--ff-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+.track-live-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-sm);
+  color: var(--t3);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.track-live-btn:hover {
+  border-color: var(--acc);
   color: var(--acc);
 }
-@media (max-width: 640px) {
-  .track-detail + .track-detail {
-    border-left: none;
-    border-top: 1px solid var(--bdr);
-  }
+.track-live-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
+.track-live-body {
+  margin-top: 12px;
+}
+.track-live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ff-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--acc);
+  margin: 0;
+}
+.track-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--acc);
+  box-shadow: 0 0 8px rgba(201, 243, 29, 0.5);
+}
+.track-live-tracking {
+  font-size: 0.78rem;
+  color: var(--t3);
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.track-live-tracking .font-mono {
+  color: var(--t2);
+}
+.track-live-body .track-history-list {
+  margin-top: 12px;
+}
+
+/* ── Payment inline error ───────────────────────────────────────────────────── */
+.track-pay-error-inline {
+  font-size: 0.78rem;
+  color: #e5484d;
+  margin-left: 0.5rem;
+}
+
+/* ── Need help ──────────────────────────────────────────────────────────────── */
 .track-help-panel {
-  margin-top: 32px;
-  padding-bottom: clamp(40px, 5vw, 60px);
+  margin-top: 28px;
 }
 .track-help-card {
   display: flex;
@@ -12197,23 +12313,74 @@ a.reviews-page:hover {
   color: var(--t2);
   margin: 0;
 }
-/* ─── Track order page: compact scoped header + CTA ───────────────────────── */
+
+/* ── Page layout overrides ──────────────────────────────────────────────────── */
 .track-page > section:first-child {
-  padding: calc(var(--nav-h) + 28px) 0 6px;
+  padding: calc(var(--nav-h) + 24px) 0 6px;
 }
 .track-page .wrap {
-  max-width: 1120px;
+  max-width: 1160px;
 }
 .track-page .sec-num {
   margin-bottom: 6px;
 }
 .track-page .sec-title {
-  font-size: clamp(1.6rem, 3.6vw, 2.3rem);
+  font-size: clamp(1.6rem, 3.6vw, 2.2rem);
   margin-bottom: 8px;
 }
 .track-page .sec-desc {
   max-width: 640px;
   margin-bottom: 0;
+}
+
+/* ── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .track-steps {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-top: 0;
+  }
+  .track-step {
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
+    gap: 14px;
+    padding: 1px 0 8px;
+  }
+  .track-step:not(:last-child)::before {
+    top: 16px;
+    bottom: -2px;
+    left: 5px;
+    right: auto;
+    width: 2px;
+    height: auto;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .track-step.is-done:not(:last-child)::before,
+  .track-step.is-current:not(:last-child)::before {
+    background: var(--acc);
+  }
+  .track-step-dot {
+    margin-top: 4px;
+    flex: 0 0 auto;
+  }
+  .track-step-body {
+    align-items: flex-start;
+    margin-top: 4px;
+  }
+  .track-item-row {
+    flex-wrap: wrap;
+  }
+  .track-item-total {
+    margin-left: 50px;
+  }
+  .track-live-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .track-live-btn {
+    margin-left: 0;
+  }
 }
 
 /* ─── Order success page: compact confirmation layout ─────────────────────── */

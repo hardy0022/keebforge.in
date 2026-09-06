@@ -38,6 +38,11 @@ export type TrackShipment = {
   shippedAt: string | null;
   deliveredAt: string | null;
 };
+export type TrackMessage = {
+  author: string;
+  message: string;
+  createdAt: string | null;
+};
 export type TrackData = {
   orderNumber: string;
   status: string;
@@ -50,6 +55,7 @@ export type TrackData = {
   repairs: TrackRepair[];
   timeline: TrackTimelineEntry[];
   shipment: TrackShipment | null;
+  messages: TrackMessage[];
   updatedAt: string | null;
 };
 
@@ -209,6 +215,14 @@ export async function trackOrder(
             deliveredAt: iso(shipmentRaw.deliveredAt),
           }
         : null,
+      messages: asArray(row.messages).map((m) => {
+        const r = asRecord(m);
+        return {
+          author: str(r.author) ?? "Team",
+          message: str(r.message) ?? "",
+          createdAt: iso(r.createdAt),
+        };
+      }),
       updatedAt: iso(row.updatedAt),
     },
   };

@@ -18,6 +18,10 @@ export async function syncTrackingCache(orderId: string): Promise<void> {
       payments: { orderBy: { createdAt: "desc" }, take: 1 },
       shipment: true,
       timeline: { orderBy: { createdAt: "asc" } },
+      messages: {
+        where: { visibleToCustomer: true },
+        orderBy: { createdAt: "asc" },
+      },
       warranty: true,
     },
   });
@@ -54,6 +58,11 @@ export async function syncTrackingCache(orderId: string): Promise<void> {
       label: ORDER_STATUS_LABELS[t.status],
       note: t.note,
       createdAt: t.createdAt,
+    })),
+    messages: order.messages.map((m) => ({
+      author: m.author,
+      message: m.message,
+      createdAt: m.createdAt,
     })),
     shipment: order.shipment
       ? {

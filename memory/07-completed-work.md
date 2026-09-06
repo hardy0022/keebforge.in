@@ -1,6 +1,54 @@
 # 07 — Completed Work (what was done & why)
 
-All work below is complete and verified as of 2026-08-20.
+## Public-site caching layer + admin caching (2026-09-06)
+
+Both workstreams are complete and verified; full detail in `reports/01-public-caching.md` and `reports/02-admin-caching.md`.
+
+- **Public cache:** `src/lib/caching/cache.ts` — `defineCached` (wraps `unstable_cache`), `reviveDates`, `TAG`/`TTL`, `invalidate*`. All public listing/detail fetchers route through it. Two bugs found & fixed: `reviveDates` must wrap the cache **output** (runs on hit + miss), and every zero-arg call needs a distinct `keys` (empty-key collision surfaced as `.filter is not a function` on `/mods`).
+- **Verified:** build green; `/shop` 18 queries cold → **0** warm; `/product` +44 cold → **0** warm; warm HTML byte-identical to cold; final sweep all public routes 200 (footer `acceptingOrders` 60s-TTL re-read + `COMMIT` expected, not a leak).
+- **Admin cache:** `getAdminCategories`, `getAdminBrands` (fresh `TAG.brands` + `invalidateBrands`), `getAdminWorkProjects`/`getAdminWorkProject`, `getAdminReviews` (`adminReviewsPage` React.cache + `cachedAdminReviews`; `q` search bypasses cache). Impossible to measure warm deltas unauth'd (307); same mechanism as the proven public path. `saveBrand` invalidates brands. Catalog list/detail/inventory/dashboard/analytics/orders/customers/payments/coupons admin reads deliberately left live.
+
+## Production-grade codebase cleanup & refactor, Phase 1–5 (2026-09-06)
+
+Behavior-preserving cleanup pass across the whole repo: dead code removed, duplication merged, structure organized, formatting standardized, and one real bug (soft-404) fixed. **No rewrites, no auth/payments/checkout/shipping/business-logic/DB/API-contract changes.** Baseline 31.7k lines / 277 files in src; verified green throughout (`tsc`, lint 0 errors, build, runtime smoke).
+
+**Phase 3 — dead code removed**
+- 8 unused components: `ui/Marquee`, `ui/Checklist`, `ui/animated-grid-pattern`, `ui/flickering-grid`, `ui/tweet-card`, `mods/ModSection`, `cart/ShippingEstimator`, `admin/mods/ModPriceForm`. This freed 5 deps (below) and dropped one lint warning.
+- `app/thanks/` route (unreferenced in sitemap/robots/proxy/next.config) — `/thanks` now 404.
+- delhivery: deleted `expectedTat`, `fetchBulkWaybills`, `bookPickup` (network wrappers); kept the pure `parse*` parsers + `pickupFail` + the file's self-check. (Verified: self-check still green.)
+- `removeServiceFromCart` + its sole helper `resolveOwnerForRead` in `src/app/actions/cart.ts` (no callers).
+- `POST` branch of `app/api/cart/service/route.ts` — rewritten to a DELETE-only route (only callers are `DELETE`: CheckoutClient, ModConfigurator).
+- `ORDER`/REPAIR branch of `app/api/uploads/route.ts` — now PRODUCT-only (customer repair photos go through the repair-request action; the `media` row creation + `normalizeRole` were dead).
+- `isAdminRole` in `src/lib/auth.ts` (display/redirect-only, not real authz).
+- Deps uninstalled (all verified 0 refs): `lucide-react`, `radix-ui`, `class-variance-authority`, `react-tweet`, `tw-animate-css`.
+- Seeds deleted: `prisma/seed-test-product.ts`, `scripts/seed-custom-product.ts`.
+
+**Phase 3 — deduplication**
+- `Spinner`: two `ActionForm` components exported identical Spinners. The orders `/ActionForm` now **re-exports** `Spinner` from the admin `@/components/admin/ActionForm` — call sites untouched. The two ActionForm wrappers themselves deliberately NOT merged (different render contracts: admin toastLabel+inline `state.error`, orders okLabel fn+Toast — merging would change error text = UI change).
+- `availableStock` (admin-catalog) = duplicate of `availableQuantity` (cart) → admin-catalog re-exports `availableQuantity as availableStock` so no public/admin call sites moved.
+- Money formats: new `formatPaiseWhole(paise)` in `src/lib/money.ts` (whole rupee, no ₹) consumed by `mods/pricing.ts`, `ModConfigurator` (`amt` deleted), `RevenueOrdersChart` (inline copy deleted) — all render byte-identically.
+- `slugify`: two private copies (admin catalog + work) → one `src/lib/slugify.ts` with options; output preserved per caller via `{stripQuotes}` (catalog) and `{maxLength:80, fallback:"project"}` (work).
+- IST day key: coupon manager's inline `en-CA/Asia/Kolkata` → canonical `istDayKey` in `src/lib/ist.ts`.
+- Icons: 6 home-page icons moved `ui/` → `icons/` (`travel-bag`, `sliders-horizontal-icon`, `cpu-icon`, `plug-connected-icon`, `arrow-big-left/right-icon`); duplicated `ui/types.ts` deleted (icons/types.ts kept, moved icons keep relative `./types`). Importers `HomeHero` (4 icons + type) and `FeaturedBuild` (2 icons) updated. `ui/` retains the shared layout components (PageHero/SectionHead/etc.).
+
+**Phase 2 — structure**
+- `git mv src/lib/cache.ts → src/lib/caching/cache.ts`; 11 importers repointed to `@/lib/caching/cache`.
+- New `app/(public)/` route group: `about`, `contact`, `faq`, `terms`, `privacy-policy`, `returns-refunds`, `shipping-information` moved under it (route groups don't change URLs — all still served at root paths; confirmed in build output).
+- `revalidatePath("/cart")` → `"/shop/cart"` in all three cart actions (the old target never matched the real `/shop/cart` page).
+- Wired `check:environment`: `tsx src/lib/environment.test.ts` (a legit self-check alongside `check:coupons` — NOT dead code).
+
+**Phase 4 — formatting**
+- Added `prettier` (devDep) + `.prettierrc.json` (printWidth 80, double-quote, semis, trailingComma all) + `.prettierignore` (node_modules/.next/memory/package-lock/public) + `format` script. Ran `prettier --write .` once at the very end — a large mechanical diff (~239 files).
+
+**Phase 5 — verification**
+- `npx tsc --noEmit` clean; `npm run lint` → 0 errors / 14 warnings (the `<img>` warnings; tweet-card one dropped with the component); `npm run build` green (61/61 static pages); `check:environment` + `check:coupons` self-checks pass.
+- Runtime smoke (fresh `next start -p 321x`): `/`, `/shop`, `/shop/clearance`, `/shop/custom`, `/mods`, `/work`, all 7 `(public)` pages, `/shop/cart`, `/workshop`, `/track-order`, `/shop/*` products → 200; `/services` 307, `/write-review` 307, `/admin` 307 (intended log-in redirects — `/services` redirects because it now serves `/mods`); real product `/product/corne-mx-copy` 200; `/thanks` 404.
+
+**Soft-404 fix (the one real bug found):** see G-003. `/product/does-not-exist-xyz` and `/shop/nope-category` were returning **200** because the route `loading.tsx` streamed a shell before `notFound()`. Removed `src/app/product/[slug]/loading.tsx` + `src/app/shop/loading.tsx`, deleted the orphaned `ProductPageSkeleton`/`ShopGridSkeleton`, and kept `notFound()` in both `generateMetadata`s (still runs pre-render to drive the 404 UI). Now both bogus slugs return **404**.
+
+**Verified safe / unchanged:** `/cart→/shop/cart`, `/checkout→/shop/checkout`, `/profile→/account/profile`, `/order/success/[orderNumber]` thin redirects kept (intentional legacy compat); delhivery `parseBulkWaybills`/`parseExpectedTat`/`parsePickupRequest` + TAT/waybill logic kept (exercised by self-check); `@better-auth/scim` + `@better-auth/sso` kept (G-006 — build-time dynamic imports, must NOT be removed despite audit flagging them); admin runtime hit-behavior unchanged (same `defineCached` mechanism as public reads). `/reset-password` broken auth-email link reported but NOT touched (no auth changes).
+
+All earlier work below is complete and verified as of 2026-08-20.
 
 ## Admin order detail: dashboard IA redesign (2026-09-05)
 

@@ -326,22 +326,29 @@ export function parseTrackingResponse(
 
   const scans: TrackingScan[] = arr(first.Scans)
     .map((s) => {
-      const d = rec(rec(s).ScanDetail);
+      const o = rec(s);
+      const d = rec(o.ScanDetail);
       return {
-        location: str(d.ScannedLocation) ?? "",
-        status: str(d.ScanType) ?? "",
-        instructions: str(d.Instructions) ?? "",
-        scannedAt: str(d.ScanDateTime) ?? null,
+        location: str(o.Location) ?? str(d.ScannedLocation) ?? "",
+        status: str(o.Status) ?? str(o.Scan) ?? str(d.ScanType) ?? "",
+        instructions: str(o.Instructions) ?? str(d.Instructions) ?? "",
+        scannedAt: str(d.ScanDateTime) ?? str(o.StatusDateTime) ?? null,
       };
     })
     .filter((sc) => sc.status || sc.location || sc.instructions);
+
+  // The shipment-level `Status` is coarse ("In Transit" for the whole journey).
+  // The latest scan's event text is the accurate current status (e.g. "Manifest
+  // uploaded at Akhnoor_Galali_D (Jammu & Kashmir)") — prefer it.
+  const liveStatus = [...scans].reverse().find((sc) => sc.status)?.status;
+  const liveAt = [...scans].reverse().find((sc) => sc.scannedAt)?.scannedAt;
 
   return {
     ok: true,
     data: {
       awb: str(first.AWB) ?? "",
-      status: str(first.Status) ?? "",
-      statusDateTime: str(first.StatusDateTime) ?? null,
+      status: liveStatus ?? str(first.Status) ?? "",
+      statusDateTime: liveAt ?? str(first.StatusDateTime) ?? null,
       destination: str(first.Destination) ?? str(first.StatusLocation) ?? "",
       scans,
     },
@@ -1017,6 +1024,174 @@ export async function createShipment(
   }
 }
 
+// ── Shipment edit / cancel (p/edit) ──────────────────────────────────────────
+// POST /api/p/edit — adjusts weight/dimensions/COD of a manifested waybill, or
+// cancels it (`cancellation: "true"`). Same endpoint, different payloads.
+
+export type EditShipmentInput = {
+  waybill: string;
+  pt?: PaymentMode;
+  cod?: number; // ₹ — only meaningful when pt is COD
+  gm?: number; // grams (may be fractional)
+  shipmentLengthCm?: number;
+  shipmentWidthCm?: number;
+  shipmentHeightCm?: number;
+};
+
+export type EditShipmentResult =
+  { ok: true } | { ok: false; errorCode: ShippingErrorCode; message: string };
+
+function editFail(errorCode: ShippingErrorCode): EditShipmentResult {
+  return {
+    ok: false,
+    errorCode,
+    message: SHIPPING_ERROR_MESSAGES[errorCode],
+  };
+}
+
+/** Builds the JSON body for /api/p/edit. Exported for the self-check. */
+export function buildEditShipmentBody(input: EditShipmentInput): string {
+  const body: Record<string, unknown> = { waybill: input.waybill };
+  if (input.pt) body.pt = input.pt;
+  if (input.cod !== undefined) body.cod = input.cod;
+  if (input.gm !== undefined) body.gm = input.gm;
+  if (input.shipmentHeightCm !== undefined)
+    body.shipment_height = input.shipmentHeightCm;
+  if (input.shipmentWidthCm !== undefined)
+    body.shipment_width = input.shipmentWidthCm;
+  if (input.shipmentLengthCm !== undefined)
+    body.shipment_length = input.shipmentLengthCm;
+  return JSON.stringify(body);
+}
+
+/** Builds the /api/p/edit cancellation payload. Exported for the self-check. */
+export function buildCancelShipmentBody(waybill: string): string {
+  return JSON.stringify({ waybill, cancellation: "true" });
+}
+
+/**
+ * Pure classifier for /api/p/edit responses (edit + cancel share the endpoint).
+ * An explicit `success:false` / `error:true` flag is a refusal whose remark is
+ * surfaced to the operator; any other 200 JSON is treated as processed (the
+ * endpoint returns 4xx for bad waybills, so a 200 without an error flag is the
+ * success signal).
+ */
+export function parseEditShipmentResponse(
+  httpStatus: number,
+  bodyText: string,
+): EditShipmentResult {
+  if (httpStatus < 200 || httpStatus >= 300) {
+    console.error(
+      `[shipment] delhivery p/edit error status=${httpStatus}`,
+      bodyText.slice(0, 300),
+    );
+    if (httpStatus === 401 || httpStatus === 403)
+      return editFail("INVALID_CREDENTIALS");
+    if (httpStatus === 429) return editFail("RATE_LIMITED");
+    return editFail("UPSTREAM_ERROR");
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    console.error(
+      "[shipment] p/edit non-JSON response:",
+      bodyText.slice(0, 300),
+    );
+    return editFail("UPSTREAM_ERROR");
+  }
+  const rec = (v: unknown): Record<string, unknown> =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? (v as Record<string, unknown>)
+      : {};
+  const o = rec(parsed);
+
+  const refused =
+    o.success === false ||
+    o.error === true ||
+    o.error === "true" ||
+    String(o.success ?? "").toLowerCase() === "false";
+  if (refused) {
+    const msg =
+      (typeof o.remark === "string" && o.remark.trim()) ||
+      (typeof o.error_message === "string" && o.error_message.trim()) ||
+      (typeof o.error === "string" && o.error.trim()) ||
+      "Delhivery rejected the shipment change.";
+    console.error(
+      "[shipment] delhivery p/edit refusal:",
+      bodyText.slice(0, 300),
+    );
+    return { ok: false, errorCode: "UPSTREAM_ERROR", message: msg };
+  }
+  return { ok: true };
+}
+
+/**
+ * Updates an existing manifested shipment's weight, dimensions, and COD amount
+ * via /api/p/edit. One-shot side effect, no caching.
+ */
+export async function editShipment(
+  input: EditShipmentInput,
+): Promise<EditShipmentResult> {
+  if (!process.env.DELHIVERY_API_TOKEN) {
+    console.error("[shipment] DELHIVERY_API_TOKEN not configured");
+    return editFail("NOT_CONFIGURED");
+  }
+  if (!trackWaybillValid(input.waybill)) {
+    console.error("[shipment] invalid waybill for p/edit:", input.waybill);
+    return editFail("UPSTREAM_ERROR");
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/api/p/edit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Token ${process.env.DELHIVERY_API_TOKEN}`,
+      },
+      body: buildEditShipmentBody(input),
+      signal: AbortSignal.timeout(15_000),
+    });
+    return parseEditShipmentResponse(res.status, await res.text());
+  } catch (err) {
+    console.error("[shipment] Delhivery p/edit request failed:", err);
+    return editFail("UPSTREAM_ERROR");
+  }
+}
+
+/**
+ * Cancels a manifested waybill via /api/p/edit (cancellation: "true").
+ * The caller clears the local shipment row so the order can be re-manifested.
+ */
+export async function cancelShipment(
+  waybill: string,
+): Promise<EditShipmentResult> {
+  if (!process.env.DELHIVERY_API_TOKEN) {
+    console.error("[shipment] DELHIVERY_API_TOKEN not configured");
+    return editFail("NOT_CONFIGURED");
+  }
+  if (!trackWaybillValid(waybill)) {
+    console.error("[shipment] invalid waybill for cancellation:", waybill);
+    return editFail("UPSTREAM_ERROR");
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/api/p/edit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Token ${process.env.DELHIVERY_API_TOKEN}`,
+      },
+      body: buildCancelShipmentBody(waybill),
+      signal: AbortSignal.timeout(15_000),
+    });
+    return parseEditShipmentResponse(res.status, await res.text());
+  } catch (err) {
+    console.error("[shipment] Delhivery cancel request failed:", err);
+    return editFail("UPSTREAM_ERROR");
+  }
+}
+
 // ── Pickup request (admin) ───────────────────────────────────────────────────
 // POST /fm/request/new/ — books a courier pickup at the warehouse.
 
@@ -1026,6 +1201,26 @@ export type PickupRequestResult =
 
 function pickupFail(errorCode: ShippingErrorCode): PickupRequestResult {
   return { ok: false, errorCode, message: SHIPPING_ERROR_MESSAGES[errorCode] };
+}
+
+export type BookPickupInput = {
+  /** Registered warehouse name (pickup_location.name must match Delhivery). */
+  pickupLocation: string;
+  /** YYYY-MM-DD */
+  pickupDate: string;
+  /** HH:MM:SS */
+  pickupTime: string;
+  expectedPackageCount: number;
+};
+
+/** Builds the /fm/request/new/ JSON body. Exported for the self-check. */
+export function buildPickupRequestBody(input: BookPickupInput): string {
+  return JSON.stringify({
+    pickup_time: input.pickupTime,
+    pickup_date: input.pickupDate,
+    pickup_location: input.pickupLocation,
+    expected_package_count: input.expectedPackageCount,
+  });
 }
 
 /** Pure parser for the fm/request/new/ response — just confirms the pickup was booked. */
@@ -1041,6 +1236,23 @@ export function parsePickupRequest(
     if (httpStatus === 401 || httpStatus === 403)
       return pickupFail("INVALID_CREDENTIALS");
     if (httpStatus === 429) return pickupFail("RATE_LIMITED");
+    if (httpStatus === 400) {
+      // Field-level validation errors come back as {"field": "reason"} — surface
+      // the reason (e.g. "Pickup time cannot be in past") instead of a generic line.
+      let msg = "Could not book pickup.";
+      try {
+        const o = JSON.parse(bodyText) as unknown;
+        if (o && typeof o === "object" && !Array.isArray(o)) {
+          const first = Object.values(o as Record<string, unknown>)
+            .map((v) => (typeof v === "string" ? v.trim() : ""))
+            .find(Boolean);
+          if (first) msg = first;
+        }
+      } catch {
+        // keep default message
+      }
+      return { ok: false, errorCode: "UPSTREAM_ERROR", message: msg };
+    }
     return pickupFail("UPSTREAM_ERROR");
   }
   let parsed: unknown;
@@ -1073,6 +1285,39 @@ export function parsePickupRequest(
         ? s.id
         : null;
   return { ok: true, pickupId: id, raw: bodyText };
+}
+
+/**
+ * Books a courier pickup at the warehouse via /fm/request/new/. One-shot side
+ * effect, no caching.
+ */
+export async function bookPickup(
+  input: BookPickupInput,
+): Promise<PickupRequestResult> {
+  if (!process.env.DELHIVERY_API_TOKEN) {
+    console.error("[pickup] DELHIVERY_API_TOKEN not configured");
+    return pickupFail("NOT_CONFIGURED");
+  }
+  if (!input.pickupLocation) {
+    console.error("[pickup] no warehouse name (Settings → Shipping)");
+    return pickupFail("NOT_CONFIGURED");
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/fm/request/new/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Token ${process.env.DELHIVERY_API_TOKEN}`,
+      },
+      body: buildPickupRequestBody(input),
+      signal: AbortSignal.timeout(15_000),
+    });
+    return parsePickupRequest(res.status, await res.text());
+  } catch (err) {
+    console.error("[pickup] Delhivery request failed:", err);
+    return pickupFail("UPSTREAM_ERROR");
+  }
 }
 
 // ── Client warehouse (pickup location) registration ─────────────────────────
@@ -1709,6 +1954,47 @@ function runSelfCheck() {
     "tracking shape: status + scans (oldest-first)",
   );
   {
+    // The coarse shipment-level Status ("In Transit") must NOT win over the
+    // latest scan's accurate event text (e.g. "Manifest uploaded at …").
+    const r = parseTrackingResponse(
+      200,
+      JSON.stringify({
+        ShipmentData: [
+          {
+            AWB: "49323510001094",
+            Status: "In Transit",
+            Scans: [
+              {
+                ScanDetail: {
+                  ScanType: "Manifest Uploaded",
+                  ScannedLocation: "Akhnoor_Galali_D",
+                  ScanDateTime: "2026-09-06 14:02:33",
+                },
+              },
+              {
+                Status:
+                  "Manifest uploaded at Akhnoor_Galali_D (Jammu & Kashmir)",
+                ScanDetail: {
+                  ScanType: "Manifest Uploaded",
+                  ScannedLocation: "Jammu & Kashmir",
+                  ScanDateTime: "2026-09-06 14:05:33",
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    t(
+      r.ok && /Manifest uploaded at Akhnoor/.test(r.data.status),
+      `tracking: latest scan status wins (got ${r.ok ? r.data.status : r.errorCode})`,
+    );
+    t(
+      r.ok && r.data.scans.length === 2,
+      "tracking: granular scan status parsed per scan",
+    );
+  }
+  {
     const r = parseTrackingResponse(200, TRACK_BODY);
     t(
       r.ok && r.data.awb === "49323510001061" && r.data.destination === "Jammu",
@@ -1906,7 +2192,75 @@ function runSelfCheck() {
   }
   t(parseExpectedTat(404, "{}", "E").ok === false, "tat: 404 → error");
 
+  // ── Shipment edit / cancel (p/edit) ───────────────────────────────────────
+  {
+    const body = buildEditShipmentBody({
+      waybill: "49323510001061",
+      pt: "Pre-paid",
+      gm: 900,
+      shipmentHeightCm: 12,
+    });
+    t(
+      body.includes('"waybill":"49323510001061"') &&
+        body.includes('"pt":"Pre-paid"'),
+      "p/edit: waybill + payment mode encoded",
+    );
+    t(
+      body.includes('"gm":900') && body.includes('"shipment_height":12'),
+      "p/edit: weight + height encoded",
+    );
+    t(
+      buildCancelShipmentBody("49323510001061") ===
+        '{"waybill":"49323510001061","cancellation":"true"}',
+      "p/edit: cancel payload",
+    );
+  }
+  t(
+    parseEditShipmentResponse(200, '{"success":true}').ok === true,
+    "p/edit: success=true → ok",
+  );
+  t(
+    parseEditShipmentResponse(200, "{}").ok === true,
+    "p/edit: bare 200 JSON treated as success",
+  );
+  {
+    const r = parseEditShipmentResponse(
+      200,
+      JSON.stringify({ success: false, remark: "Waybill not found" }),
+    );
+    t(!r.ok && /not found/i.test(r.message), "p/edit: refusal remark surfaced");
+  }
+  t(
+    parseEditShipmentResponse(
+      200,
+      JSON.stringify({ error: true, error_message: "Bad request" }),
+    ).ok === false,
+    "p/edit: error-true → fail",
+  );
+  t(
+    parseEditShipmentResponse(401, '{"detail":"Invalid token"}').ok === false,
+    "p/edit: 401 → credentials",
+  );
+  t(
+    parseEditShipmentResponse(200, "<html>err").ok === false,
+    "p/edit: non-JSON → error",
+  );
+
   // ── Pickup request ─────────────────────────────────────────────────────────
+  {
+    const body = buildPickupRequestBody({
+      pickupLocation: "KeebForge HQ",
+      pickupDate: "2026-09-06",
+      pickupTime: "11:00:00",
+      expectedPackageCount: 1,
+    });
+    t(
+      body.includes('"pickup_location":"KeebForge HQ"') &&
+        body.includes('"pickup_date":"2026-09-06"') &&
+        body.includes('"expected_package_count":1'),
+      "pickup: payload built",
+    );
+  }
   {
     const r = parsePickupRequest(200, JSON.stringify({ pickup_id: "PICK123" }));
     t(r.ok && r.pickupId === "PICK123", "pickup: pickup_id captured");
@@ -1933,6 +2287,16 @@ function runSelfCheck() {
     parsePickupRequest(200, "<html>err").ok === false,
     "pickup: non-JSON → error",
   );
+  {
+    const r = parsePickupRequest(
+      400,
+      JSON.stringify({ pickup_time: "Pickup time cannot be in past" }),
+    );
+    t(
+      r.ok === false && r.message.includes("in past"),
+      "pickup: 400 surfaces the field reason",
+    );
+  }
 
   // ── Client warehouse (pickup location) registration ────────────────────────
   t(

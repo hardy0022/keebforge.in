@@ -7,7 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { syncTrackingCache } from "@/lib/tracking";
 import {
+  bookPickup,
+  cancelShipment,
   createShipment,
+  editShipment,
   PICKUP_SETTING_KEY,
   type CreateShipmentInput,
   type PickupLocation,
@@ -16,6 +19,54 @@ import {
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
 const rupees = (paise: number) => (paise / 100).toFixed(2).replace(/\.00$/, "");
+
+/** Pickup location from the admin Settings card (PICKUP_SETTING_KEY), falling
+ * back to DELHIVERY_PICKUP_* env vars, then DELHIVERY_ORIGIN_PINCODE. */
+async function resolvePickupLocation(): Promise<PickupLocation | null> {
+  const setting = await prisma.siteSetting.findUnique({
+    where: { key: PICKUP_SETTING_KEY },
+  });
+  if (
+    setting?.value &&
+    typeof setting.value === "object" &&
+    !Array.isArray(setting.value)
+  ) {
+    return setting.value as unknown as PickupLocation;
+  }
+  return null;
+}
+
+function pickupLocationFromPs(ps: PickupLocation | null): {
+  name: string;
+  add: string;
+  city: string;
+  pin_code: string;
+  country: string;
+  phone: string;
+  returnAdd: string;
+  returnPin: string;
+  returnCity: string;
+  returnState: string;
+  returnCountry: string;
+} {
+  return {
+    name: ps?.name ?? process.env.DELHIVERY_PICKUP_NAME ?? "",
+    add: ps?.address ?? process.env.DELHIVERY_PICKUP_ADDRESS ?? "",
+    city: ps?.city ?? process.env.DELHIVERY_PICKUP_CITY ?? "",
+    pin_code:
+      ps?.pin ??
+      process.env.DELHIVERY_PICKUP_PIN ??
+      process.env.DELHIVERY_ORIGIN_PINCODE ??
+      "",
+    country: ps?.country ?? process.env.DELHIVERY_PICKUP_COUNTRY ?? "India",
+    phone: ps?.phone ?? process.env.DELHIVERY_PICKUP_PHONE ?? "",
+    returnAdd: ps?.returnAddress ?? ps?.address ?? "",
+    returnPin: ps?.returnPin ?? ps?.pin ?? "",
+    returnCity: ps?.returnCity ?? ps?.city ?? "",
+    returnState: ps?.returnState ?? ps?.state ?? "",
+    returnCountry: ps?.returnCountry ?? ps?.country ?? "India",
+  };
+}
 
 const statusSchema = z.object({
   orderId: z.string().min(1),
@@ -433,33 +484,7 @@ export async function createShipmentDelivery(
   // Pickup location from the admin Settings card (PICKUP_SETTING_KEY), falling
   // back to DELHIVERY_PICKUP_* env vars, then DELHIVERY_ORIGIN_PINCODE. The
   // return fields default to the same warehouse so RTO packages have an address.
-  const pickupSetting = await prisma.siteSetting.findUnique({
-    where: { key: PICKUP_SETTING_KEY },
-  });
-  const ps =
-    pickupSetting &&
-    pickupSetting.value &&
-    typeof pickupSetting.value === "object" &&
-    !Array.isArray(pickupSetting.value)
-      ? (pickupSetting.value as PickupLocation)
-      : null;
-  const pickup = {
-    name: ps?.name ?? process.env.DELHIVERY_PICKUP_NAME ?? "",
-    add: ps?.address ?? process.env.DELHIVERY_PICKUP_ADDRESS ?? "",
-    city: ps?.city ?? process.env.DELHIVERY_PICKUP_CITY ?? "",
-    pin_code:
-      ps?.pin ??
-      process.env.DELHIVERY_PICKUP_PIN ??
-      process.env.DELHIVERY_ORIGIN_PINCODE ??
-      "",
-    country: ps?.country ?? process.env.DELHIVERY_PICKUP_COUNTRY ?? "India",
-    phone: ps?.phone ?? process.env.DELHIVERY_PICKUP_PHONE ?? "",
-    returnAdd: ps?.returnAddress ?? ps?.address ?? "",
-    returnPin: ps?.returnPin ?? ps?.pin ?? "",
-    returnCity: ps?.returnCity ?? ps?.city ?? "",
-    returnState: ps?.returnState ?? ps?.state ?? "",
-    returnCountry: ps?.returnCountry ?? ps?.country ?? "India",
-  };
+  const pickup = pickupLocationFromPs(await resolvePickupLocation());
 
   // Content description: real item/service names first, then repair rows and
   // work types, so repair orders don't manifest as the generic fallback.
@@ -580,6 +605,291 @@ export async function createShipmentDelivery(
   return { ok: true, message: result.waybill };
 }
 
+const updateShipmentSchema = z.object({
+  orderId: z.string().min(1),
+  weightGrams: z.coerce.number().min(0.1),
+  paymentType: z.enum(["Pre-paid", "COD"]).default("Pre-paid"),
+  codAmount: z.coerce.number().min(0).optional(),
+  lengthCm: z.coerce.number().min(1).optional(),
+  widthCm: z.coerce.number().min(1).optional(),
+  heightCm: z.coerce.number().min(1).optional(),
+});
+
+/**
+ * Adjusts an already-manifested Delhivery shipment (weight / dimensions / COD)
+ * via /api/p/edit, then records a timeline entry.
+ */
+export async function updateShipmentDelivery(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requirePermission("order", "update");
+  const parsed = updateShipmentSchema.safeParse({
+    orderId: formData.get("orderId"),
+    weightGrams: formData.get("weightGrams"),
+    paymentType: formData.get("paymentType") || undefined,
+    codAmount: formData.get("codAmount") || undefined,
+    lengthCm: formData.get("lengthCm") || undefined,
+    widthCm: formData.get("widthCm") || undefined,
+    heightCm: formData.get("heightCm") || undefined,
+  });
+  if (!parsed.success)
+    return { error: "Check the fields — weight (grams) is required." };
+  const {
+    orderId,
+    weightGrams,
+    paymentType,
+    codAmount,
+    lengthCm,
+    widthCm,
+    heightCm,
+  } = parsed.data;
+  if (paymentType === "COD" && codAmount == null)
+    return { error: "Enter the COD amount for a COD shipment." };
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      orderNumber: true,
+      shipment: { select: { trackingNumber: true } },
+    },
+  });
+  if (!order) return { error: "Order not found." };
+  const waybill = order.shipment?.trackingNumber;
+  if (!waybill)
+    return { error: "No Delhivery shipment exists for this order yet." };
+
+  const result = await editShipment({
+    waybill,
+    pt: paymentType,
+    cod: paymentType === "COD" ? codAmount : undefined,
+    gm: weightGrams,
+    shipmentLengthCm: lengthCm,
+    shipmentWidthCm: widthCm,
+    shipmentHeightCm: heightCm,
+  });
+  if (!result.ok) return { error: result.message };
+
+  try {
+    await prisma.orderTimeline.create({
+      data: {
+        orderId,
+        status: "SHIPMENT_BOOKED",
+        note:
+          paymentType === "COD"
+            ? `Shipment ${waybill} updated with Delhivery (weight ${weightGrams} gm, COD ₹${rupees(codAmount! * 100)}).`
+            : `Shipment ${waybill} updated with Delhivery (weight ${weightGrams} gm).`,
+      },
+    });
+    await syncTrackingCache(orderId);
+  } catch (e) {
+    console.error("updateShipmentDelivery (timeline) failed:", e);
+    return {
+      error:
+        "Shipment updated in Delhivery but the timeline note couldn't be saved (waybill " +
+        waybill +
+        ").",
+    };
+  }
+  revalidatePath(`/admin/orders/${order.orderNumber}`);
+  return { ok: true, message: `Shipment ${waybill} updated` };
+}
+
+const cancelShipmentSchema = z.object({
+  orderId: z.string().min(1),
+  confirm: z.string().min(1),
+});
+
+/**
+ * Cancels a manifested Delhivery shipment via /api/p/edit, then clears the
+ * local tracking number so the order can be re-manifested.
+ */
+export async function cancelShipmentDelivery(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requirePermission("order", "update");
+  const parsed = cancelShipmentSchema.safeParse({
+    orderId: formData.get("orderId"),
+    confirm: formData.get("confirm"),
+  });
+  if (!parsed.success || !/^yes$/i.test(parsed.data.confirm.trim()))
+    return { error: "Type YES to confirm cancellation." };
+  const { orderId } = parsed.data;
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      orderNumber: true,
+      shipment: { select: { trackingNumber: true } },
+    },
+  });
+  if (!order) return { error: "Order not found." };
+  const waybill = order.shipment?.trackingNumber;
+  if (!waybill) return { error: "No Delhivery shipment to cancel." };
+
+  const result = await cancelShipment(waybill);
+  if (!result.ok) return { error: result.message };
+
+  try {
+    await prisma.$transaction([
+      prisma.shipment.update({
+        where: { orderId },
+        data: {
+          trackingNumber: null,
+          status: "NOT_DISPATCHED",
+          shippedAt: null,
+        },
+      }),
+      prisma.orderTimeline.create({
+        data: {
+          orderId,
+          status: "SHIPMENT_BOOKED",
+          note: `Shipment ${waybill} cancelled with Delhivery. This order can be manifested again.`,
+        },
+      }),
+    ]);
+    await syncTrackingCache(orderId);
+  } catch (e) {
+    console.error("cancelShipmentDelivery (save) failed:", e);
+    return {
+      error:
+        "Shipment cancelled in Delhivery but couldn't update the order locally (waybill " +
+        waybill +
+        ").",
+    };
+  }
+  revalidatePath(`/admin/orders/${order.orderNumber}`);
+  return { ok: true, message: `Shipment ${waybill} cancelled` };
+}
+
+const bookPickupSchema = z.object({
+  orderId: z.string().min(1),
+  pickupDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  pickupTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
+  packageCount: z.coerce.number().int().min(1).max(100),
+});
+
+/**
+ * Books a Delhivery courier pickup at the configured warehouse
+ * (/fm/request/new/) and records a timeline entry.
+ */
+export async function bookPickupDelivery(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requirePermission("order", "update");
+  const parsed = bookPickupSchema.safeParse({
+    orderId: formData.get("orderId"),
+    pickupDate: formData.get("pickupDate"),
+    pickupTime: formData.get("pickupTime"),
+    packageCount: formData.get("packageCount"),
+  });
+  if (!parsed.success)
+    return { error: "Enter a pickup date, time, and package count." };
+  const { orderId, pickupDate, pickupTime, packageCount } = parsed.data;
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { orderNumber: true },
+  });
+  if (!order) return { error: "Order not found." };
+
+  const pickup = pickupLocationFromPs(await resolvePickupLocation());
+  if (!pickup.name)
+    return {
+      error:
+        "Set a Delhivery Pickup Location in Admin → Settings → Shipping first.",
+    };
+  const time = pickupTime.length === 5 ? `${pickupTime}:00` : pickupTime;
+
+  // Delhivery rejects past pickups; convert the IST date+time input to a UTC
+  // instant (IST is fixed +05:30, no DST) and fail fast with a clear message.
+  const pickupAt = Date.parse(`${pickupDate}T${time}+05:30`);
+  if (!Number.isFinite(pickupAt) || pickupAt <= Date.now()) {
+    return { error: "Pickup must be at a future time (IST)." };
+  }
+
+  const result = await bookPickup({
+    pickupLocation: pickup.name,
+    pickupDate,
+    pickupTime: time,
+    expectedPackageCount: packageCount,
+  });
+  if (!result.ok) return { error: result.message };
+
+  try {
+    await prisma.orderTimeline.create({
+      data: {
+        orderId,
+        status: "SHIPMENT_BOOKED",
+        note: `Pickup booked with Delhivery for ${pickupDate} ${time} from ${pickup.name} (${packageCount} package${packageCount === 1 ? "" : "s"}).`,
+      },
+    });
+    await syncTrackingCache(orderId);
+  } catch (e) {
+    console.error("bookPickupDelivery (timeline) failed:", e);
+    return {
+      error:
+        "Pickup booked with Delhivery but the timeline note couldn't be saved.",
+    };
+  }
+  revalidatePath(`/admin/orders/${order.orderNumber}`);
+  return {
+    ok: true,
+    message: `Pickup booked for ${pickupDate} ${time}`,
+  };
+}
+
+const warehousePickupSchema = z.object({
+  pickupDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  pickupTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
+  packageCount: z.coerce.number().int().min(1).max(1000),
+});
+
+/**
+ * Books a warehouse pickup from the /admin/shipments page — not tied to one
+ * order/timeline (a pickup covers every manifested package at the warehouse).
+ */
+export async function bookWarehousePickup(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requirePermission("order", "update");
+  const parsed = warehousePickupSchema.safeParse({
+    pickupDate: formData.get("pickupDate"),
+    pickupTime: formData.get("pickupTime"),
+    packageCount: formData.get("packageCount"),
+  });
+  if (!parsed.success)
+    return { error: "Enter a pickup date, time, and package count." };
+  const { pickupDate, pickupTime, packageCount } = parsed.data;
+
+  const pickup = pickupLocationFromPs(await resolvePickupLocation());
+  if (!pickup.name)
+    return {
+      error:
+        "Set a Delhivery Pickup Location in Admin → Settings → Shipping first.",
+    };
+  const time = pickupTime.length === 5 ? `${pickupTime}:00` : pickupTime;
+
+  const pickupAt = Date.parse(`${pickupDate}T${time}+05:30`);
+  if (!Number.isFinite(pickupAt) || pickupAt <= Date.now()) {
+    return { error: "Pickup must be at a future time (IST)." };
+  }
+
+  const result = await bookPickup({
+    pickupLocation: pickup.name,
+    pickupDate,
+    pickupTime: time,
+    expectedPackageCount: packageCount,
+  });
+  if (!result.ok) return { error: result.message };
+  return {
+    ok: true,
+    message: `Pickup booked for ${pickupDate} ${time} from ${pickup.name}`,
+  };
+}
 const manualPaymentSchema = z.object({
   orderId: z.string().min(1),
   amount: z.coerce.number().int().min(1),

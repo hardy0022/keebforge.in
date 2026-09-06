@@ -12,6 +12,7 @@ import {
   ORDER_TYPE_LABELS,
 } from "@/lib/orders";
 import { getAdminOrder } from "@/lib/admin";
+import { trackShipment } from "@/lib/delhivery";
 import { fmtIST } from "@/lib/ist";
 import { OrderHeaderActions } from "@/components/admin/orders/OrderHeaderActions";
 import { FinancialPanel } from "@/components/admin/orders/FinancialPanel";
@@ -196,6 +197,34 @@ export default async function AdminOrderDetail({
   const customerHref = order.profile
     ? "/admin/customers"
     : `/admin/orders?q=${encodeURIComponent(order.customerEmail)}`;
+
+  // Live Delhivery status for a manifested waybill (fresh API look per view).
+  let liveShipment:
+    | {
+        status?: string;
+        destination?: string;
+        latestScan?: {
+          status: string;
+          location: string;
+          instructions: string;
+          scannedAt: string | null;
+        };
+        error?: string;
+      }
+    | undefined;
+  if (order.shipment?.trackingNumber) {
+    const res = await trackShipment(order.shipment.trackingNumber);
+    if (res.ok) {
+      const scans = res.data.scans;
+      liveShipment = {
+        status: res.data.status,
+        destination: res.data.destination,
+        latestScan: scans.length ? scans[scans.length - 1] : undefined,
+      };
+    } else {
+      liveShipment = { error: res.message };
+    }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
@@ -1013,6 +1042,7 @@ export default async function AdminOrderDetail({
                 }
               : null
           }
+          live={liveShipment}
           weightGrams={order.shippingWeightGrams}
           shippingMode={order.shippingMode}
           defaults={{

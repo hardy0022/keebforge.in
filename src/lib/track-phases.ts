@@ -47,3 +47,24 @@ export function orderPhaseFor(status: OrderStatus): {
     total: ORDER_PHASE_LABELS.length,
   };
 }
+
+/**
+ * Maps a raw Delhivery scan/shipment status to the canonical tracking page
+ * label (client-safe — Delhivery's own tracker shows e.g. "Ready to Ship"
+ * for a manifested shipment waiting at the origin hub). Unknown texts pass
+ * through unchanged.
+ */
+export function delhiveryStatusLabel(status: string): string {
+  const s = status.toLowerCase();
+  if (/manifest|shipment created|booked|awaiting pickup|in process/.test(s))
+    return "Ready to Ship";
+  if (/picked up|handed over/.test(s)) return "Picked Up";
+  if (/out for delivery/.test(s)) return "Out for Delivery";
+  if (/attempted/.test(s)) return "Delivery Attempted";
+  if (/delivered/.test(s)) return "Delivered";
+  if (/\brto\b|return/.test(s)) return "Returning to Origin";
+  if (/cancel/.test(s)) return "Cancelled";
+  if (/in transit|reached|arrived|with courier|\bhub\b|routed/.test(s))
+    return "In Transit";
+  return status;
+}

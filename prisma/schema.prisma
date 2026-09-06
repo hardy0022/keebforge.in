@@ -805,6 +805,7 @@ model Tracking {
   timeline      Json?
   shipment      Json?
   warranty      Json?
+  messages      Json?
   total         Int
   updatedAt     DateTime      @updatedAt
 

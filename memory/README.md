@@ -20,24 +20,30 @@ Start with `01-project-scope.md`. Then, depending on what you're doing:
 | What's next / blocked items | `08-roadmap.md` |
 | Env vars, commands, deployment | `09-env-ops.md` |
 | Known traps that waste time | `10-gotchas.md` |
+| Detailed work reports (caching, cleanup) | `reports/*.md` |
 
 ## One-paragraph summary
 
 KeebForge.in is the production website for a Bangalore-based mechanical-keyboard repair / custom-build business. It was rebuilt from scratch (Next.js 16 App Router) on top of two abandoned starter projects: a static HTML site (`static.keebforge.in`, the old public site) and a Next.js starter (`order.keebforge.in`, used only as a design/content reference). The new build is a live-data application: Prisma → Supabase PostgreSQL, Better Auth for authentication, Resend for email, Razorpay for payments (test mode, live keys pending), Cloudinary for media (live, e2e-verified). All prices come from the database, not hardcoded values.
 
-## State at a glance (2026-08-24)
+## State at a glance (2026-09-06)
 
-- **Complete:** Foundation (Phase 3), all content pages (Phase 4), security/pricing/SEO audit, shop + cart + product PDP, Better Auth (dedicated `/auth/login` + `/auth/register` with real username claim + server-side password policy), admin Phase 1+2 (orders, products/categories/brands/variants/inventory, CSV, dashboard metrics), customer account area (`/account` profile + address book with name/email/landmark), Cloudinary media system (e2e-verified), `/mods` booking flow — 4-step configurator with live Delhivery quoting, pickup = 1.5× forward rule (D-023), direct Pay & Confirm → `/checkout` (D-024) — and `/workshop` custom-work intake. `/checkout` handles both product carts and mods stash: numbered 2-col layout, sticky Order Summary, shared AddressPicker cards (same UI as `/mods` Step 04), Razorpay test-mode modal verified opening.
-- **Delhivery logistics live in admin (2026-09-04):** one-click "Create shipment (Delhivery)" on order detail now manifests real shipments (waybill saved as the tracking number, status → DISPATCHED, timeline + toast with the waybill). Shipment/tracking/TAT/pickup/waybill-fetch all consolidated in `src/lib/delhivery/`. Pickup location is configured in Admin → Settings → Shipping (registers the warehouse via the Delhivery ClientWarehouse create/edit APIs, source of truth = SiteSetting `delhivery_pickup`, env vars are fallback). `/mods` defaults to "I'll ship the device" and hides Pay & Confirm until shipping is quoted.
-- **Verified:** `typecheck`, `lint`, `build` all green; mods pay-flow E2E (surface ₹991.21 return-only / ₹1,308.21 pickup breakdowns, server charge matches display to the paise); address-card selection E2E on both pages (default preselect, mismatch → manual fallback, guest path); stale-quote + tamper protections.
-- **Seeded:** 8 brands + 11 demo products so the shop is exercisable — replace with real inventory via the admin. Service catalog groups live in DB (admin-managed).
-- **Blocked / pending:** Razorpay keys are test placeholders (webhook verification + live keys pending — see roadmap); **Dash ownership verification blocked on a Vercel apex→www 308 redirect** (fix steps in `08-roadmap.md`); OAuth production callback URIs must be registered in provider consoles; shop Phase 3 remainder (variant picking, brand pages, wishlist, review submission).
+- **Complete:** Foundation (Phase 3), all content pages (Phase 4), security/pricing/SEO audit, shop + cart + product PDP, Better Auth (dedicated `/auth/login` + `/auth/register`), admin (orders, products/categories/brands/variants/inventory, CSV, dashboard), customer account (`/account`), Cloudinary media system, `/mods` shipping quoting + direct Pay & Confirm → `/checkout`, `/workshop` intake, Razorpay EMI² affordability widget, live Delhivery admin shipment creation, and the **full production-grade cleanup/refactor (2026-09-06)** — dead code/deps removed, duplication merged, `app/(public)/` route group, `lib/caching/` + prettier added, and the `loading.tsx` soft-404 bug fixed (G-003).
+- **Formatting now enforced:** every source file has been through `prettier --write .` (`.prettierrc.json`, `printWidth 80`). Keep it that way — run `npm run format` before committing touched files. `memory/` is prettier-ignored.
+- **Delhivery logistics live in admin (2026-09-04):** one-click "Create shipment (Delhivery)" manifests real shipments (waybill = tracking number). Pickup location is configured in Admin → Settings → Shipping — that DB value is the source of truth (G-025). `/mods` defaults to "I'll ship the device" and hides Pay & Confirm until shipping is quoted.
+- **Verified:** `typecheck`, `lint` (0 errors / 14 intentional `<img>` warnings), `build` all green; bogus product/category slugs return **404** (soft-404 fixed); public route smoke green.
+- **Blocked / pending:** Razorpay keys are test placeholders (webhook verification + live keys pending — roadmap); **Dash ownership verification blocked on a Vercel apex→www 308 redirect** (roadmap); OAuth production callback URIs must be registered in provider consoles; shop Phase 3 remainder (variant picking, brand pages, wishlist, review submission).
 - **Naming:** `/services` → `/mods`, `/repair` → `/workshop` (old URLs 307); per-service detail pages removed (D-022).
 
 ## Golden rules (see each doc for detail)
 
-1. Money is **integer paise**, never floats. `formatINR()` is the only display formatter.
+1. Money is **integer paise**, never floats. `formatINR()` (₹ + 2dp) and `formatPaiseWhole()` (whole rupee, no ₹) are the only formatters in `src/lib/money.ts`.
 2. **Never `prisma migrate dev`** — write manual migration SQL and `migrate deploy`. See `03-database.md`.
 3. **Never auto-provision ADMIN.** Roles are explicit; admin is granted manually. All authorization is server-side.
 4. Public pages are server-rendered with `cache()`; client components are used only where interaction is unavoidable (cart qty, admin forms, login, admin shell, order detail). Admin client components must never import from a `server-only` module — see `10-gotchas.md` G-015.
 5. `.env` is never committed; `.env.example` holds variable names only.
+6. **Never re-add `loading.tsx` to `/product/[slug]` or `/shop`** — it causes soft-404s (G-003). Prettier + the shared helpers (`formatPaiseWhole`, `slugify`, `istDayKey`) are single-source; reuse them, don't copy.
+
+## State at a glance (historical, 2026-08-24)
+
+- Same stack; previously listed `/services`/`/repair` naming + cart-backed checkout — superseded by the 2026-09-06 cleanup once refactor mapped URLs to `/mods` + `/workshop` and moved static pages into `(public)/`.

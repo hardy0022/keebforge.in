@@ -10,7 +10,11 @@ import {
   type TrackState,
   type ShipmentScanState,
 } from "@/app/actions/track-order";
-import { ORDER_PHASE_LABELS, orderPhaseFor } from "@/lib/track-phases";
+import {
+  ORDER_PHASE_LABELS,
+  orderPhaseFor,
+  delhiveryStatusLabel,
+} from "@/lib/track-phases";
 import { formatINR } from "@/lib/money";
 import { RazorpayScript } from "@/components/payments/RazorpayScript";
 import {
@@ -59,6 +63,16 @@ function fmtDateTime(v: string | null | undefined): string {
   return `${date} · ${time}`;
 }
 
+function fmtTime(v: string | null | undefined): string {
+  if (!v) return "";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
   const [state, formAction, pending] = useActionState<TrackState, FormData>(
     trackOrder,
@@ -82,43 +96,42 @@ export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
       <div className="wrap">
         <div className="track-wrap">
           <RazorpayScript />
-          <form action={formAction} className="track-form">
-            <p className="track-card-title" id="track-order-label">
-              Order Number
-            </p>
-            <p className="track-card-desc">
-              Enter your order number to track your order.
-            </p>
-            <div className="track-row">
-              <div className="track-field">
-                <span className="track-field-prefix" aria-hidden="true">
-                  #
-                </span>
-                <input
-                  id="track-order-number"
-                  name="orderNumber"
-                  type="text"
-                  className="input"
-                  placeholder="e.g. KF30X2A"
-                  autoComplete="off"
-                  autoCapitalize="characters"
-                  spellCheck={false}
-                  required
-                  minLength={4}
-                  maxLength={20}
-                  disabled={pending}
-                  value={orderNumber}
-                  onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
-                  aria-labelledby="track-order-label"
-                  aria-describedby="track-hint"
-                />
-              </div>
-              <button type="submit" className="btn-prime" disabled={pending}>
+
+          <form action={formAction} className="track-search">
+            <div>
+              <label
+                htmlFor="track-order-number"
+                className="track-search-label"
+              >
+                Order number
+              </label>
+              <p className="track-search-desc">
+                Enter your order number to track your order.
+              </p>
+            </div>
+            <div className="track-search-row">
+              <input
+                id="track-order-number"
+                name="orderNumber"
+                type="text"
+                className="input"
+                placeholder="e.g. KF30X2A"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                required
+                minLength={4}
+                maxLength={20}
+                disabled={pending}
+                value={orderNumber}
+                onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
+              />
+              <button type="submit" className="btn-track" disabled={pending}>
                 {pending ? "Tracking…" : "Track Order"}
               </button>
             </div>
-            <p id="track-hint" className="track-hint">
-              Order numbers look like KF30X2A — yours is in your order
+            <p className="track-search-hint">
+              Order numbers look like <b>KF30X2A</b> — yours is in your order
               confirmation email.
             </p>
           </form>
@@ -221,96 +234,77 @@ function LiveTracking({ waybill }: { waybill: string }) {
     ShipmentScanState,
     FormData
   >(fetchShipmentScans, { ok: false, error: "" });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
-  if (!open) {
-    return (
-      <div className="track-detail">
-        <dt>Live tracking</dt>
-        <dd>
+  useEffect(() => {
+    if (!open) return;
+    const fd = new FormData();
+    fd.set("waybill", waybill);
+    startTransition(() => formAction(fd));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, waybill]);
+
+  return (
+    <div className="track-live">
+      <div className="track-live-head">
+        <span className="track-live-label">Live tracking</span>
+        {open ? (
+          <form action={formAction} style={{ display: "contents" }}>
+            <input type="hidden" name="waybill" value={waybill} />
+            <button type="submit" className="track-live-btn" disabled={pending}>
+              {pending ? "Fetching…" : state.ok ? "Refresh" : "Fetch scans"}
+            </button>
+          </form>
+        ) : (
           <button
             type="button"
-            className="track-timeline-btn"
+            className="track-live-btn"
             onClick={() => setOpen(true)}
           >
             View latest scans
           </button>
-        </dd>
+        )}
       </div>
-    );
-  }
 
-  return (
-    <div className="track-detail">
-      <dt>Live tracking</dt>
-      <dd>
-        <form
-          action={formAction}
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <input type="hidden" name="waybill" value={waybill} />
-          <span className="font-mono text-xs">{waybill}</span>
-          <button
-            type="submit"
-            className="track-timeline-btn"
-            disabled={pending}
-          >
-            {pending ? "Fetching…" : state.ok ? "Refresh" : "Fetch scans"}
-          </button>
-        </form>
-        {state.ok ? (
-          <div
-            style={{
-              marginTop: 10,
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}
-          >
-            <p className="track-history-title">
-              {state.status || "In transit"}{" "}
-              {state.destination ? `· ${state.destination}` : ""}
-            </p>
-            <ol
-              className="track-history-list"
-              style={{ listStyle: "none", padding: 0, margin: 0 }}
-            >
-              {[...state.scans].reverse().map((sc, i) => (
-                <li key={i} className="track-history-item">
-                  <span className="track-history-dot" aria-hidden="true" />
-                  <div className="track-history-body">
-                    <p className="track-history-title">
-                      {sc.status || "Scan"}{" "}
-                      {sc.location ? ` · ${sc.location}` : ""}
-                    </p>
-                    {sc.instructions && (
-                      <p className="track-history-note">{sc.instructions}</p>
-                    )}
-                    {sc.scannedAt && (
-                      <p className="track-history-date">
-                        {fmtDateTime(sc.scannedAt)}
-                      </p>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        ) : state.error ? (
-          <p
-            className="track-history-note"
-            role="alert"
-            style={{ marginTop: 8 }}
-          >
-            {state.error}
+      {open && state.ok && (
+        <div className="track-live-body">
+          <p className="track-live-status">
+            <span className="track-live-dot" aria-hidden="true" />
+            {delhiveryStatusLabel(state.status) || "In Transit"}
           </p>
-        ) : null}
-      </dd>
+          <p className="track-live-tracking">
+            Tracking: <span className="font-mono">{waybill}</span>
+            {state.destination ? ` · ${state.destination}` : ""}
+          </p>
+          <ol className="track-history-list">
+            {[...state.scans].reverse().map((sc, i) => (
+              <li key={i} className="track-history-item">
+                <span className="track-history-dot" aria-hidden="true" />
+                <div className="track-history-body">
+                  <p className="track-history-title">
+                    {sc.status || "Scan"}
+                    {sc.location ? ` · ${sc.location}` : ""}
+                  </p>
+                  {sc.instructions && (
+                    <p className="track-history-note">{sc.instructions}</p>
+                  )}
+                  {sc.scannedAt && (
+                    <p className="track-history-date">
+                      {fmtDateTime(sc.scannedAt)}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {open && !state.ok && state.error && (
+        <p className="track-history-note" role="alert">
+          {state.error}
+        </p>
+      )}
     </div>
   );
 }
@@ -337,6 +331,7 @@ function TrackResult({
   );
   const paid = data.paymentStatus === "PAID";
   const amountNotSet = data.total <= 0;
+  const messages = data.messages ?? [];
 
   useEffect(() => {
     if (!timelineOpen) return;
@@ -362,19 +357,11 @@ function TrackResult({
 
   return (
     <div className="track-results" aria-live="polite">
-      <div className="track-section-head">
-        <span className="os-section-title">Order Status</span>
-        <span className="os-section-rule" aria-hidden="true" />
-      </div>
-
-      {/* Main status panel */}
+      {/* ── Status card ── */}
       <div className="track-card track-status-card">
-        <div className="track-head">
-          <div>
-            <p className="track-label">Order</p>
-            <p className="track-number">{data.orderNumber}</p>
-          </div>
-          <div className="track-badges">
+        <div className="track-status-head">
+          <span className="os-section-title">Order Status</span>
+          <div className="track-status-badges">
             {paid ? (
               <span className="badge badge-ok">Paid ✓</span>
             ) : amountNotSet ? (
@@ -388,6 +375,8 @@ function TrackResult({
             )}
           </div>
         </div>
+
+        <p className="track-number">{data.orderNumber}</p>
 
         <div className="track-progress">
           <p className="track-module-label">Order Progress</p>
@@ -457,13 +446,16 @@ function TrackResult({
         )}
       </div>
 
+      {/* ── Items + Info grid ── */}
       {hasLines && (
-        <>
-          <div className="track-section-head">
-            <span className="os-section-title">Order Items</span>
-            <span className="os-section-rule" aria-hidden="true" />
-          </div>
+        <div className="track-info-grid">
           <div className="track-card track-items-card">
+            <span
+              className="os-section-title"
+              style={{ padding: "16px 20px 0" }}
+            >
+              Order Items
+            </span>
             {data.services.map((s, i) => (
               <div key={`srv-${i}`} className="track-item-row">
                 <span className="track-item-thumb" aria-hidden="true">
@@ -471,9 +463,9 @@ function TrackResult({
                 </span>
                 <div className="track-item-main">
                   <p className="track-item-name">{s.name}</p>
-                  <p className="track-item-meta">
-                    {s.quantity > 1 ? `Qty ${s.quantity}` : ""}
-                  </p>
+                  {s.quantity > 1 && (
+                    <p className="track-item-meta">Qty {s.quantity}</p>
+                  )}
                 </div>
                 <span className="track-item-total">
                   {formatINR(s.lineTotal)}
@@ -487,9 +479,9 @@ function TrackResult({
                 </span>
                 <div className="track-item-main">
                   <p className="track-item-name">{it.name}</p>
-                  <p className="track-item-meta">
-                    {it.quantity > 1 ? `Qty ${it.quantity}` : ""}
-                  </p>
+                  {it.quantity > 1 && (
+                    <p className="track-item-meta">Qty {it.quantity}</p>
+                  )}
                 </div>
                 <span className="track-item-total">
                   {formatINR(it.lineTotal)}
@@ -497,83 +489,177 @@ function TrackResult({
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {(firstRepair || hasShipment) && (
-        <dl className="track-details">
+        <div className="track-info-grid">
           {firstRepair && (
-            <>
-              <div className="track-detail">
-                <dt>Device</dt>
-                <dd>
-                  <b>
-                    {firstRepair.deviceModel
-                      ? `${humanize(firstRepair.deviceType)} — ${firstRepair.deviceModel}`
-                      : firstRepair.deviceModel ||
-                        humanize(firstRepair.deviceType)}
-                  </b>
-                </dd>
-              </div>
-              <div className="track-detail">
-                <dt>Description</dt>
-                <dd>{firstRepair.issue}</dd>
-              </div>
-            </>
+            <TrackDeviceCard
+              deviceType={firstRepair.deviceType}
+              deviceModel={firstRepair.deviceModel}
+              issue={firstRepair.issue}
+              messages={messages}
+            />
           )}
-
           {hasShipment && (
-            <>
+            <div className="track-card track-info-card track-shipment-card">
+              <span className="os-section-title">Shipment</span>
+
               {shipment!.courier && (
-                <div className="track-detail">
-                  <dt>Courier</dt>
-                  <dd>{shipment!.courier}</dd>
+                <div className="track-ship-field">
+                  <span className="os-section-title">Courier</span>
+                  <p className="track-info-primary">{shipment!.courier}</p>
                 </div>
               )}
-              {shipment!.status && (
-                <div className="track-detail">
-                  <dt>Shipment</dt>
-                  <dd>
+
+              {shipment!.status && !shipment!.trackingNumber && (
+                <div className="track-ship-field">
+                  <span className="os-section-title">Status</span>
+                  <p className="track-info-primary">
                     {SHIPMENT_LABELS[shipment!.status] ??
                       humanize(shipment!.status)}
-                  </dd>
+                  </p>
                 </div>
               )}
+
               {(shipment!.trackingNumber || shipment!.trackingUrl) && (
-                <div className="track-detail">
-                  <dt>Tracking</dt>
-                  <dd>
-                    {shipment!.trackingNumber && (
-                      <span className="font-mono text-xs">
-                        {shipment!.trackingNumber}
-                      </span>
-                    )}
-                    {shipment!.trackingNumber && shipment!.trackingUrl && " · "}
-                    {shipment!.trackingUrl && (
+                <div className="track-ship-field">
+                  <span className="os-section-title">Tracking</span>
+                  {shipment!.trackingNumber && (
+                    <p className="track-info-primary track-tracking-num">
+                      {shipment!.trackingNumber}
+                    </p>
+                  )}
+                  {shipment!.trackingUrl && !shipment!.trackingNumber && (
+                    <p className="track-info-primary track-tracking-num">
+                      {shipment!.trackingUrl}
+                    </p>
+                  )}
+                  {shipment!.trackingNumber ? (
+                    <Link
+                      className="track-ship-link"
+                      href={`https://www.delhivery.com/track-v2/package/${shipment!.trackingNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Track on Delhivery ↗
+                    </Link>
+                  ) : (
+                    shipment!.trackingUrl && (
                       <Link
+                        className="track-ship-link"
                         href={shipment!.trackingUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        open courier ↗
+                        Open courier ↗
                       </Link>
-                    )}
-                  </dd>
+                    )
+                  )}
                 </div>
               )}
+
               {shipment!.estimatedDeliveryDate && (
-                <div className="track-detail">
-                  <dt>Est. delivery</dt>
-                  <dd>{fmtDate(shipment!.estimatedDeliveryDate)}</dd>
+                <div className="track-ship-field">
+                  <span className="os-section-title">Est. delivery</span>
+                  <p className="track-info-primary">
+                    {fmtDate(shipment!.estimatedDeliveryDate)}
+                  </p>
                 </div>
               )}
+
               {shipment!.trackingNumber && (
                 <LiveTracking waybill={shipment!.trackingNumber} />
               )}
-            </>
+            </div>
           )}
-        </dl>
+        </div>
       )}
+    </div>
+  );
+}
+
+function TrackDeviceCard({
+  deviceType,
+  deviceModel,
+  issue,
+  messages,
+}: {
+  deviceType: string;
+  deviceModel: string;
+  issue: string;
+  messages: TrackData["messages"];
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? messages : messages.slice(0, 3);
+  const type = humanize(deviceType);
+  // Avoid printing the model twice when it already carries the type/name, and
+  // collapse any accidental answer-repeat in the stored test/title value.
+  const model = deviceModel.trim().replace(/\s{2,}/g, " ");
+
+  return (
+    <div className="track-card track-info-card track-device-card">
+      <span className="os-section-title">Device</span>
+      <p className="track-device-name">{type}</p>
+      {model && model.toLowerCase() !== type.toLowerCase() && (
+        <p className="track-device-model">{model}</p>
+      )}
+
+      {issue && (
+        <>
+          <span className="os-section-title track-device-block-label">
+            Description
+          </span>
+          <p className="track-info-secondary track-device-desc">{issue}</p>
+        </>
+      )}
+
+      <div className="track-messages-block">
+        <span className="os-section-title">Updates from the team</span>
+        {visible.length === 0 ? (
+          <div className="track-messages-empty">
+            <p>No updates yet.</p>
+            <p>
+              We&apos;ll post updates here when there&apos;s something important
+              to share.
+            </p>
+          </div>
+        ) : (
+          <>
+            <ol className="track-feed">
+              {visible.map((m, i) => (
+                <li
+                  key={i}
+                  className={`track-feed-item${i === 0 ? " is-latest" : ""}`}
+                >
+                  <span className="track-feed-dot" aria-hidden="true" />
+                  <div className="track-feed-body">
+                    <p className="track-feed-title">{m.message}</p>
+                    <p className="track-feed-meta">
+                      {m.author && `${m.author} · `}
+                      {fmtDate(m.createdAt)}
+                      {m.createdAt && ` · ${fmtTime(m.createdAt)}`}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            {messages.length > 3 && (
+              <button
+                type="button"
+                className="track-view-more"
+                onClick={() => setShowAll((v) => !v)}
+                aria-expanded={showAll}
+              >
+                {showAll
+                  ? "Show fewer updates"
+                  : `View all updates (${messages.length}) →`}
+              </button>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

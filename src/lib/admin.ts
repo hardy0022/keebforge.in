@@ -6,6 +6,7 @@ import type {
   PaymentStatus,
   ReviewStatus,
   ReviewType,
+  ShippingStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { defineCached, TAG, TTL } from "@/lib/caching/cache";
@@ -296,6 +297,51 @@ export const getAdminOrders = cache((params: AdminOrdersQuery) => {
     pages: Math.max(1, Math.ceil(total / pageSize)),
   }));
 });
+
+// ─── Shipments (admin) ────────────────────────────────────────────────────
+
+/** Shipment rows with their order context, newest first. Admin-only.
+ *  Delivered and returned are hidden unless a status is explicitly asked for. */
+export const getAdminShipments = cache(
+  ({ q, status }: { q?: string; status?: ShippingStatus }) =>
+    prisma.shipment.findMany({
+      where: {
+        ...(q
+          ? {
+              OR: [
+                { trackingNumber: { contains: q, mode: "insensitive" } },
+                { courier: { contains: q, mode: "insensitive" } },
+                {
+                  order: {
+                    orderNumber: { contains: q, mode: "insensitive" },
+                  },
+                },
+                {
+                  order: { customerName: { contains: q, mode: "insensitive" } },
+                },
+              ],
+            }
+          : {}),
+        ...(status
+          ? { status }
+          : {
+              status: { notIn: ["DELIVERED", "RETURNED"] as ShippingStatus[] },
+            }),
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        order: {
+          select: {
+            orderNumber: true,
+            customerName: true,
+            customerEmail: true,
+            total: true,
+            shippingDestinationPincode: true,
+          },
+        },
+      },
+    }),
+);
 
 // ─── Order detail ───────────────────────────────────────────────────────────
 
