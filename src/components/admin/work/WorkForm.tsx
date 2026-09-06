@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveWork } from "@/app/admin/actions/work";
 import { Spinner } from "@/components/admin/ActionForm";
+import { cldUrl } from "@/lib/cloudinary-url";
 
 type ImageItem = { key: string; file: File | null; publicId: string | null; url: string };
 
@@ -177,7 +178,7 @@ export function WorkForm({ project }: { project?: WorkProjectProp }) {
         <div className="work-image-grid">
           {items.map((item, i) => (
             <div key={item.key} className="work-image-tile">
-              <img src={item.url} alt="" />
+              <img src={cldUrl(item.url, 480)} alt="" />
               <div className="work-image-controls">
                 <button type="button" className="btn-admin" aria-label="Move earlier" onClick={() => moveItem(item.key, -1)} disabled={pending || i === 0}>
                   ←

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { cldUrl } from "@/lib/cloudinary-url";
 import type { ShopProduct } from "@/lib/data";
 
 interface ProductGalleryProps {
@@ -64,7 +63,7 @@ export function ProductGallery({ images, productName, variantImages }: ProductGa
         {allImages.map((img, i) => (
           <Image
             key={i}
-            src={cldUrl(img.url, 1200)}
+            src={img.url}
             alt={img.alt ?? productName}
             fill
             priority={i === 0}
@@ -115,7 +114,7 @@ export function ProductGallery({ images, productName, variantImages }: ProductGa
           </button>
           <div className="product-gallery-fullscreen-image">
             <Image
-              src={cldUrl(currentImage.url, 1200)}
+              src={currentImage.url}
               alt={currentImage.alt ?? productName}
               fill
               priority

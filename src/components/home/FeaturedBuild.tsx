@@ -10,7 +10,6 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { cldUrl } from "@/lib/cloudinary-url";
 import { formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import ArrowBigLeftIcon from "@/components/ui/arrow-big-left-icon";
@@ -77,7 +76,7 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
             >
               {image ? (
                 <Image
-                  src={cldUrl(image.url, 1200)}
+                  src={image.url}
                   alt={image.alt ?? product.name}
                   fill
                   sizes="(min-width: 1024px) 60vw, 100vw"

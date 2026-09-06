@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { cldUrl } from "@/lib/cloudinary-url";
+import { BlurFadeImage } from "@/components/ui/blur-fade-image";
 
 type WorkSlide = { url: string; alt?: string | null };
 
@@ -19,12 +19,13 @@ export function WorkImageSlider({ images, projectName }: { images: WorkSlide[]; 
   const next = () => setIndex((i) => (i === images.length - 1 ? 0 : i + 1));
 
   return (
-    <div className="work-gallery product-gallery">
-      <div className="product-gallery-main">
+    <BlurFadeImage>
+      <div className="work-gallery product-gallery">
+        <div className="product-gallery-main">
         {images.map((img, i) => (
           <Image
             key={i}
-            src={cldUrl(img.url, 1200)}
+            src={img.url}
             alt={img.alt ?? projectName}
             fill
             priority={i === 0}
@@ -56,6 +57,7 @@ export function WorkImageSlider({ images, projectName }: { images: WorkSlide[]; 
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </BlurFadeImage>
   );
 }

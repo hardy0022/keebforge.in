@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Reveal } from "@/components/home/Reveal";
-import { cldUrl } from "@/lib/cloudinary-url";
 import type { HomeWork } from "@/lib/home";
 
 const MODS_POINTS = ["Keyboard modifications", "Switch lubing", "Stabilizer tuning", "Soldering & switch work"];
@@ -10,7 +9,7 @@ function PathMedia({ image, title }: { image?: { url: string; alt?: string }; ti
   if (!image) return <div className="hp-path-media" />;
   return (
     <div className="hp-path-media">
-      <Image src={cldUrl(image.url, 900)} alt={image.alt ?? title} fill sizes="(min-width: 1024px) 40vw, 100vw" />
+      <Image src={image.url} alt={image.alt ?? title} fill sizes="(min-width: 1024px) 40vw, 100vw" />
     </div>
   );
 }

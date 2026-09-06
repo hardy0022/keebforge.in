@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
 import { ReviewBody } from "@/components/reviews/ReviewBody";
+import { BlurFadeImage } from "@/components/ui/blur-fade-image";
 
 /** Photos shown per review before the "+N more" tile takes over. */
 const PHOTOS_SHOWN = 4;
@@ -44,7 +45,8 @@ export function ReviewCard({ review, verified }: { review: ReviewCardItem; verif
       </div>
       <ReviewBody review={review} />
       {shownPhotos.length > 0 && (
-        <div className="review-photos">
+        <BlurFadeImage>
+          <div className="review-photos">
           {shownPhotos.map((img) => (
             <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="review-photo">
               {isOptimizable(img.url) ? (
@@ -66,7 +68,8 @@ export function ReviewCard({ review, verified }: { review: ReviewCardItem; verif
               <span>+{morePhotos}</span>
             </a>
           )}
-        </div>
+          </div>
+        </BlurFadeImage>
       )}
       <footer className="review-footer">
         <div className="review-author">

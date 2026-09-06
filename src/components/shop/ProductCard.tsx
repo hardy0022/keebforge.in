@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { cldUrl } from "@/lib/cloudinary-url";
 import Link from "next/link";
 import type { ShopProduct } from "@/lib/data";
 import { formatINR } from "@/lib/money";
 import { isPurchasable, CONDITION_LABELS, MAX_CARD_FEATURES } from "@/lib/shop";
 import { CardAddToCart } from "@/components/shop/CardAddToCart";
 import { CardIcon, type ProductCardFeature } from "@/lib/card-icons";
+import { BlurFadeImage } from "@/components/ui/blur-fade-image";
 
 export function ProductCard({ product }: { product: ShopProduct }) {
   const images = product.images;
@@ -49,17 +49,19 @@ export function ProductCard({ product }: { product: ShopProduct }) {
       <Link href={`/product/${product.slug}`} className="shop-card-media" aria-label={product.name}>
         {count > 0 ? (
           <>
-            {images.map((img, i) => (
-              <Image
-                key={i}
-                src={cldUrl(img.url, 800)}
-                alt={img.alt ?? product.name}
-                fill
-                sizes="(min-width: 1200px) 25vw, (min-width: 850px) 33vw, (min-width: 600px) 50vw, 100vw"
-                className="shop-card-img"
-                style={manual !== null ? { opacity: i === manual ? 1 : 0 } : undefined}
-              />
-            ))}
+            <BlurFadeImage className="absolute inset-0">
+              {images.map((img, i) => (
+                <Image
+                  key={i}
+                  src={img.url}
+                  alt={img.alt ?? product.name}
+                  fill
+                  sizes="(min-width: 1200px) 25vw, (min-width: 850px) 33vw, (min-width: 600px) 50vw, 100vw"
+                  className="shop-card-img"
+                  style={manual !== null ? { opacity: i === manual ? 1 : 0 } : undefined}
+                />
+              ))}
+            </BlurFadeImage>
             {count > 1 && (
               <div className="shop-card-swap">
                 <button

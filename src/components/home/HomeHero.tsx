@@ -96,7 +96,7 @@ export function HomeHero() {
               </div>
               <div className="hp-hero-visual-frame">
                 <Image
-                  src="/hero-background.png"
+                  src="/hero-background.webp"
                   alt="KeebForge custom mechanical keyboard"
                   fill
                   priority

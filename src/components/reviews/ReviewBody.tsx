@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from "react";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
+import { cldUrl } from "@/lib/cloudinary-url";
 import type { ReviewCardItem } from "@/components/reviews/ReviewCard";
 
 function formatDate(d: Date): string {
@@ -93,7 +94,7 @@ export function ReviewBody({ review }: { review: ReviewCardItem }) {
               <div className="review-modal-photos">
                 {review.images.map((img) => (
                   <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="review-modal-photo">
-                    <img src={img.url} alt="" loading="lazy" />
+                    <img src={cldUrl(img.url, 1600)} alt="" loading="lazy" />
                   </a>
                 ))}
               </div>

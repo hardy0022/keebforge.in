@@ -7,6 +7,7 @@ import { saveProduct, type CatalogActionState } from "@/app/admin/actions/catalo
 import { PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS, type ProductType } from "@/lib/product-labels";
 import { CARD_ICONS, CARD_ICON_NAMES } from "@/lib/card-icons";
 import { MAX_CARD_FEATURES, CONDITION_LABELS } from "@/lib/shop";
+import { cldUrl } from "@/lib/cloudinary-url";
 
 const SECTION_TYPE_OPTIONS = [
   { value: "NEW", label: "New / In Stock" },
@@ -326,7 +327,7 @@ export function ProductForm({ product, optionGroups = [], categories, brands }: 
               </label>
               {img.url ? (
                 // eslint-disable-next-line @next/next/no-img-element -- admin preview thumbnail
-                <img src={img.url} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid var(--bdr)" }} />
+                <img src={cldUrl(img.url, 88)} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid var(--bdr)" }} />
               ) : (
                 <span style={{ width: 44, height: 44, borderRadius: 6, border: "1px dashed var(--bdr)" }} />
               )}

@@ -6,7 +6,6 @@ import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { CtaSection } from "@/components/ui/CtaSection";
 import { buildMetadata } from "@/lib/seo";
-import { cldUrl } from "@/lib/cloudinary-url";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = buildMetadata({
@@ -78,7 +77,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
                   {featuredImg?.[0] ? (
                     <>
                       <Image
-                        src={cldUrl(featuredImg[0].url, 1600)}
+                        src={featuredImg[0].url}
                         alt={featuredImg[0].alt ?? featured.title}
                         fill
                         priority
@@ -144,7 +143,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
                     <Link href={`/work/${p.slug}`} className="work-card" aria-label={p.title}>
                       <div className="work-card-media">
                         {img ? (
-                          <Image src={cldUrl(img.url, 900)} alt={img.alt ?? p.title} fill sizes="(min-width: 960px) 23vw, (min-width: 640px) 46vw, 100vw" />
+                          <Image src={img.url} alt={img.alt ?? p.title} fill sizes="(min-width: 960px) 23vw, (min-width: 640px) 46vw, 100vw" />
                         ) : (
                           <div className="flex h-full items-center justify-center text-[var(--t3)]">⌨️</div>
                         )}

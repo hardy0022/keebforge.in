@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatINR } from "@/lib/money";
+import { cldUrl } from "@/lib/cloudinary-url";
 import { RazorpayScript } from "@/components/payments/RazorpayScript";
 import { AffordabilityWidget } from "@/components/payments/AffordabilityWidget";
 import {
@@ -1357,7 +1358,7 @@ export function ProductCheckout({ shippingModes, razorpayKeyId }: { shippingMode
                     <div key={it.id} className="flex items-center gap-3">
                       {it.product.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={it.product.image} alt="" className="w-12 h-12 rounded object-cover border border-[var(--bdr)]" />
+                        <img src={cldUrl(it.product.image, 96)} alt="" className="w-12 h-12 rounded object-cover border border-[var(--bdr)]" />
                       ) : (
                         <div className="w-12 h-12 rounded bg-[var(--bg2)] border border-[var(--bdr)] flex items-center justify-center text-lg">
                           ⌨️

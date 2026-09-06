@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState, startTransition, type ReactElement
 import Link from "next/link";
 import { submitReview, type ReviewSubmitState } from "@/app/actions/review";
 import { sniffImageFile, IMAGE_ACCEPT, IMAGE_TYPES_MESSAGE } from "@/lib/image-validation";
+import { cldUrl } from "@/lib/cloudinary-url";
 import { ReviewStars } from "./ReviewStars";
 import { useRouter } from "next/navigation";
 
@@ -139,7 +140,7 @@ export function ReviewForm({
             <div className="wr-photo-grid">
               {keptExisting.map((m) => (
                 <div key={m.id} className="wr-photo">
-                  <img src={m.url} alt="" loading="lazy" width={120} height={90} />
+                  <img src={cldUrl(m.url, 480)} alt="" loading="lazy" width={120} height={90} />
                   <button type="button" className="wr-photo-x" onClick={() => toggleRemove(m.id)} aria-label="Remove photo">
                     ×
                   </button>
@@ -214,7 +215,7 @@ export function ReviewForm({
         <div className="review-preview-card">
           <div className="review-preview-product">
             {product?.image ? (
-              <img src={product.image} alt="" width={56} height={36} className="review-preview-thumb" />
+              <img src={cldUrl(product.image, 112)} alt="" width={56} height={36} className="review-preview-thumb" />
             ) : (
               <span className="review-preview-thumb review-preview-thumb-empty" aria-hidden="true" />
             )}
@@ -243,7 +244,7 @@ export function ReviewForm({
               <div className="review-photos">
                 {previewPhotos.slice(0, 4).map((p) => (
                   <span key={p.key} className="review-photo">
-                    <img src={p.url} alt="" loading="lazy" />
+                    <img src={cldUrl(p.url, 480)} alt="" loading="lazy" />
                   </span>
                 ))}
                 {previewPhotos.length > 4 && (

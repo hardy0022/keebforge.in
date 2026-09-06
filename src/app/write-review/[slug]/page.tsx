@@ -4,6 +4,7 @@ import { getCurrentAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getProductBySlug } from "@/lib/data";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
+import { cldUrl } from "@/lib/cloudinary-url";
 
 export const metadata: Metadata = {
   title: "Write a review | KeebForge",
@@ -51,7 +52,7 @@ export default async function WriteReviewPage({ params }: { params: Promise<{ sl
 
           <div className="write-review-product-card">
             {product.images[0] && (
-              <img src={product.images[0].url} alt="" width={84} height={53} className="write-review-thumb" />
+              <img src={cldUrl(product.images[0].url, 168)} alt="" width={84} height={53} className="write-review-thumb" />
             )}
             <div className="write-review-product-meta">
               <span className="write-review-product-cat">
