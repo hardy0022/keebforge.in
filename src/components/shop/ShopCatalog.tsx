@@ -3,10 +3,18 @@ import { ShopGrid } from "@/components/shop/ShopGrid";
 import type { EmptyStateConfig } from "@/components/shop/ShopEmptyState";
 import { getShopProducts, type ShopSort } from "@/lib/data";
 
-const SORTS: ShopSort[] = ["newest", "price-asc", "price-desc", "name-asc", "name-desc"];
+const SORTS: ShopSort[] = [
+  "newest",
+  "price-asc",
+  "price-desc",
+  "name-asc",
+  "name-desc",
+];
 
 /* Bespoke empty states per listing — sections without one fall back to the generic state. */
-const EMPTY_STATES: Partial<Record<"custom" | "new" | "clearance", EmptyStateConfig>> = {
+const EMPTY_STATES: Partial<
+  Record<"custom" | "new" | "clearance", EmptyStateConfig>
+> = {
   custom: {
     eyebrow: "// Made to Order",
     title: "Custom Builds, Made to Order",
@@ -18,7 +26,11 @@ const EMPTY_STATES: Partial<Record<"custom" | "new" | "clearance", EmptyStateCon
   },
 };
 
-export const SHOP_SECTIONS = { custom: "CUSTOM", new: "NEW", clearance: "CLEARANCE" } as const;
+export const SHOP_SECTIONS = {
+  custom: "CUSTOM",
+  new: "NEW",
+  clearance: "CLEARANCE",
+} as const;
 export type ShopSectionKey = keyof typeof SHOP_SECTIONS;
 
 /** Shared shop listing (sort bar + grid) used by /shop and each section route. */
@@ -42,7 +54,12 @@ export async function ShopCatalog({
 
   return (
     <>
-      <ShopSortBar total={result.total} page={page} pages={result.pages} sort={sort} />
+      <ShopSortBar
+        total={result.total}
+        page={page}
+        pages={result.pages}
+        sort={sort}
+      />
       <ShopGrid
         items={result.items}
         page={page}

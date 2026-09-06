@@ -15,7 +15,10 @@ import { isStrongPassword } from "../password";
  */
 export const auth = betterAuth({
   appName: "KeebForge",
-  baseURL: process.env.NODE_ENV === "production" ? process.env.BETTER_AUTH_URL ?? "https://keebforge.in" : "http://localhost:3000",
+  baseURL:
+    process.env.NODE_ENV === "production"
+      ? (process.env.BETTER_AUTH_URL ?? "https://keebforge.in")
+      : "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: { enabled: true },
@@ -47,9 +50,12 @@ export const auth = betterAuth({
       // Enforce the register-page password policy server-side (sign-up and
       // password change only — sign-in is never gated on strength).
       if (ctx.path === "/sign-up/email" || ctx.path === "/change-password") {
-        const password = (ctx.body as { password?: unknown } | undefined)?.password;
+        const password = (ctx.body as { password?: unknown } | undefined)
+          ?.password;
         if (typeof password === "string" && !isStrongPassword(password)) {
-          throw new APIError("BAD_REQUEST", { message: "Password does not meet the requirements." });
+          throw new APIError("BAD_REQUEST", {
+            message: "Password does not meet the requirements.",
+          });
         }
       }
     }),

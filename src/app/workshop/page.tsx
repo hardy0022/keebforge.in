@@ -20,7 +20,15 @@ export default async function RepairPage() {
         await prisma.address.findMany({
           where: { profileId: profile.id },
           orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
-          select: { id: true, label: true, streetAddress: true, city: true, state: true, postalCode: true, isDefault: true },
+          select: {
+            id: true,
+            label: true,
+            streetAddress: true,
+            city: true,
+            state: true,
+            postalCode: true,
+            isDefault: true,
+          },
         })
       ).map((a) => ({ ...a }))
     : [];
@@ -31,13 +39,18 @@ export default async function RepairPage() {
         <p className="sec-num">{"// Workshop"}</p>
         <h1 className="ri-hero-title">Keyboard Workshop</h1>
         <p className="ri-hero-desc">
-          Repairs, custom work, builds, restoration, and technical services for keyboards and desk setups —
-          tell us what you&apos;re working on and we&apos;ll help you figure out the next step.
+          Repairs, custom work, builds, restoration, and technical services for
+          keyboards and desk setups — tell us what you&apos;re working on and
+          we&apos;ll help you figure out the next step.
         </p>
       </header>
 
       <RepairIntake
-        defaults={{ name: profile?.name ?? "", email: profile?.email ?? "", phone: profile?.phone ?? "" }}
+        defaults={{
+          name: profile?.name ?? "",
+          email: profile?.email ?? "",
+          phone: profile?.phone ?? "",
+        }}
         addresses={addresses}
       />
 

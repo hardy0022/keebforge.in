@@ -3,20 +3,39 @@ import Image from "next/image";
 import { Reveal } from "@/components/home/Reveal";
 import type { HomeWork } from "@/lib/home";
 
-const MODS_POINTS = ["Keyboard modifications", "Switch lubing", "Stabilizer tuning", "Soldering & switch work"];
+const MODS_POINTS = [
+  "Keyboard modifications",
+  "Switch lubing",
+  "Stabilizer tuning",
+  "Soldering & switch work",
+];
 
-function PathMedia({ image, title }: { image?: { url: string; alt?: string }; title: string }) {
+function PathMedia({
+  image,
+  title,
+}: {
+  image?: { url: string; alt?: string };
+  title: string;
+}) {
   if (!image) return <div className="hp-path-media" />;
   return (
     <div className="hp-path-media">
-      <Image src={image.url} alt={image.alt ?? title} fill sizes="(min-width: 1024px) 40vw, 100vw" />
+      <Image
+        src={image.url}
+        alt={image.alt ?? title}
+        fill
+        sizes="(min-width: 1024px) 40vw, 100vw"
+      />
     </div>
   );
 }
 
 export function ModsWorkshop({ work }: { work: HomeWork[] }) {
-  const modsImage = work.find((w) => w.category === "CUSTOM_BUILD" || w.category === "MOD")?.images[0] ?? work[0]?.images[0];
-  const workshopImage = work.find((w) => w.category === "REPAIR")?.images[0] ?? work[0]?.images[0];
+  const modsImage =
+    work.find((w) => w.category === "CUSTOM_BUILD" || w.category === "MOD")
+      ?.images[0] ?? work[0]?.images[0];
+  const workshopImage =
+    work.find((w) => w.category === "REPAIR")?.images[0] ?? work[0]?.images[0];
 
   return (
     <section className="hp-pathways" aria-label="Mods and workshop">
@@ -47,15 +66,21 @@ export function ModsWorkshop({ work }: { work: HomeWork[] }) {
           </p>
           <h2 className="hp-path-title">Fix it right.</h2>
           <ul className="hp-path-list">
-            {["Repairs", "Restoration", "Custom work", "Electronics"].map((pt) => (
-              <li key={pt}>{pt}</li>
-            ))}
+            {["Repairs", "Restoration", "Custom work", "Electronics"].map(
+              (pt) => (
+                <li key={pt}>{pt}</li>
+              ),
+            )}
           </ul>
           <span className="btn-ghost">
             Visit Workshop <span aria-hidden="true">→</span>
           </span>
         </div>
-        <Link href="/workshop" className="hp-stretch" aria-label="Visit the workshop" />
+        <Link
+          href="/workshop"
+          className="hp-stretch"
+          aria-label="Visit the workshop"
+        />
       </Reveal>
     </section>
   );

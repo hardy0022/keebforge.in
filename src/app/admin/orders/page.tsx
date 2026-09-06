@@ -11,13 +11,30 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const ORDER_STATUSES = Object.entries(ORDER_STATUS_LABELS) as [string, string][];
-const PAYMENT_STATUSES = ["PENDING", "PARTIALLY_PAID", "PAID", "FAILED", "REFUNDED"] as const;
+const ORDER_STATUSES = Object.entries(ORDER_STATUS_LABELS) as [
+  string,
+  string,
+][];
+const PAYMENT_STATUSES = [
+  "PENDING",
+  "PARTIALLY_PAID",
+  "PAID",
+  "FAILED",
+  "REFUNDED",
+] as const;
 
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; payment?: string; from?: string; to?: string; sort?: string; page?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    payment?: string;
+    from?: string;
+    to?: string;
+    sort?: string;
+    page?: string;
+  }>;
 }) {
   await requirePermission("order", "view");
   const sp = await searchParams;
@@ -50,15 +67,46 @@ export default async function AdminOrdersPage({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ fontFamily: "var(--ff-display)", fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <h1
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.35rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+          }}
+        >
           Orders <span className="muted num">({result.total})</span>
         </h1>
       </div>
 
-      <form method="get" action="/admin/orders" style={{ display: "flex", flexWrap: "wrap", gap: 10 }} className="admin-card">
-        <input className="input" name="q" defaultValue={sp.q} placeholder="Search order #, name or email" style={{ flex: "1 1 200px" }} />
-        <select className="select" name="status" defaultValue={sp.status ?? ""} style={{ flex: "0 1 170px" }}>
+      <form
+        method="get"
+        action="/admin/orders"
+        style={{ display: "flex", flexWrap: "wrap", gap: 10 }}
+        className="admin-card"
+      >
+        <input
+          className="input"
+          name="q"
+          defaultValue={sp.q}
+          placeholder="Search order #, name or email"
+          style={{ flex: "1 1 200px" }}
+        />
+        <select
+          className="select"
+          name="status"
+          defaultValue={sp.status ?? ""}
+          style={{ flex: "0 1 170px" }}
+        >
           <option value="">All statuses</option>
           {ORDER_STATUSES.map(([value, label]) => (
             <option key={value} value={value}>
@@ -66,7 +114,12 @@ export default async function AdminOrdersPage({
             </option>
           ))}
         </select>
-        <select className="select" name="payment" defaultValue={sp.payment ?? ""} style={{ flex: "0 1 140px" }}>
+        <select
+          className="select"
+          name="payment"
+          defaultValue={sp.payment ?? ""}
+          style={{ flex: "0 1 140px" }}
+        >
           <option value="">All payments</option>
           {PAYMENT_STATUSES.map((p) => (
             <option key={p} value={p}>
@@ -74,9 +127,26 @@ export default async function AdminOrdersPage({
             </option>
           ))}
         </select>
-        <input className="input" type="date" name="from" defaultValue={sp.from} style={{ flex: "0 1 150px" }} />
-        <input className="input" type="date" name="to" defaultValue={sp.to} style={{ flex: "0 1 150px" }} />
-        <select className="select" name="sort" defaultValue={sp.sort ?? "newest"} style={{ flex: "0 1 150px" }}>
+        <input
+          className="input"
+          type="date"
+          name="from"
+          defaultValue={sp.from}
+          style={{ flex: "0 1 150px" }}
+        />
+        <input
+          className="input"
+          type="date"
+          name="to"
+          defaultValue={sp.to}
+          style={{ flex: "0 1 150px" }}
+        />
+        <select
+          className="select"
+          name="sort"
+          defaultValue={sp.sort ?? "newest"}
+          style={{ flex: "0 1 150px" }}
+        >
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
           <option value="amount-desc">Highest amount</option>
@@ -97,7 +167,8 @@ export default async function AdminOrdersPage({
       {result.items.length === 0 ? (
         <div className="empty">
           <b>No orders match</b>
-          Try widening the filters — or new orders will appear here after checkout is live.
+          Try widening the filters — or new orders will appear here after
+          checkout is live.
         </div>
       ) : (
         <div className="admin-card" style={{ padding: 8 }}>
@@ -119,30 +190,45 @@ export default async function AdminOrdersPage({
                 {result.items.map((o) => (
                   <tr key={o.id}>
                     <td>
-                      <Link href={`/admin/orders/${o.orderNumber}`} style={{ color: "var(--acc)", fontWeight: 600 }}>
+                      <Link
+                        href={`/admin/orders/${o.orderNumber}`}
+                        style={{ color: "var(--acc)", fontWeight: 600 }}
+                      >
                         {o.orderNumber}
                       </Link>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: "0.82rem" }}>{o.customerName}</div>
+                      <div style={{ fontWeight: 600, fontSize: "0.82rem" }}>
+                        {o.customerName}
+                      </div>
                       <div className="muted num" style={{ fontSize: "0.7rem" }}>
                         {o.customerEmail}
                       </div>
                     </td>
                     <td>
-                      <span className="badge badge-purple">{ORDER_TYPE_LABELS[o.type]}</span>
+                      <span className="badge badge-purple">
+                        {ORDER_TYPE_LABELS[o.type]}
+                      </span>
                     </td>
                     <td>
-                      <span className="badge">{ORDER_STATUS_LABELS[o.status]}</span>
+                      <span className="badge">
+                        {ORDER_STATUS_LABELS[o.status]}
+                      </span>
                     </td>
                     <td>
-                      <span className={`badge ${o.paymentStatus === "PAID" ? "badge-ok" : o.paymentStatus === "FAILED" ? "badge-err" : "badge-warn"}`}>
+                      <span
+                        className={`badge ${o.paymentStatus === "PAID" ? "badge-ok" : o.paymentStatus === "FAILED" ? "badge-err" : "badge-warn"}`}
+                      >
                         {o.paymentStatus}
                       </span>
                     </td>
-                    <td className="num muted">{o._count.items + o._count.services + o._count.repairs}</td>
+                    <td className="num muted">
+                      {o._count.items + o._count.services + o._count.repairs}
+                    </td>
                     <td className="num">{formatINR(o.total)}</td>
-                    <td className="muted num">{fmtIST(o.createdAt, { day: "2-digit", month: "short" })}</td>
+                    <td className="muted num">
+                      {fmtIST(o.createdAt, { day: "2-digit", month: "short" })}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -152,14 +238,37 @@ export default async function AdminOrdersPage({
       )}
 
       {result.pages > 1 && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center" }}>
-          <Link className="btn-admin sm" href={link({ page: result.page - 1 })} style={result.page <= 1 ? { pointerEvents: "none", opacity: 0.4 } : undefined}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Link
+            className="btn-admin sm"
+            href={link({ page: result.page - 1 })}
+            style={
+              result.page <= 1
+                ? { pointerEvents: "none", opacity: 0.4 }
+                : undefined
+            }
+          >
             ← Prev
           </Link>
           <span className="muted num">
             Page {result.page} of {result.pages}
           </span>
-          <Link className="btn-admin sm" href={link({ page: result.page + 1 })} style={result.page >= result.pages ? { pointerEvents: "none", opacity: 0.4 } : undefined}>
+          <Link
+            className="btn-admin sm"
+            href={link({ page: result.page + 1 })}
+            style={
+              result.page >= result.pages
+                ? { pointerEvents: "none", opacity: 0.4 }
+                : undefined
+            }
+          >
             Next →
           </Link>
         </div>

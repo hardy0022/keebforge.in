@@ -16,12 +16,17 @@ type VariantProp = {
   options?: Record<string, string> | null;
 };
 
-const labelize = (k: string) => k.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const labelize = (k: string) =>
+  k.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 /* Option groups are derived entirely from variant.options JSON (e.g. {"case color": "Black"})
    so any product's configuration surfaces automatically. Empty → legacy dropdown mode. */
 function buildGroups(variants: VariantProp[]) {
-  if (!variants.length || variants.some((v) => !v.options || Object.keys(v.options).length === 0)) return [];
+  if (
+    !variants.length ||
+    variants.some((v) => !v.options || Object.keys(v.options).length === 0)
+  )
+    return [];
   const order: string[] = [];
   const values = new Map<string, Set<string>>();
   for (const v of variants) {
@@ -34,7 +39,11 @@ function buildGroups(variants: VariantProp[]) {
       values.get(k)!.add(val);
     }
   }
-  return order.map((k) => ({ name: k, label: labelize(k), values: [...values.get(k)!] }));
+  return order.map((k) => ({
+    name: k,
+    label: labelize(k),
+    values: [...values.get(k)!],
+  }));
 }
 
 export function AddToCart({
@@ -48,7 +57,9 @@ export function AddToCart({
 }) {
   const router = useRouter();
   const groups = useMemo(() => buildGroups(variants), [variants]);
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string>
+  >({});
   const [variantId, setVariantId] = useState("");
   const [qty, setQty] = useState(1);
   const [buyNow, setBuyNow] = useState(false);
@@ -66,7 +77,9 @@ export function AddToCart({
         : null
       : (variants.find((v) => v.id === variantId) ?? null);
 
-  const available = selected ? Math.max(0, selected.stock - selected.reservedQuantity) : baseAvailable;
+  const available = selected
+    ? Math.max(0, selected.stock - selected.reservedQuantity)
+    : baseAvailable;
   const out = available <= 0;
 
   useEffect(() => {
@@ -74,9 +87,12 @@ export function AddToCart({
   }, [state, buyNow, router]);
 
   const valueEnabled = (group: string, value: string) =>
-    variants.some((v) =>
-      v.options?.[group] === value &&
-      Object.entries(selectedOptions).every(([k, val]) => k === group || !val || v.options?.[k] === val)
+    variants.some(
+      (v) =>
+        v.options?.[group] === value &&
+        Object.entries(selectedOptions).every(
+          ([k, val]) => k === group || !val || v.options?.[k] === val,
+        ),
     );
 
   return (
@@ -91,9 +107,17 @@ export function AddToCart({
             <div key={g.name}>
               <span className="product-option-label">
                 {g.label}
-                {selectedOptions[g.name] ? <em>: {selectedOptions[g.name]}</em> : <em> — select one</em>}
+                {selectedOptions[g.name] ? (
+                  <em>: {selectedOptions[g.name]}</em>
+                ) : (
+                  <em> — select one</em>
+                )}
               </span>
-              <div className="option-pills" role="radiogroup" aria-label={g.label}>
+              <div
+                className="option-pills"
+                role="radiogroup"
+                aria-label={g.label}
+              >
                 {g.values.map((value) => {
                   const active = selectedOptions[g.name] === value;
                   const enabled = valueEnabled(g.name, value);
@@ -119,13 +143,17 @@ export function AddToCart({
             </div>
           ))}
           {!complete && (
-            <p className="text-sm text-[var(--t3)]">Pick an option for every field to continue.</p>
+            <p className="text-sm text-[var(--t3)]">
+              Pick an option for every field to continue.
+            </p>
           )}
         </div>
       ) : (
         variants.length > 0 && (
           <label className="flex flex-col gap-2">
-            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--t3)]">Variant</span>
+            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--t3)]">
+              Variant
+            </span>
             <select
               value={variantId}
               onChange={(e) => {
@@ -145,33 +173,39 @@ export function AddToCart({
       )}
 
       <div className="product-buy-actions">
+        <button
+          type="submit"
+          className="btn-prime btn-prime-lg product-buy-btn"
+          disabled={pending || out || (groups.length > 0 && !complete)}
+          onClick={() => setBuyNow(false)}
+          onMouseEnter={() => cartIconRef.current?.startAnimation()}
+          onMouseLeave={() => cartIconRef.current?.stopAnimation()}
+        >
+          {!out && <CartIcon ref={cartIconRef} size={16} strokeWidth={1.8} />}
+          {out ? "Out of Stock" : pending ? "Adding…" : "Add to Cart"}
+        </button>
+        {!out && (
           <button
             type="submit"
-            className="btn-prime btn-prime-lg product-buy-btn"
-            disabled={pending || out || (groups.length > 0 && !complete)}
-            onClick={() => setBuyNow(false)}
-            onMouseEnter={() => cartIconRef.current?.startAnimation()}
-            onMouseLeave={() => cartIconRef.current?.stopAnimation()}
+            className="btn-ghost product-buynow-btn"
+            disabled={pending || (groups.length > 0 && !complete)}
+            onClick={() => setBuyNow(true)}
           >
-            {!out && <CartIcon ref={cartIconRef} size={16} strokeWidth={1.8} />}
-            {out ? "Out of Stock" : pending ? "Adding…" : "Add to Cart"}
+            Buy Now
           </button>
-          {!out && (
-            <button
-              type="submit"
-              className="btn-ghost product-buynow-btn"
-              disabled={pending || (groups.length > 0 && !complete)}
-              onClick={() => setBuyNow(true)}
-            >
-              Buy Now
-            </button>
-          )}
-        </div>
+        )}
+      </div>
 
-      {state?.error && <p className="text-sm text-[var(--err)]">{state.error}</p>}
+      {state?.error && (
+        <p className="text-sm text-[var(--err)]">{state.error}</p>
+      )}
       {state?.ok && !buyNow && (
         <p className="text-sm text-[var(--ok)]">
-          Added to cart{state.count != null ? ` — ${state.count} item${state.count === 1 ? "" : "s"} in cart` : ""}.
+          Added to cart
+          {state.count != null
+            ? ` — ${state.count} item${state.count === 1 ? "" : "s"} in cart`
+            : ""}
+          .
         </p>
       )}
     </form>

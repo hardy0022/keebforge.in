@@ -31,9 +31,17 @@ export const viewport: Viewport = {
   themeColor: "#080a0c",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${spaceGrotesk.variable} ${inter.variable}`}
+    >
       <body className="antialiased page-layout">
         <SiteChrome footer={<SiteFooter />}>{children}</SiteChrome>
         <Analytics />

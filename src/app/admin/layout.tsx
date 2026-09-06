@@ -8,7 +8,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   // Authorization happens here, server-side, before any admin data renders:
   // no session → /login; non-admin role → /unauthorized.
   const ctx = await requireAdminContext();

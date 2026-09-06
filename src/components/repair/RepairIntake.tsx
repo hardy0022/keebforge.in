@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { submitRepairRequest, type RepairRequestState } from "@/app/actions/repair-request";
+import {
+  submitRepairRequest,
+  type RepairRequestState,
+} from "@/app/actions/repair-request";
 import { INDIAN_STATES } from "@/lib/indian-states";
 
 export type AddressDTO = {
@@ -16,23 +19,59 @@ export type AddressDTO = {
 };
 
 const SERVICE_CARDS = [
-  { id: "custom", title: "Custom Work", desc: "Build, modify, tune, or customize your keyboard." },
-  { id: "repair", title: "Repair", desc: "Diagnose and repair keyboards, mice, PCBs, and electronics." },
-  { id: "unsure", title: "Not sure", desc: "Describe the problem and we'll help determine the right service." },
+  {
+    id: "custom",
+    title: "Custom Work",
+    desc: "Build, modify, tune, or customize your keyboard.",
+  },
+  {
+    id: "repair",
+    title: "Repair",
+    desc: "Diagnose and repair keyboards, mice, PCBs, and electronics.",
+  },
+  {
+    id: "unsure",
+    title: "Not sure",
+    desc: "Describe the problem and we'll help determine the right service.",
+  },
 ] as const;
 
 type ServiceType = (typeof SERVICE_CARDS)[number]["id"];
 
 const CUSTOM_WORK = [
-  "Custom Build", "Switch Modification", "Stabilizer Work", "Lubing", "Soldering",
-  "PCB Work", "Firmware", "Case / Plate", "Keycaps", "Full Custom Build", "Other",
+  "Custom Build",
+  "Switch Modification",
+  "Stabilizer Work",
+  "Lubing",
+  "Soldering",
+  "PCB Work",
+  "Firmware",
+  "Case / Plate",
+  "Keycaps",
+  "Full Custom Build",
+  "Other",
 ];
 const REPAIR_WORK = [
-  "Not powering on", "Keys not working", "Connection issue", "PCB issue", "Switch issue",
-  "RGB issue", "Firmware issue", "Physical damage", "Liquid damage", "Other",
+  "Not powering on",
+  "Keys not working",
+  "Connection issue",
+  "PCB issue",
+  "Switch issue",
+  "RGB issue",
+  "Firmware issue",
+  "Physical damage",
+  "Liquid damage",
+  "Other",
 ];
 
-const CONDITIONS = ["Working but has issues", "Partially working", "Not powering on", "Cosmetic only", "Brand new (parts only)", "Other"];
+const CONDITIONS = [
+  "Working but has issues",
+  "Partially working",
+  "Not powering on",
+  "Cosmetic only",
+  "Brand new (parts only)",
+  "Other",
+];
 const DEVICES = [
   { id: "KEYBOARD", label: "Keyboard" },
   { id: "MOUSE", label: "Mouse" },
@@ -51,11 +90,18 @@ function workOptions(service: ServiceType): string[] {
       : service === "repair"
         ? REPAIR_WORK
         : // unsure: both lists merged, deduped ("Other" appears in each)
-          [...new Set([...CUSTOM_WORK.filter((w) => w !== "Full Custom Build"), ...REPAIR_WORK])];
+          [
+            ...new Set([
+              ...CUSTOM_WORK.filter((w) => w !== "Full Custom Build"),
+              ...REPAIR_WORK,
+            ]),
+          ];
   const sorted = [...list].sort((a, b) => a.localeCompare(b));
   // keep "Other" pinned to the end
   const i = sorted.indexOf("Other");
-  return i === -1 ? sorted : [...sorted.slice(0, i), ...sorted.slice(i + 1), "Other"];
+  return i === -1
+    ? sorted
+    : [...sorted.slice(0, i), ...sorted.slice(i + 1), "Other"];
 }
 
 export function RepairIntake({
@@ -65,7 +111,10 @@ export function RepairIntake({
   defaults: { name: string; email: string; phone: string };
   addresses: AddressDTO[];
 }) {
-  const [state, formAction, pending] = useActionState<RepairRequestState, FormData>(submitRepairRequest, {});
+  const [state, formAction, pending] = useActionState<
+    RepairRequestState,
+    FormData
+  >(submitRepairRequest, {});
   const [phase, setPhase] = useState<"form" | "review">("form");
 
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
@@ -83,7 +132,8 @@ export function RepairIntake({
   const [phone, setPhone] = useState(defaults.phone);
   const [contactNotes, setContactNotes] = useState("");
   const [shippingMethod, setShippingMethod] = useState("SHIP");
-  const defaultAddress = addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+  const defaultAddress =
+    addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
   const [useAddressId, setUseAddressId] = useState(defaultAddress?.id ?? "");
   const [street, setStreet] = useState("");
   const [landmark, setLandmark] = useState("");
@@ -94,18 +144,30 @@ export function RepairIntake({
   const [gateError, setGateError] = useState<string | null>(null);
 
   const toggleWork = (w: string) =>
-    setWorkTypes((cur) => (cur.includes(w) ? cur.filter((x) => x !== w) : [...cur, w]));
+    setWorkTypes((cur) =>
+      cur.includes(w) ? cur.filter((x) => x !== w) : [...cur, w],
+    );
 
   const missing: string[] = [];
   if (!serviceType) missing.push("a service type");
   if (!brand.trim()) missing.push("the brand");
   if (model.trim().length < 2) missing.push("the model / PCB");
   if (workTypes.length === 0) missing.push("at least one work type");
-  if (description.trim().length < 20) missing.push("a description (20+ characters)");
-  if (firstName.trim().length < 1 || lastName.trim().length < 1) missing.push("your first and last name");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) missing.push("a valid email");
+  if (description.trim().length < 20)
+    missing.push("a description (20+ characters)");
+  if (firstName.trim().length < 1 || lastName.trim().length < 1)
+    missing.push("your first and last name");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()))
+    missing.push("a valid email");
   if (phone.trim().length < 10) missing.push("a valid phone number");
-  if (shippingMethod !== "UNSURE" && !useAddressId && (!street.trim() || !city.trim() || !state_.trim() || !/^\d{6}$/.test(postalCode.trim())))
+  if (
+    shippingMethod !== "UNSURE" &&
+    !useAddressId &&
+    (!street.trim() ||
+      !city.trim() ||
+      !state_.trim() ||
+      !/^\d{6}$/.test(postalCode.trim()))
+  )
     missing.push("the full pickup address");
 
   const goReview = () => {
@@ -121,17 +183,23 @@ export function RepairIntake({
   if (state.ok && state.orderNumber) {
     return (
       <div className="ri-done panel">
-        <div className="ri-done-badge" aria-hidden="true">✓</div>
+        <div className="ri-done-badge" aria-hidden="true">
+          ✓
+        </div>
         <h2 className="ri-done-title">Request Received</h2>
         <p className="ri-done-text">
-          We&apos;ve received your request. We&apos;ll review the details and get back to you with the next steps.
-          Final price will be confirmed after inspection.
+          We&apos;ve received your request. We&apos;ll review the details and
+          get back to you with the next steps. Final price will be confirmed
+          after inspection.
         </p>
         <p className="ri-ref">
           Reference <strong>{state.orderNumber}</strong>
         </p>
         <div className="ri-done-actions">
-          <Link href={`/order/success/${state.orderNumber}`} className="btn-prime">
+          <Link
+            href={`/order/success/${state.orderNumber}`}
+            className="btn-prime"
+          >
             View Request
           </Link>
           <Link href="/" className="btn-ghost">
@@ -142,7 +210,8 @@ export function RepairIntake({
     );
   }
 
-  const serviceLabel = SERVICE_CARDS.find((s) => s.id === serviceType)?.title ?? "—";
+  const serviceLabel =
+    SERVICE_CARDS.find((s) => s.id === serviceType)?.title ?? "—";
   const deviceLabel = DEVICES.find((d) => d.id === deviceType)?.label ?? "—";
   const shipLabel = SHIPPING.find((s) => s.id === shippingMethod)?.label ?? "—";
   const selectedAddress = addresses.find((a) => a.id === useAddressId) ?? null;
@@ -185,21 +254,61 @@ export function RepairIntake({
             <p className="panel-tag">Final Check</p>
             <h2 className="panel-title">Review Your Request</h2>
             <dl className="ri-review-grid">
-              <div><dt>Service type</dt><dd>{serviceLabel}</dd></div>
-              <div><dt>Device</dt><dd>{deviceLabel}</dd></div>
-              <div><dt>Brand</dt><dd>{brand}</dd></div>
-              <div><dt>Model / PCB</dt><dd>{model}</dd></div>
-              <div className="ri-span"><dt>Requested work</dt><dd>{workTypes.join(", ")}</dd></div>
-              <div className="ri-span"><dt>Description</dt><dd>{description}</dd></div>
-              <div><dt>Condition</dt><dd>{condition}</dd></div>
-              <div><dt>Budget estimate</dt><dd>{budget.trim() || "—"}</dd></div>
-              <div><dt>Name</dt><dd>{`${firstName} ${lastName}`.trim()}</dd></div>
-              <div><dt>Email</dt><dd>{email}</dd></div>
-              <div><dt>WhatsApp / Phone</dt><dd>{phone}</dd></div>
-              <div><dt>Shipping</dt><dd>{shipLabel}</dd></div>
+              <div>
+                <dt>Service type</dt>
+                <dd>{serviceLabel}</dd>
+              </div>
+              <div>
+                <dt>Device</dt>
+                <dd>{deviceLabel}</dd>
+              </div>
+              <div>
+                <dt>Brand</dt>
+                <dd>{brand}</dd>
+              </div>
+              <div>
+                <dt>Model / PCB</dt>
+                <dd>{model}</dd>
+              </div>
+              <div className="ri-span">
+                <dt>Requested work</dt>
+                <dd>{workTypes.join(", ")}</dd>
+              </div>
+              <div className="ri-span">
+                <dt>Description</dt>
+                <dd>{description}</dd>
+              </div>
+              <div>
+                <dt>Condition</dt>
+                <dd>{condition}</dd>
+              </div>
+              <div>
+                <dt>Budget estimate</dt>
+                <dd>{budget.trim() || "—"}</dd>
+              </div>
+              <div>
+                <dt>Name</dt>
+                <dd>{`${firstName} ${lastName}`.trim()}</dd>
+              </div>
+              <div>
+                <dt>Email</dt>
+                <dd>{email}</dd>
+              </div>
+              <div>
+                <dt>WhatsApp / Phone</dt>
+                <dd>{phone}</dd>
+              </div>
+              <div>
+                <dt>Shipping</dt>
+                <dd>{shipLabel}</dd>
+              </div>
               {shippingMethod !== "UNSURE" && (
                 <div className="ri-span">
-                  <dt>{shippingMethod === "SHIP" ? "Shipping address" : "Pickup address"}</dt>
+                  <dt>
+                    {shippingMethod === "SHIP"
+                      ? "Shipping address"
+                      : "Pickup address"}
+                  </dt>
                   <dd>
                     {selectedAddress
                       ? `${selectedAddress.streetAddress}, ${selectedAddress.city}, ${selectedAddress.state} ${selectedAddress.postalCode}`
@@ -209,10 +318,16 @@ export function RepairIntake({
               )}
             </dl>
             {(state.error || gateError) && (
-              <p role="alert" className="ri-error">{state.error ?? gateError}</p>
+              <p role="alert" className="ri-error">
+                {state.error ?? gateError}
+              </p>
             )}
             <div className="ri-review-actions">
-              <button type="button" className="btn-ghost" onClick={() => setPhase("form")}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setPhase("form")}
+              >
                 Edit Request
               </button>
             </div>
@@ -251,8 +366,16 @@ export function RepairIntake({
                 <label>Device type</label>
                 <div className="pill-radio-group">
                   {DEVICES.map((dv) => (
-                    <label key={dv.id} className={`pill-radio${deviceType === dv.id ? " selected" : ""}`}>
-                      <input type="radio" name="deviceTypeRadio" checked={deviceType === dv.id} onChange={() => setDeviceType(dv.id)} />
+                    <label
+                      key={dv.id}
+                      className={`pill-radio${deviceType === dv.id ? " selected" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        name="deviceTypeRadio"
+                        checked={deviceType === dv.id}
+                        onChange={() => setDeviceType(dv.id)}
+                      />
                       {dv.label}
                     </label>
                   ))}
@@ -261,11 +384,21 @@ export function RepairIntake({
               <div className="ri-field-row">
                 <div className="form-row">
                   <label htmlFor="ri-brand">Brand</label>
-                  <input id="ri-brand" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Keychron, Logitech…" />
+                  <input
+                    id="ri-brand"
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    placeholder="e.g. Keychron, Logitech…"
+                  />
                 </div>
                 <div className="form-row">
                   <label htmlFor="ri-model">Model / PCB</label>
-                  <input id="ri-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. K2, G Pro X, custom PCB rev…" />
+                  <input
+                    id="ri-model"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    placeholder="e.g. K2, G Pro X, custom PCB rev…"
+                  />
                 </div>
               </div>
             </section>
@@ -276,7 +409,13 @@ export function RepairIntake({
               <h2 className="panel-title">What do you need done?</h2>
               <div className="ri-chip-row">
                 {workOptions(serviceType ?? "unsure").map((w) => (
-                  <button key={w} type="button" className={`ri-chip${workTypes.includes(w) ? " selected" : ""}`} aria-pressed={workTypes.includes(w)} onClick={() => toggleWork(w)}>
+                  <button
+                    key={w}
+                    type="button"
+                    className={`ri-chip${workTypes.includes(w) ? " selected" : ""}`}
+                    aria-pressed={workTypes.includes(w)}
+                    onClick={() => toggleWork(w)}
+                  >
                     {w}
                   </button>
                 ))}
@@ -284,15 +423,26 @@ export function RepairIntake({
               <div className="ri-field-row">
                 <div className="form-row">
                   <label htmlFor="ri-condition">Current condition</label>
-                  <select id="ri-condition" value={condition} onChange={(e) => setCondition(e.target.value)}>
+                  <select
+                    id="ri-condition"
+                    value={condition}
+                    onChange={(e) => setCondition(e.target.value)}
+                  >
                     {CONDITIONS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="form-row">
                   <label htmlFor="ri-budget">Estimated budget (optional)</label>
-                  <input id="ri-budget" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. ₹2,000–5,000" />
+                  <input
+                    id="ri-budget"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    placeholder="e.g. ₹2,000–5,000"
+                  />
                 </div>
               </div>
               <div className="form-row">
@@ -314,27 +464,64 @@ export function RepairIntake({
               <div className="ri-field-row">
                 <div className="form-row">
                   <label htmlFor="ri-first-name">First Name</label>
-                  <input id="ri-first-name" name="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" placeholder="Your first name" />
+                  <input
+                    id="ri-first-name"
+                    name="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    autoComplete="given-name"
+                    placeholder="Your first name"
+                  />
                 </div>
                 <div className="form-row">
                   <label htmlFor="ri-last-name">Last Name</label>
-                  <input id="ri-last-name" name="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} autoComplete="family-name" placeholder="Your last name" />
+                  <input
+                    id="ri-last-name"
+                    name="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    autoComplete="family-name"
+                    placeholder="Your last name"
+                  />
                 </div>
               </div>
               <div className="ri-field-row">
                 <div className="form-row">
                   <label htmlFor="ri-phone">WhatsApp / Phone</label>
-                  <input id="ri-phone" name="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="+91 9998888000" />
+                  <input
+                    id="ri-phone"
+                    name="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel"
+                    placeholder="+91 9998888000"
+                  />
                 </div>
                 <div className="form-row">
                   <label htmlFor="ri-email">Email</label>
-                  <input id="ri-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="your@email.com" />
+                  <input
+                    id="ri-email"
+                    name="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    placeholder="your@email.com"
+                  />
                 </div>
               </div>
               <div className="ri-field-row">
                 <div className="form-row">
-                  <label htmlFor="ri-notes">Additional contact info (optional)</label>
-                  <input id="ri-notes" value={contactNotes} onChange={(e) => setContactNotes(e.target.value)} placeholder="Discord, Telegram, alternate number…" />
+                  <label htmlFor="ri-notes">
+                    Additional contact info (optional)
+                  </label>
+                  <input
+                    id="ri-notes"
+                    value={contactNotes}
+                    onChange={(e) => setContactNotes(e.target.value)}
+                    placeholder="Discord, Telegram, alternate number…"
+                  />
                 </div>
               </div>
             </section>
@@ -345,52 +532,104 @@ export function RepairIntake({
               <h2 className="panel-title">Shipping / Pickup</h2>
               <div className="pill-radio-group ri-shipping-pills">
                 {SHIPPING.map((sm) => (
-                  <label key={sm.id} className={`pill-radio${shippingMethod === sm.id ? " selected" : ""}`}>
-                    <input type="radio" name="shippingRadio" checked={shippingMethod === sm.id} onChange={() => setShippingMethod(sm.id)} />
+                  <label
+                    key={sm.id}
+                    className={`pill-radio${shippingMethod === sm.id ? " selected" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="shippingRadio"
+                      checked={shippingMethod === sm.id}
+                      onChange={() => setShippingMethod(sm.id)}
+                    />
                     {sm.label}
                   </label>
                 ))}
               </div>
-              {(shippingMethod === "SHIP" || shippingMethod === "PICKUP") && (
-                addresses.length > 0 ? (
+              {(shippingMethod === "SHIP" || shippingMethod === "PICKUP") &&
+                (addresses.length > 0 ? (
                   <div className="ri-address-list">
                     {[...addresses, null].map((a) =>
                       a ? (
-                        <label key={a.id} className={`ri-address${useAddressId === a.id ? " selected" : ""}`}>
-                          <input type="radio" name="addrPick" checked={useAddressId === a.id} onChange={() => setUseAddressId(a.id)} />
+                        <label
+                          key={a.id}
+                          className={`ri-address${useAddressId === a.id ? " selected" : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name="addrPick"
+                            checked={useAddressId === a.id}
+                            onChange={() => setUseAddressId(a.id)}
+                          />
                           <span>
-                            <strong>{a.label}{a.isDefault ? " · Default" : ""}</strong>
-                            {a.streetAddress}, {a.city}, {a.state} {a.postalCode}
+                            <strong>
+                              {a.label}
+                              {a.isDefault ? " · Default" : ""}
+                            </strong>
+                            {a.streetAddress}, {a.city}, {a.state}{" "}
+                            {a.postalCode}
                           </span>
                         </label>
                       ) : (
-                        <label key="new" className={`ri-address${useAddressId === "" ? " selected" : ""}`}>
-                          <input type="radio" name="addrPick" checked={useAddressId === ""} onChange={() => setUseAddressId("")} />
-                          <span><strong>Use a different address</strong></span>
+                        <label
+                          key="new"
+                          className={`ri-address${useAddressId === "" ? " selected" : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name="addrPick"
+                            checked={useAddressId === ""}
+                            onChange={() => setUseAddressId("")}
+                          />
+                          <span>
+                            <strong>Use a different address</strong>
+                          </span>
                         </label>
-                      )
+                      ),
                     )}
                     {useAddressId === "" && (
                       <div className="ri-address-manual">
                         <div className="form-row">
                           <label htmlFor="ri-street">Street address</label>
-                          <input id="ri-street" value={street} onChange={(e) => setStreet(e.target.value)} autoComplete="street-address" placeholder="House, street…" />
+                          <input
+                            id="ri-street"
+                            value={street}
+                            onChange={(e) => setStreet(e.target.value)}
+                            autoComplete="street-address"
+                            placeholder="House, street…"
+                          />
                         </div>
                         <div className="form-row">
-                          <label htmlFor="ri-landmark">Landmark (Optional)</label>
-                          <input id="ri-landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Near metro station, opposite park…" />
+                          <label htmlFor="ri-landmark">
+                            Landmark (Optional)
+                          </label>
+                          <input
+                            id="ri-landmark"
+                            value={landmark}
+                            onChange={(e) => setLandmark(e.target.value)}
+                            placeholder="Near metro station, opposite park…"
+                          />
                         </div>
                         <div className="ri-field-row ri-field-row-3">
                           <div className="form-row">
                             <label htmlFor="ri-city">City</label>
-                            <input id="ri-city" value={city} onChange={(e) => setCity(e.target.value)} autoComplete="address-level2" />
+                            <input
+                              id="ri-city"
+                              value={city}
+                              onChange={(e) => setCity(e.target.value)}
+                              autoComplete="address-level2"
+                            />
                           </div>
                           <div className="form-row">
                             <label htmlFor="ri-pin">PIN code</label>
                             <input
                               id="ri-pin"
                               value={postalCode}
-                              onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                              onChange={(e) =>
+                                setPostalCode(
+                                  e.target.value.replace(/\D/g, "").slice(0, 6),
+                                )
+                              }
                               inputMode="numeric"
                               maxLength={6}
                               autoComplete="postal-code"
@@ -398,10 +637,17 @@ export function RepairIntake({
                           </div>
                           <div className="form-row">
                             <label htmlFor="ri-state-in">State</label>
-                            <select id="ri-state-in" value={state_} onChange={(e) => setState_(e.target.value)} autoComplete="address-level1">
+                            <select
+                              id="ri-state-in"
+                              value={state_}
+                              onChange={(e) => setState_(e.target.value)}
+                              autoComplete="address-level1"
+                            >
                               <option value="">Select state…</option>
                               {INDIAN_STATES.map((s) => (
-                                <option key={s} value={s}>{s}</option>
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
                               ))}
                             </select>
                           </div>
@@ -413,23 +659,43 @@ export function RepairIntake({
                   <div className="ri-address-manual">
                     <div className="form-row">
                       <label htmlFor="ri-street">Street address</label>
-                      <input id="ri-street" value={street} onChange={(e) => setStreet(e.target.value)} autoComplete="street-address" placeholder="House, street…" />
+                      <input
+                        id="ri-street"
+                        value={street}
+                        onChange={(e) => setStreet(e.target.value)}
+                        autoComplete="street-address"
+                        placeholder="House, street…"
+                      />
                     </div>
                     <div className="form-row">
                       <label htmlFor="ri-landmark">Landmark (Optional)</label>
-                      <input id="ri-landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Near metro station, opposite park…" />
+                      <input
+                        id="ri-landmark"
+                        value={landmark}
+                        onChange={(e) => setLandmark(e.target.value)}
+                        placeholder="Near metro station, opposite park…"
+                      />
                     </div>
                     <div className="ri-field-row ri-field-row-3">
                       <div className="form-row">
                         <label htmlFor="ri-city">City</label>
-                        <input id="ri-city" value={city} onChange={(e) => setCity(e.target.value)} autoComplete="address-level2" />
+                        <input
+                          id="ri-city"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          autoComplete="address-level2"
+                        />
                       </div>
                       <div className="form-row">
                         <label htmlFor="ri-pin">PIN code</label>
                         <input
                           id="ri-pin"
                           value={postalCode}
-                          onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          onChange={(e) =>
+                            setPostalCode(
+                              e.target.value.replace(/\D/g, "").slice(0, 6),
+                            )
+                          }
                           inputMode="numeric"
                           maxLength={6}
                           autoComplete="postal-code"
@@ -437,17 +703,23 @@ export function RepairIntake({
                       </div>
                       <div className="form-row">
                         <label htmlFor="ri-state-in">State</label>
-                        <select id="ri-state-in" value={state_} onChange={(e) => setState_(e.target.value)} autoComplete="address-level1">
+                        <select
+                          id="ri-state-in"
+                          value={state_}
+                          onChange={(e) => setState_(e.target.value)}
+                          autoComplete="address-level1"
+                        >
                           <option value="">Select state…</option>
                           {INDIAN_STATES.map((s) => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
                           ))}
                         </select>
                       </div>
                     </div>
                   </div>
-                )
-              )}
+                ))}
             </section>
           </>
         )}
@@ -464,14 +736,29 @@ export function RepairIntake({
               </div>
             ))}
           </dl>
-          <p className="ri-quote-note">Final price will be confirmed after inspection.</p>
-          {gateError && phase === "form" && <p role="alert" className="ri-error">{gateError}</p>}
+          <p className="ri-quote-note">
+            Final price will be confirmed after inspection.
+          </p>
+          {gateError && phase === "form" && (
+            <p role="alert" className="ri-error">
+              {gateError}
+            </p>
+          )}
           {phase === "form" ? (
-            <button type="button" className="btn-form-submit" onClick={goReview} disabled={pending}>
+            <button
+              type="button"
+              className="btn-form-submit"
+              onClick={goReview}
+              disabled={pending}
+            >
               Review Request
             </button>
           ) : (
-            <button type="submit" className="btn-form-submit" disabled={pending}>
+            <button
+              type="submit"
+              className="btn-form-submit"
+              disabled={pending}
+            >
               {pending ? "Submitting…" : "Submit Request →"}
             </button>
           )}

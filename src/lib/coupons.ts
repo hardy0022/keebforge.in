@@ -23,7 +23,7 @@ const normalizeCode = (code: string) => code.trim().toUpperCase();
 export async function validateCoupon(
   code: string,
   subtotalPaise: number,
-  customer: { profileId: string | null; email: string | null }
+  customer: { profileId: string | null; email: string | null },
 ): Promise<CouponResult> {
   const clean = normalizeCode(code);
   if (!clean) return { ok: false, error: "Enter a coupon code." };
@@ -49,7 +49,10 @@ export async function validateCoupon(
     });
   }
 
-  return evaluateCoupon(coupon, subtotalPaise, { usageCount, perCustomerUsage });
+  return evaluateCoupon(coupon, subtotalPaise, {
+    usageCount,
+    perCustomerUsage,
+  });
 }
 
 /**
@@ -60,7 +63,7 @@ export async function validateCoupon(
 export function couponOrderCreateData(
   eligible: CouponEligible,
   discount: number,
-  customer: { profileId: string | null; email: string }
+  customer: { profileId: string | null; email: string },
 ) {
   return {
     couponId: eligible.couponId,

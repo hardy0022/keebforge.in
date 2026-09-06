@@ -12,8 +12,9 @@ export default function NotFound() {
             doesn&apos;t register.
           </h1>
           <p className="cta-desc">
-            The page you&apos;re looking for doesn&apos;t exist or has moved. Old KeebForge URLs automatically redirect to their
-            new locations — try the homepage or browse the services.
+            The page you&apos;re looking for doesn&apos;t exist or has moved.
+            Old KeebForge URLs automatically redirect to their new locations —
+            try the homepage or browse the services.
           </p>
           <div className="flex gap-3.5 justify-center flex-wrap">
             <Link href="/" className="btn-prime btn-prime-lg">

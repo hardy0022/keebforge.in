@@ -10,7 +10,10 @@ export function ReviewDeleteButton({ reviewId }: { reviewId: string }) {
         type="submit"
         className="btn-admin sm err"
         onClick={(e) => {
-          if (!window.confirm("Delete this review permanently (with its photos)?")) e.preventDefault();
+          if (
+            !window.confirm("Delete this review permanently (with its photos)?")
+          )
+            e.preventDefault();
         }}
       >
         Delete

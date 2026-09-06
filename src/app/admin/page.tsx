@@ -24,7 +24,11 @@ const RANGES = [
   { days: 365, label: "1y" },
 ];
 
-export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+export default async function AdminDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
   await requireAdmin();
   const { range } = await searchParams;
   const rangeDays = Math.max(7, Math.min(365, Number(range) || 7));
@@ -42,13 +46,31 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ fontFamily: "var(--ff-display)", fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <h1
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.35rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+          }}
+        >
           Dashboard
         </h1>
       </div>
 
-      <div className="admin-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+      <div
+        className="admin-grid"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
+      >
         <div className="admin-stat lime">
           <span>Today&apos;s revenue</span>
           <b>{formatINR(stats.todayRevenue)}</b>
@@ -83,16 +105,31 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
         </div>
       </div>
 
-      <div className="admin-grid cols-2" style={{ gridTemplateColumns: "2fr 1fr" }}>
+      <div
+        className="admin-grid cols-2"
+        style={{ gridTemplateColumns: "2fr 1fr" }}
+      >
         <div className="admin-card">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 14,
+            }}
+          >
             <h3 style={{ marginBottom: 0 }}>Revenue — paid orders</h3>
             <div className="seg">
               {RANGES.map((r) => (
                 <Link
                   key={r.days}
                   href={`/admin?range=${r.days}`}
-                  style={{ padding: "5px 12px", borderRadius: 99, fontSize: "0.72rem", fontWeight: 700 }}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 99,
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                  }}
                   className={r.days === rangeDays ? "active" : undefined}
                 >
                   {r.label}
@@ -112,12 +149,21 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
                   <div
                     key={b.date}
                     className="chart-bar"
-                    style={{ height: `${Math.max(2, (b.total / maxTotal) * 100)}%` }}
+                    style={{
+                      height: `${Math.max(2, (b.total / maxTotal) * 100)}%`,
+                    }}
                     data-label={`${b.label} · ${formatINR(b.total)}`}
                   />
                 ))}
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }} className="muted">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginTop: 8,
+                }}
+                className="muted"
+              >
                 <span>{revenue[0]?.label}</span>
                 <span>{revenue[revenue.length - 1]?.label}</span>
               </div>
@@ -135,8 +181,20 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {pipeEntries.map(([status, count]) => (
-                <div key={status} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                  <span className="badge">{ORDER_STATUS_LABELS[status as keyof typeof ORDER_STATUS_LABELS] ?? status}</span>
+                <div
+                  key={status}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <span className="badge">
+                    {ORDER_STATUS_LABELS[
+                      status as keyof typeof ORDER_STATUS_LABELS
+                    ] ?? status}
+                  </span>
                   <b className="num">{count}</b>
                 </div>
               ))}
@@ -145,11 +203,25 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
         </div>
       </div>
 
-      <div className="admin-grid cols-2" style={{ gridTemplateColumns: "2fr 1fr" }}>
+      <div
+        className="admin-grid cols-2"
+        style={{ gridTemplateColumns: "2fr 1fr" }}
+      >
         <div className="admin-card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 6,
+            }}
+          >
             <h3 style={{ marginBottom: 0 }}>Recent orders</h3>
-            <Link href="/admin/orders" className="muted" style={{ fontSize: "0.75rem" }}>
+            <Link
+              href="/admin/orders"
+              className="muted"
+              style={{ fontSize: "0.75rem" }}
+            >
               View all →
             </Link>
           </div>
@@ -174,18 +246,35 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
                   {recentOrders.map((o) => (
                     <tr key={o.id}>
                       <td>
-                        <Link href={`/admin/orders/${o.orderNumber}`} style={{ color: "var(--acc)", fontWeight: 600 }}>
+                        <Link
+                          href={`/admin/orders/${o.orderNumber}`}
+                          style={{ color: "var(--acc)", fontWeight: 600 }}
+                        >
                           {o.orderNumber}
                         </Link>
                       </td>
-                      <td style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td
+                        style={{
+                          maxWidth: 160,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {o.customerName}
                       </td>
                       <td>
-                        <span className="badge">{ORDER_STATUS_LABELS[o.status]}</span>
+                        <span className="badge">
+                          {ORDER_STATUS_LABELS[o.status]}
+                        </span>
                       </td>
                       <td className="num">{formatINR(o.total)}</td>
-                      <td className="muted num">{fmtIST(o.createdAt, { day: "2-digit", month: "short" })}</td>
+                      <td className="muted num">
+                        {fmtIST(o.createdAt, {
+                          day: "2-digit",
+                          month: "short",
+                        })}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -194,7 +283,10 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
           )}
         </div>
 
-        <div className="admin-grid" style={{ gridTemplateColumns: "1fr", gap: 16 }}>
+        <div
+          className="admin-grid"
+          style={{ gridTemplateColumns: "1fr", gap: 16 }}
+        >
           <div className="admin-card">
             <h3>Recent activity</h3>
             {activity.length === 0 ? (
@@ -206,11 +298,23 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {activity.map((a) => (
                   <div key={a.id} style={{ fontSize: "0.78rem" }}>
-                    <Link href={`/admin/orders/${a.order.orderNumber}`} style={{ color: "var(--acc)", fontWeight: 600 }}>
+                    <Link
+                      href={`/admin/orders/${a.order.orderNumber}`}
+                      style={{ color: "var(--acc)", fontWeight: 600 }}
+                    >
                       {a.order.orderNumber}
                     </Link>{" "}
-                    <span style={{ color: "var(--t2)" }}>→ {ORDER_STATUS_LABELS[a.status]}</span>
-                    <div className="muted num">{fmtIST(a.createdAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                    <span style={{ color: "var(--t2)" }}>
+                      → {ORDER_STATUS_LABELS[a.status]}
+                    </span>
+                    <div className="muted num">
+                      {fmtIST(a.createdAt, {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -57,7 +57,14 @@ export const TTL = {
  * already a Date). Keyed by name — never by value — so content strings can't
  * be mistaken for timestamps.
  */
-const DATE_KEYS = new Set(["createdAt", "updatedAt", "date", "expiresAt", "startDate", "endDate"]);
+const DATE_KEYS = new Set([
+  "createdAt",
+  "updatedAt",
+  "date",
+  "expiresAt",
+  "startDate",
+  "endDate",
+]);
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
 function reviveDates(value: unknown): unknown {
@@ -92,7 +99,9 @@ export function defineCached<A extends unknown[], R>(
   // unstable_cache returns its stored copy on a hit without re-running the
   // callback, so the revive-aware wrapper must sit OUTSIDE it to run on both
   // hit and miss paths. updateTag/revalidateTag purge the soft tags below.
-  return cache(async (...args: A) => reviveDates(await readCached(...args))) as (...args: A) => Promise<R>;
+  return cache(async (...args: A) =>
+    reviveDates(await readCached(...args)),
+  ) as (...args: A) => Promise<R>;
 }
 
 // ─── Targeted invalidation, called by server actions after mutations ────────

@@ -24,10 +24,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { user, profile } = await getCurrentAuth();
-    const res = await validateCoupon(parsed.data.code, parsed.data.subtotalPaise, {
-      profileId: profile?.id ?? null,
-      email: user?.email ?? null,
-    });
+    const res = await validateCoupon(
+      parsed.data.code,
+      parsed.data.subtotalPaise,
+      {
+        profileId: profile?.id ?? null,
+        email: user?.email ?? null,
+      },
+    );
 
     if (!res.ok) {
       return NextResponse.json({ ok: false, error: res.error });
@@ -40,6 +44,9 @@ export async function POST(req: NextRequest) {
       type: res.coupon.type,
     });
   } catch {
-    return NextResponse.json({ ok: false, error: "Could not validate coupon." }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Could not validate coupon." },
+      { status: 500 },
+    );
   }
 }

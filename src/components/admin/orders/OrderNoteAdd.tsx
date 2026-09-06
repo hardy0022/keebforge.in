@@ -16,12 +16,36 @@ export function OrderNoteAdd({ orderId }: { orderId: string }) {
             style={{ minHeight: 44 }}
             disabled={pending}
           />
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem", color: "var(--t2)" }}>
-              <input type="checkbox" name="visibleToCustomer" value="1" disabled={pending} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: "0.78rem",
+                color: "var(--t2)",
+              }}
+            >
+              <input
+                type="checkbox"
+                name="visibleToCustomer"
+                value="1"
+                disabled={pending}
+              />
               Visible to customer
             </label>
-            <button type="submit" className="btn-admin primary" disabled={pending}>
+            <button
+              type="submit"
+              className="btn-admin primary"
+              disabled={pending}
+            >
               {pending ? <Spinner /> : "Add note"}
             </button>
           </div>

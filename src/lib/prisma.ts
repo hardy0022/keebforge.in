@@ -11,7 +11,9 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 // toggled on an already-built `next start`.
 function getPrisma() {
   if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = new PrismaClient(process.env["PRISMA_QUERY_LOG"] === "1" ? { log: ["query"] } : undefined);
+    globalForPrisma.prisma = new PrismaClient(
+      process.env["PRISMA_QUERY_LOG"] === "1" ? { log: ["query"] } : undefined,
+    );
   }
   return globalForPrisma.prisma;
 }

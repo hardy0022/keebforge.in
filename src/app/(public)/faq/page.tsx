@@ -19,7 +19,11 @@ export default function FaqPage() {
         tag="FAQ"
         title="Frequently Asked Questions"
         desc="Everything customers usually ask before sending in a keyboard or mouse for service — what gets repaired, how ordering and shipping work, pricing and payment."
-        pills={["Mail-in service across India", "Payment before work begins", "Quotes after inspection"]}
+        pills={[
+          "Mail-in service across India",
+          "Payment before work begins",
+          "Quotes after inspection",
+        ]}
       />
       <FaqList items={GENERAL_FAQ} />
       <CtaSection

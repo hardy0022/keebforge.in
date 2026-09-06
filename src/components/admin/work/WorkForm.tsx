@@ -7,7 +7,12 @@ import { saveWork } from "@/app/admin/actions/work";
 import { Spinner } from "@/components/admin/ActionForm";
 import { cldUrl } from "@/lib/cloudinary-url";
 
-type ImageItem = { key: string; file: File | null; publicId: string | null; url: string };
+type ImageItem = {
+  key: string;
+  file: File | null;
+  publicId: string | null;
+  url: string;
+};
 
 export type WorkProjectProp = {
   id: string;
@@ -23,7 +28,14 @@ export type WorkProjectProp = {
   images: { url: string; publicId?: string | null }[];
 };
 
-const CATEGORIES = ["CUSTOM_BUILD", "REPAIR", "MOD", "PCB", "MOUSE", "OTHER"] as const;
+const CATEGORIES = [
+  "CUSTOM_BUILD",
+  "REPAIR",
+  "MOD",
+  "PCB",
+  "MOUSE",
+  "OTHER",
+] as const;
 
 function label(cat: string): string {
   return cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -34,7 +46,9 @@ function fmtDate(date: string | null): string {
 }
 
 /** Auto-growing textarea: box expands with its content instead of showing a scrollbar. */
-function AutoGrowTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+function AutoGrowTextarea(
+  props: React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
   const resize = () => {
@@ -48,18 +62,34 @@ function AutoGrowTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElemen
     resize();
   }, []);
 
-  return <textarea {...props} ref={ref} onInput={(e) => { props.onInput?.(e); resize(); }} />;
+  return (
+    <textarea
+      {...props}
+      ref={ref}
+      onInput={(e) => {
+        props.onInput?.(e);
+        resize();
+      }}
+    />
+  );
 }
 
 export function WorkForm({ project }: { project?: WorkProjectProp }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<ImageItem[]>(() =>
-    (project?.images ?? []).map((img) => ({ key: `e-${img.url}`, file: null, publicId: img.publicId ?? null, url: img.url }))
+    (project?.images ?? []).map((img) => ({
+      key: `e-${img.url}`,
+      file: null,
+      publicId: img.publicId ?? null,
+      url: img.url,
+    })),
   );
   const [removed, setRemoved] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
-  const [toast, setToast] = useState<{ ok: boolean; message: string } | null>(null);
+  const [toast, setToast] = useState<{ ok: boolean; message: string } | null>(
+    null,
+  );
   const [featured, setFeatured] = useState(project?.featured ?? false);
   const [active, setActive] = useState(project?.active ?? true);
 
@@ -72,7 +102,12 @@ export function WorkForm({ project }: { project?: WorkProjectProp }) {
     }
     setItems((prev) => [
       ...prev,
-      ...files.map((f) => ({ key: `n-${f.name}-${Math.random().toString(36).slice(2, 7)}`, file: f, publicId: null, url: URL.createObjectURL(f) })),
+      ...files.map((f) => ({
+        key: `n-${f.name}-${Math.random().toString(36).slice(2, 7)}`,
+        file: f,
+        publicId: null,
+        url: URL.createObjectURL(f),
+      })),
     ]);
   }
 
@@ -123,9 +158,11 @@ export function WorkForm({ project }: { project?: WorkProjectProp }) {
       "workImages",
       JSON.stringify(
         items.map((item) =>
-          item.publicId ? { publicId: item.publicId, url: item.url } : { fileIndex: newKeyToIdx.get(item.key) ?? -1 }
-        )
-      )
+          item.publicId
+            ? { publicId: item.publicId, url: item.url }
+            : { fileIndex: newKeyToIdx.get(item.key) ?? -1 },
+        ),
+      ),
     );
 
     setPending(true);
@@ -137,67 +174,160 @@ export function WorkForm({ project }: { project?: WorkProjectProp }) {
       router.refresh();
       router.push(`/admin/work/${result.id ?? project?.id}`);
     } else {
-      setToast({ ok: false, message: result.error ?? "Unable to save the project." });
+      setToast({
+        ok: false,
+        message: result.error ?? "Unable to save the project.",
+      });
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="admin-card" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-        <h3 style={{ marginBottom: 0 }}>{project ? `Edit project: ${project.title}` : "New project"}</h3>
-        {project && (
-          <Link href={`/work/${project.slug}`}>
-            View live →
-          </Link>
-        )}
+    <form
+      onSubmit={onSubmit}
+      className="admin-card"
+      style={{ display: "flex", flexDirection: "column", gap: 16 }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <h3 style={{ marginBottom: 0 }}>
+          {project ? `Edit project: ${project.title}` : "New project"}
+        </h3>
+        {project && <Link href={`/work/${project.slug}`}>View live →</Link>}
       </div>
 
-      <div className="admin-grid cols-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
-        <input className="input" name="title" placeholder="Project title" defaultValue={project?.title ?? ""} required disabled={pending} />
-        <input className="input" name="slug" placeholder="Slug (blank = auto)" defaultValue={project?.slug ?? ""} disabled={pending} />
-        <select className="select" name="category" defaultValue={project?.category ?? "CUSTOM_BUILD"} disabled={pending}>
+      <div
+        className="admin-grid cols-2"
+        style={{
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 10,
+        }}
+      >
+        <input
+          className="input"
+          name="title"
+          placeholder="Project title"
+          defaultValue={project?.title ?? ""}
+          required
+          disabled={pending}
+        />
+        <input
+          className="input"
+          name="slug"
+          placeholder="Slug (blank = auto)"
+          defaultValue={project?.slug ?? ""}
+          disabled={pending}
+        />
+        <select
+          className="select"
+          name="category"
+          defaultValue={project?.category ?? "CUSTOM_BUILD"}
+          disabled={pending}
+        >
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {label(c)}
             </option>
           ))}
         </select>
-        <input className="input" type="date" name="date" defaultValue={fmtDate(project?.date ?? null)} disabled={pending} />
-        <input className="input" name="sortOrder" type="number" min={0} defaultValue={project?.sortOrder ?? 0} title="Lower numbers appear first" disabled={pending} />
+        <input
+          className="input"
+          type="date"
+          name="date"
+          defaultValue={fmtDate(project?.date ?? null)}
+          disabled={pending}
+        />
+        <input
+          className="input"
+          name="sortOrder"
+          type="number"
+          min={0}
+          defaultValue={project?.sortOrder ?? 0}
+          title="Lower numbers appear first"
+          disabled={pending}
+        />
         <div className="admin-actions" style={{ margin: 0 }}>
-          <button type="submit" className="btn-admin primary" disabled={pending}>
-            {pending ? <Spinner /> : project ? "Save changes" : "Create project"}
+          <button
+            type="submit"
+            className="btn-admin primary"
+            disabled={pending}
+          >
+            {pending ? (
+              <Spinner />
+            ) : project ? (
+              "Save changes"
+            ) : (
+              "Create project"
+            )}
           </button>
         </div>
       </div>
 
       <div>
         <div className="muted" style={{ fontSize: "0.78rem", marginBottom: 8 }}>
-          Images — first image is the cover. Click arrows to reorder, × to remove.
+          Images — first image is the cover. Click arrows to reorder, × to
+          remove.
         </div>
         <div className="work-image-grid">
           {items.map((item, i) => (
             <div key={item.key} className="work-image-tile">
               <img src={cldUrl(item.url, 480)} alt="" />
               <div className="work-image-controls">
-                <button type="button" className="btn-admin" aria-label="Move earlier" onClick={() => moveItem(item.key, -1)} disabled={pending || i === 0}>
+                <button
+                  type="button"
+                  className="btn-admin"
+                  aria-label="Move earlier"
+                  onClick={() => moveItem(item.key, -1)}
+                  disabled={pending || i === 0}
+                >
                   ←
                 </button>
-                <button type="button" className="btn-admin" aria-label="Move later" onClick={() => moveItem(item.key, 1)} disabled={pending || i === items.length - 1}>
+                <button
+                  type="button"
+                  className="btn-admin"
+                  aria-label="Move later"
+                  onClick={() => moveItem(item.key, 1)}
+                  disabled={pending || i === items.length - 1}
+                >
                   →
                 </button>
-                <button type="button" className="btn-admin" style={{ color: "var(--err)" }} aria-label="Remove image" onClick={() => removeItem(item.key)} disabled={pending}>
+                <button
+                  type="button"
+                  className="btn-admin"
+                  style={{ color: "var(--err)" }}
+                  aria-label="Remove image"
+                  onClick={() => removeItem(item.key)}
+                  disabled={pending}
+                >
                   ✕
                 </button>
               </div>
             </div>
           ))}
           <label className="work-image-add" role="button">
-            <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => addFiles(e.target.files)} disabled={pending} />
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => addFiles(e.target.files)}
+              disabled={pending}
+            />
             <span>+ Add images</span>
           </label>
         </div>
-        {removed.length > 0 && <div className="muted" style={{ fontSize: "0.75rem", marginTop: 6 }}>{removed.length} image(s) will be deleted on save.</div>}
+        {removed.length > 0 && (
+          <div className="muted" style={{ fontSize: "0.75rem", marginTop: 6 }}>
+            {removed.length} image(s) will be deleted on save.
+          </div>
+        )}
       </div>
 
       <AutoGrowTextarea
@@ -220,10 +350,22 @@ export function WorkForm({ project }: { project?: WorkProjectProp }) {
 
       <div className="flex items-center gap-4" style={{ fontSize: "0.85rem" }}>
         <label className="flex items-center gap-2">
-          <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} disabled={pending} /> Featured
+          <input
+            type="checkbox"
+            checked={featured}
+            onChange={(e) => setFeatured(e.target.checked)}
+            disabled={pending}
+          />{" "}
+          Featured
         </label>
         <label className="flex items-center gap-2">
-          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} disabled={pending} /> Published
+          <input
+            type="checkbox"
+            checked={active}
+            onChange={(e) => setActive(e.target.checked)}
+            disabled={pending}
+          />{" "}
+          Published
         </label>
       </div>
 

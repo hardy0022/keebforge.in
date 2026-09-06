@@ -42,7 +42,6 @@ export function AuthShell({
             <Link href={switchHref} className="btn-social auth-switch-btn">
               {switchLabel} <span aria-hidden="true">→</span>
             </Link>
-
           </aside>
         </div>
 

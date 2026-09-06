@@ -1,7 +1,11 @@
 import "server-only";
 import { v2 as cloudinary } from "cloudinary";
 
-const configured = Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+const configured = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET,
+);
 
 export function cloudinaryConfigured() {
   return configured;
@@ -29,7 +33,11 @@ const ROOT = "keebforge";
  * Products use their stable cuid (survives slug renames); repairs/orders use
  * their business ids. Never customer names/emails/phones.
  */
-export function mediaFolder(entityType: "PRODUCT" | "ORDER" | "REVIEW" | "WORK", entityId: string, role?: string): string {
+export function mediaFolder(
+  entityType: "PRODUCT" | "ORDER" | "REVIEW" | "WORK",
+  entityId: string,
+  role?: string,
+): string {
   switch (entityType) {
     case "PRODUCT": {
       // Drafts (new-product editor, before the row exists) get a staging folder
@@ -46,21 +54,37 @@ export function mediaFolder(entityType: "PRODUCT" | "ORDER" | "REVIEW" | "WORK",
   }
 }
 
-export type UploadedImage = { url: string; publicId: string; width: number; height: number };
+export type UploadedImage = {
+  url: string;
+  publicId: string;
+  width: number;
+  height: number;
+};
 
 /** Upload an image buffer to an explicit Cloudinary folder. */
-export function uploadBuffer(buffer: Buffer, opts: { folder: string; publicId?: string }): Promise<UploadedImage> {
+export function uploadBuffer(
+  buffer: Buffer,
+  opts: { folder: string; publicId?: string },
+): Promise<UploadedImage> {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: opts.folder,
-        ...(opts.publicId ? { public_id: `${opts.folder}/${opts.publicId}`, invalidate: true } : {}),
+        ...(opts.publicId
+          ? { public_id: `${opts.folder}/${opts.publicId}`, invalidate: true }
+          : {}),
         resource_type: "image",
       },
       (error, result) => {
-        if (error || !result) return reject(error ?? new Error("Upload failed."));
-        resolve({ url: result.secure_url, publicId: result.public_id, width: result.width ?? 0, height: result.height ?? 0 });
-      }
+        if (error || !result)
+          return reject(error ?? new Error("Upload failed."));
+        resolve({
+          url: result.secure_url,
+          publicId: result.public_id,
+          width: result.width ?? 0,
+          height: result.height ?? 0,
+        });
+      },
     );
     stream.end(buffer);
   });
@@ -72,7 +96,10 @@ export function uploadBuffer(buffer: Buffer, opts: { folder: string; publicId?: 
  */
 export async function deleteImage(publicId: string): Promise<boolean> {
   try {
-    const res = await cloudinary.uploader.destroy(publicId, { resource_type: "image", invalidate: true });
+    const res = await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+      invalidate: true,
+    });
     if (res.result !== "ok") {
       console.error(`[cloudinary] destroy not ok for ${publicId}:`, res.result);
       return false;
@@ -85,12 +112,26 @@ export async function deleteImage(publicId: string): Promise<boolean> {
 }
 
 /** Move an asset between folders (draft → final product folder). */
-export async function renameAsset(fromPublicId: string, toPublicId: string): Promise<UploadedImage | null> {
+export async function renameAsset(
+  fromPublicId: string,
+  toPublicId: string,
+): Promise<UploadedImage | null> {
   try {
-    const res = await cloudinary.uploader.rename(fromPublicId, toPublicId, { resource_type: "image", invalidate: true });
-    return { url: res.secure_url, publicId: res.public_id, width: res.width ?? 0, height: res.height ?? 0 };
+    const res = await cloudinary.uploader.rename(fromPublicId, toPublicId, {
+      resource_type: "image",
+      invalidate: true,
+    });
+    return {
+      url: res.secure_url,
+      publicId: res.public_id,
+      width: res.width ?? 0,
+      height: res.height ?? 0,
+    };
   } catch (e) {
-    console.error(`[cloudinary] rename failed ${fromPublicId} -> ${toPublicId}:`, e);
+    console.error(
+      `[cloudinary] rename failed ${fromPublicId} -> ${toPublicId}:`,
+      e,
+    );
     return null;
   }
 }

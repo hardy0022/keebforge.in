@@ -43,7 +43,8 @@
   --r-sm: 10px;
   --r-md: 14px;
   --r-lg: 20px;
-  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06),
+  --shadow-card:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
     0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
     0 24px 48px -12px rgba(6, 5, 12, 0.6),
     0 8px 24px -8px rgba(124, 111, 242, 0.1);
@@ -160,7 +161,13 @@ html {
 }
 
 body {
-  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124, 111, 242, 0.1) 0%, transparent 60%), var(--bg);
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      rgba(124, 111, 242, 0.1) 0%,
+      transparent 60%
+    ),
+    var(--bg);
   color: var(--t1);
   font-family: var(--ff-body);
   font-weight: 400;
@@ -217,15 +224,24 @@ ul {
 
 /* Loading placeholder blocks — subtle dark shimmer using theme surfaces. */
 .skeleton {
-  background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 50%, var(--bg2) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--bg2) 25%,
+    var(--bg3) 50%,
+    var(--bg2) 75%
+  );
   background-size: 200% 100%;
   animation: skeleton-wave 1.4s ease infinite;
   border-radius: var(--r-sm);
 }
 
 @keyframes skeleton-wave {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
 .wrap {
@@ -290,7 +306,10 @@ ul {
   background: rgba(6, 6, 8, 0.55);
   backdrop-filter: blur(12px) saturate(160%);
   -webkit-backdrop-filter: blur(12px) saturate(160%);
-  transition: background 0.4s, border-color 0.4s, backdrop-filter 0.4s;
+  transition:
+    background 0.4s,
+    border-color 0.4s,
+    backdrop-filter 0.4s;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .nav.scrolled {
@@ -365,7 +384,9 @@ ul {
   opacity: 0;
   transform: scaleX(0.4);
   transform-origin: center;
-  transition: opacity 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+  transition:
+    opacity 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
 }
 .nav-link.active::after {
   opacity: 0.85;
@@ -393,7 +414,9 @@ ul {
   border: 1px solid var(--bdr);
   border-radius: 12px;
   cursor: pointer;
-  transition: color 0.2s var(--ease-out), border-color 0.2s var(--ease-out),
+  transition:
+    color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out),
     background-color 0.2s var(--ease-out);
 }
 .nav-cart {
@@ -442,7 +465,9 @@ ul {
   background: var(--acc);
   padding: 7px 16px;
   border-radius: 99px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   flex-shrink: 0;
 }
 .nav-cta:hover {
@@ -582,7 +607,9 @@ ul {
   background: none;
   border: none;
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
   text-align: left;
   text-decoration: none;
 }
@@ -676,7 +703,9 @@ ul {
   padding: 10px 12px;
   border-radius: 8px;
   text-decoration: none;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 .nav-shop-item:hover {
   background: var(--surf);
@@ -718,13 +747,17 @@ ul {
   background: var(--acc);
   padding: 11px 24px;
   border-radius: 99px;
-  transition: transform 0.22s var(--ease-out), box-shadow 0.22s;
+  transition:
+    transform 0.22s var(--ease-out),
+    box-shadow 0.22s;
   border: none;
   cursor: pointer;
 }
 .btn-prime:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 0 32px var(--acc-glow), 0 0 0 4px var(--acc-dim);
+  box-shadow:
+    0 0 32px var(--acc-glow),
+    0 0 0 4px var(--acc-dim);
 }
 .btn-prime-lg {
   font-size: 0.92rem;
@@ -741,7 +774,10 @@ ul {
   border: 1px solid var(--bdr);
   padding: 11px 22px;
   border-radius: 99px;
-  transition: color 0.2s, border-color 0.2s, transform 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
   background: none;
   cursor: pointer;
 }
@@ -790,7 +826,10 @@ ul {
   opacity: 0;
   transform: translateY(16px);
   filter: blur(3px);
-  transition: opacity 0.65s var(--ease-out), transform 0.65s var(--ease-out), filter 0.65s var(--ease-out);
+  transition:
+    opacity 0.65s var(--ease-out),
+    transform 0.65s var(--ease-out),
+    filter 0.65s var(--ease-out);
   transition-delay: var(--reveal-delay, 0ms);
 }
 .hp-reveal.in {
@@ -853,8 +892,16 @@ ul {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(50% 70% at 78% 42%, rgba(124, 111, 242, 0.15) 0%, transparent 70%),
-    radial-gradient(38% 46% at 12% 8%, rgba(201, 243, 29, 0.05) 0%, transparent 60%);
+    radial-gradient(
+      50% 70% at 78% 42%,
+      rgba(124, 111, 242, 0.15) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      38% 46% at 12% 8%,
+      rgba(201, 243, 29, 0.05) 0%,
+      transparent 60%
+    );
 }
 .hp-hero-grid {
   position: relative;
@@ -943,8 +990,16 @@ ul {
   border: 1px solid var(--bdr);
   border-radius: 22px;
   background:
-    radial-gradient(80% 60% at 50% 68%, rgba(124, 111, 242, 0.16) 0%, transparent 62%),
-    radial-gradient(60% 46% at 18% 0%, rgba(124, 111, 242, 0.09) 0%, transparent 55%),
+    radial-gradient(
+      80% 60% at 50% 68%,
+      rgba(124, 111, 242, 0.16) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      60% 46% at 18% 0%,
+      rgba(124, 111, 242, 0.09) 0%,
+      transparent 55%
+    ),
     var(--bg1);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
@@ -963,8 +1018,18 @@ ul {
   background-size: 36px 36px;
   transform: perspective(430px) rotateX(57deg);
   transform-origin: 50% 100%;
-  mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.95) 6%, rgba(0, 0, 0, 0.4) 44%, transparent 72%);
-  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.95) 6%, rgba(0, 0, 0, 0.4) 44%, transparent 72%);
+  mask-image: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.95) 6%,
+    rgba(0, 0, 0, 0.4) 44%,
+    transparent 72%
+  );
+  -webkit-mask-image: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.95) 6%,
+    rgba(0, 0, 0, 0.4) 44%,
+    transparent 72%
+  );
 }
 /* scattered glowing purple points, denser toward center */
 .hp-hero-frame::after {
@@ -976,10 +1041,22 @@ ul {
   background-image:
     radial-gradient(rgba(179, 163, 255, 0.85) 1.2px, transparent 1.4px),
     radial-gradient(rgba(179, 163, 255, 0.5) 1px, transparent 1.2px);
-  background-size: 46px 46px, 66px 66px;
-  background-position: 0 0, 12px 18px;
-  mask-image: radial-gradient(56% 54% at 50% 60%, rgba(0, 0, 0, 0.65) 0%, transparent 86%);
-  -webkit-mask-image: radial-gradient(56% 54% at 50% 60%, rgba(0, 0, 0, 0.65) 0%, transparent 86%);
+  background-size:
+    46px 46px,
+    66px 66px;
+  background-position:
+    0 0,
+    12px 18px;
+  mask-image: radial-gradient(
+    56% 54% at 50% 60%,
+    rgba(0, 0, 0, 0.65) 0%,
+    transparent 86%
+  );
+  -webkit-mask-image: radial-gradient(
+    56% 54% at 50% 60%,
+    rgba(0, 0, 0, 0.65) 0%,
+    transparent 86%
+  );
 }
 
 /* decal notes layered around the switch — pure HTML/CSS, not baked into the asset */
@@ -1163,7 +1240,6 @@ ul {
   }
 }
 
-
 /* ─── Services ticker: thin marquee between hero and statement ──────────── */
 .home-ticker {
   position: relative;
@@ -1299,7 +1375,9 @@ ul {
   align-items: baseline;
   padding: 26px 4px;
   text-decoration: none;
-  transition: padding 0.3s var(--ease-out), background 0.3s ease;
+  transition:
+    padding 0.3s var(--ease-out),
+    background 0.3s ease;
 }
 .hp-what-row-inner:hover {
   padding-left: 12px;
@@ -1323,7 +1401,9 @@ ul {
   font-size: clamp(1.15rem, 2.6vw, 2rem);
   letter-spacing: -0.02em;
   color: var(--t1);
-  transition: color 0.3s ease, transform 0.3s var(--ease-out);
+  transition:
+    color 0.3s ease,
+    transform 0.3s var(--ease-out);
 }
 .hp-what-row-inner:hover .hp-what-name {
   color: #fff;
@@ -1337,7 +1417,9 @@ ul {
   font-size: 1.4rem;
   color: var(--acc);
   opacity: 0.35;
-  transition: opacity 0.3s ease, transform 0.3s var(--ease-out);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s var(--ease-out);
 }
 .hp-what-row-inner:hover .hp-what-arrow {
   opacity: 1;
@@ -1410,7 +1492,10 @@ ul {
   visibility: hidden;
   pointer-events: none;
   transform: translateY(0);
-  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out), visibility 0.5s;
+  transition:
+    opacity 0.5s var(--ease-out),
+    transform 0.5s var(--ease-out),
+    visibility 0.5s;
 }
 .hp-how-step.is-active {
   opacity: 1;
@@ -1546,7 +1631,11 @@ ul {
   border: 1px solid rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
 }
 .hp-feature-dot:hover {
   background: rgba(255, 255, 255, 0.85);
@@ -1817,7 +1906,10 @@ ul {
 }
 .hp-reviews-grid .product-review-card {
   flex: 1;
-  transition: transform 0.35s var(--ease-out), border-color 0.35s ease, box-shadow 0.35s ease;
+  transition:
+    transform 0.35s var(--ease-out),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
 }
 .hp-reviews-grid .product-review-card:hover {
   transform: translateY(-4px);
@@ -1839,7 +1931,12 @@ ul {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(50% 60% at 50% 62%, rgba(201, 243, 29, 0.07) 0%, rgba(124, 111, 242, 0.06) 40%, transparent 72%);
+  background: radial-gradient(
+    50% 60% at 50% 62%,
+    rgba(201, 243, 29, 0.07) 0%,
+    rgba(124, 111, 242, 0.06) 40%,
+    transparent 72%
+  );
 }
 .hp-final-inner {
   position: relative;
@@ -1987,7 +2084,10 @@ ul {
   border-radius: 10px;
   padding: 12px 16px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    transform 0.2s;
 }
 .btn-social:hover {
   border-color: var(--bdr-h);
@@ -2031,7 +2131,10 @@ ul {
   border-radius: var(--r-md);
   padding: 24px 20px;
   overflow: hidden;
-  transition: transform 0.28s var(--ease-out), border-color 0.28s, box-shadow 0.28s;
+  transition:
+    transform 0.28s var(--ease-out),
+    border-color 0.28s,
+    box-shadow 0.28s;
   display: flex;
   flex-direction: column;
   contain: layout style;
@@ -2040,7 +2143,11 @@ ul {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0%, transparent 55%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.035) 0%,
+    transparent 55%
+  );
   pointer-events: none;
 }
 .card:hover {
@@ -2128,13 +2235,20 @@ ul {
   opacity: 1;
 }
 .card-feat {
-  background: linear-gradient(140deg, rgba(212, 247, 0, 0.06) 0%, rgba(212, 247, 0, 0.01) 60%, transparent 100%);
+  background: linear-gradient(
+    140deg,
+    rgba(212, 247, 0, 0.06) 0%,
+    rgba(212, 247, 0, 0.01) 60%,
+    transparent 100%
+  );
   border-color: rgba(212, 247, 0, 0.2);
   padding: 24px;
 }
 .card-feat:hover {
   border-color: rgba(212, 247, 0, 0.45);
-  box-shadow: 0 0 80px var(--acc-glow2), var(--shadow-card);
+  box-shadow:
+    0 0 80px var(--acc-glow2),
+    var(--shadow-card);
 }
 .feat-badge {
   display: inline-block;
@@ -2176,7 +2290,9 @@ ul {
   background: var(--acc);
   padding: 12px 22px;
   border-radius: 99px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   text-align: center;
   cursor: pointer;
   border: none;
@@ -2416,7 +2532,10 @@ ul {
   border: 1px solid var(--acc);
   border-radius: 99px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
 }
 .svc-pick .cd {
   margin-bottom: 18px;
@@ -2472,7 +2591,10 @@ ul {
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
   padding: 26px 22px;
-  transition: background 0.25s, border-color 0.28s, transform 0.28s var(--ease-out);
+  transition:
+    background 0.25s,
+    border-color 0.28s,
+    transform 0.28s var(--ease-out);
 }
 .info-card:hover {
   background: var(--bg2);
@@ -2559,7 +2681,9 @@ ul {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s var(--ease-out), filter 0.4s;
+  transition:
+    transform 0.5s var(--ease-out),
+    filter 0.4s;
   filter: brightness(0.88) saturate(0.85);
 }
 .gallery-item:hover img {
@@ -2646,14 +2770,20 @@ ul {
   gap: 14px;
   width: 340px;
   flex-shrink: 0;
-  transition: border-color 0.25s, box-shadow 0.25s;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s;
   position: relative;
 }
 .review-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0%, transparent 55%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.025) 0%,
+    transparent 55%
+  );
   pointer-events: none;
 }
 .review-card:hover {
@@ -2960,7 +3090,9 @@ ul {
   font-size: 1.7rem;
   line-height: 1;
   color: var(--t3);
-  transition: color 0.15s, transform 0.15s;
+  transition:
+    color 0.15s,
+    transform 0.15s;
 }
 .star-picker-btn:hover span {
   color: var(--acc);
@@ -3059,7 +3191,9 @@ ul {
   padding: 11px 14px;
   width: 100%;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
   resize: vertical;
 }
 .form-row input::placeholder,
@@ -3092,7 +3226,9 @@ ul {
   border: none;
   cursor: pointer;
   margin-top: 8px;
-  transition: transform 0.22s var(--ease-out), box-shadow 0.22s;
+  transition:
+    transform 0.22s var(--ease-out),
+    box-shadow 0.22s;
 }
 .btn-form-submit:hover {
   transform: translateY(-2px);
@@ -3137,7 +3273,9 @@ ul {
   cursor: pointer;
   text-align: center;
   position: relative;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 .upload-zone:hover,
 .upload-zone.dropping {
@@ -3386,11 +3524,19 @@ ul {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px
+  );
   background-size: 28px 28px;
   z-index: 0;
   mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    black 20%,
+    transparent 70%
+  );
 }
 .cta-wrap {
   max-width: 600px;
@@ -3426,7 +3572,11 @@ ul {
 .cta-deco {
   position: absolute;
   inset: -40%;
-  background: radial-gradient(ellipse at center, var(--acc-dim) 0%, transparent 65%);
+  background: radial-gradient(
+    ellipse at center,
+    var(--acc-dim) 0%,
+    transparent 65%
+  );
   z-index: -1;
   pointer-events: none;
 }
@@ -3558,7 +3708,9 @@ ul {
   font-size: 0.86rem;
   line-height: 1.4;
   color: var(--t2);
-  transition: color 0.18s, transform 0.18s;
+  transition:
+    color 0.18s,
+    transform 0.18s;
   width: fit-content;
 }
 .footer-col-links a:hover {
@@ -3598,8 +3750,11 @@ ul {
   border: 1px solid var(--bdr);
   border-radius: var(--r-sm);
   cursor: pointer;
-  transition: color 0.18s var(--ease-out), border-color 0.18s var(--ease-out),
-    background-color 0.18s var(--ease-out), transform 0.18s var(--ease-out);
+  transition:
+    color 0.18s var(--ease-out),
+    border-color 0.18s var(--ease-out),
+    background-color 0.18s var(--ease-out),
+    transform 0.18s var(--ease-out);
 }
 .follow-btn svg {
   width: 17px;
@@ -3747,7 +3902,9 @@ ul {
   color: var(--t3);
   font-size: 0.8rem;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 .work-image-add:hover {
   border-color: var(--lime);
@@ -3785,7 +3942,10 @@ section[id] {
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
   overflow: hidden;
-  transition: transform 0.25s var(--ease-out), border-color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+  transition:
+    transform 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out);
 }
 .shop-card:hover {
   transform: translateY(-3px);
@@ -3845,7 +4005,10 @@ section[id] {
   border: 1px solid var(--bdr);
   color: var(--t1);
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
 }
 .shop-card-swap-btn:hover {
   background: rgba(6, 6, 8, 0.85);
@@ -3920,7 +4083,10 @@ section[id] {
   color: var(--t2);
   border: 1px solid var(--bdr);
   border-radius: 10px;
-  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background-color 0.2s;
 }
 a.shop-pager-num:hover {
   color: var(--t1);
@@ -4102,7 +4268,9 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: 8px;
   cursor: pointer;
-  transition: border-color 0.2s var(--ease-out), color 0.2s var(--ease-out);
+  transition:
+    border-color 0.2s var(--ease-out),
+    color 0.2s var(--ease-out);
 }
 .cart-qty button:hover:not(:disabled) {
   border-color: var(--acc);
@@ -4520,7 +4688,10 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   color: var(--t1);
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
 }
 
 .product-gallery-btn:hover {
@@ -4646,8 +4817,12 @@ a.shop-pager-num:hover {
 }
 
 @keyframes gallery-fullscreen-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .product-gallery-close {
@@ -4664,7 +4839,9 @@ a.shop-pager-num:hover {
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--t1);
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   z-index: 10;
 }
 
@@ -4687,7 +4864,10 @@ a.shop-pager-num:hover {
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--t1);
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
   z-index: 10;
 }
 
@@ -4914,7 +5094,10 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: 10px;
   cursor: pointer;
-  transition: color 0.18s, border-color 0.18s, background-color 0.18s;
+  transition:
+    color 0.18s,
+    border-color 0.18s,
+    background-color 0.18s;
 }
 .option-pill:hover:not(:disabled):not(.selected) {
   color: var(--t1);
@@ -4978,7 +5161,10 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: 12px;
   cursor: pointer;
-  transition: border-color 0.18s, background-color 0.18s, color 0.18s;
+  transition:
+    border-color 0.18s,
+    background-color 0.18s,
+    color 0.18s;
 }
 
 .option-card:hover:not(.selected) {
@@ -4996,7 +5182,9 @@ a.shop-pager-num:hover {
   border-radius: 50%;
   border: 1.5px solid var(--bdr-h);
   color: #000;
-  transition: border-color 0.18s, background-color 0.18s;
+  transition:
+    border-color 0.18s,
+    background-color 0.18s;
 }
 
 .option-card.selected {
@@ -5273,7 +5461,10 @@ a.shop-pager-num:hover {
   border-radius: 99px;
   border: 1px solid var(--bdr);
   background: var(--bg1);
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
 }
 .shop-tab:hover {
   border-color: var(--bdr-h);
@@ -5419,7 +5610,9 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: 10px;
   outline: none;
-  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s;
+  transition:
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.2s;
   min-width: 160px;
 }
 
@@ -5483,7 +5676,10 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: 14px;
   overflow: hidden;
-  transition: transform 0.28s var(--ease-out), border-color 0.28s, box-shadow 0.28s;
+  transition:
+    transform 0.28s var(--ease-out),
+    border-color 0.28s,
+    box-shadow 0.28s;
 }
 
 .shop-card:hover {
@@ -5624,7 +5820,9 @@ a.shop-pager-num:hover {
   background: var(--acc);
   color: #000;
   cursor: pointer;
-  transition: filter 0.2s, transform 0.2s;
+  transition:
+    filter 0.2s,
+    transform 0.2s;
 }
 .shop-card-atc-btn svg {
   width: 17px;
@@ -5771,7 +5969,9 @@ a.shop-pager-num:hover {
   padding: 10px 12px;
   width: 100%;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .textarea {
   resize: vertical;
@@ -5930,7 +6130,10 @@ a.shop-pager-num:hover {
   background: var(--bg3);
   color: var(--t1);
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
 }
 .btn-admin:hover {
   border-color: var(--bdr-h);
@@ -6029,7 +6232,9 @@ a.shop-pager-num:hover {
   border-radius: var(--r-sm);
   font-size: 0.84rem;
   color: var(--t2);
-  transition: background 0.18s, color 0.18s;
+  transition:
+    background 0.18s,
+    color 0.18s;
 }
 .sidebar-link:hover {
   background: var(--surf);
@@ -6106,7 +6311,9 @@ a.shop-pager-num:hover {
   background: var(--bg3);
   border: 1px solid var(--bdr);
   box-shadow: var(--shadow-card);
-  animation: kf-toast-in 0.25s var(--ease-out) both, kf-toast-out 0.3s ease 2.3s forwards;
+  animation:
+    kf-toast-in 0.25s var(--ease-out) both,
+    kf-toast-out 0.3s ease 2.3s forwards;
 }
 @keyframes kf-toast-out {
   to {
@@ -6367,7 +6574,10 @@ a.shop-pager-num:hover {
   border-radius: var(--r-sm);
   padding: 12px 8px;
   cursor: pointer;
-  transition: color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+  transition:
+    color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out);
 }
 .device-tab:hover {
   color: var(--t1);
@@ -6426,9 +6636,13 @@ a.shop-pager-num:hover {
   grid-template-columns: 1.2fr 1fr 0.7fr;
   gap: 12px;
 }
-.addr-city-row > * { min-width: 0; }
+.addr-city-row > * {
+  min-width: 0;
+}
 .addr-city-row input,
-.addr-city-row select { min-width: 0; }
+.addr-city-row select {
+  min-width: 0;
+}
 @media (max-width: 640px) {
   .addr-city-row {
     grid-template-columns: 1fr 1fr;
@@ -6534,7 +6748,9 @@ a.shop-pager-num:hover {
   padding: 16px;
   cursor: pointer;
   border-radius: var(--r-sm);
-  transition: background-color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+  transition:
+    background-color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out);
   user-select: none;
   border: 1px solid var(--bdr);
   background: var(--bg2);
@@ -6560,7 +6776,9 @@ a.shop-pager-num:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
   background: var(--bg1);
 }
 .service-row.selected .chk-box {
@@ -6866,7 +7084,9 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
   padding: 22px;
-  box-shadow: 0 24px 64px -12px rgba(6, 5, 12, 0.7), 0 0 0 1px var(--bdr);
+  box-shadow:
+    0 24px 64px -12px rgba(6, 5, 12, 0.7),
+    0 0 0 1px var(--bdr);
 }
 
 @media (max-width: 640px) {
@@ -6920,7 +7140,10 @@ a.shop-pager-num:hover {
   padding: 12px 16px;
   outline: none;
   width: 100%;
-  transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  transition:
+    border-color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
 }
 .field-inline input[type="text"]::placeholder,
 .field-inline input[type="number"]::placeholder,
@@ -6994,7 +7217,10 @@ a.shop-pager-num:hover {
   padding: 10px 4px;
   cursor: pointer;
   user-select: none;
-  transition: color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+  transition:
+    color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out);
   text-align: center;
 }
 .pill-radio:hover {
@@ -7081,7 +7307,13 @@ a.shop-pager-num:hover {
   align-items: center;
   justify-content: center;
   padding: clamp(32px, 6vw, 80px) var(--pad-x);
-  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124, 111, 242, 0.1) 0%, transparent 60%), var(--bg);
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      rgba(124, 111, 242, 0.1) 0%,
+      transparent 60%
+    ),
+    var(--bg);
 }
 
 /* Wide two-column auth card (login + register). Two columns only when both
@@ -7291,7 +7523,10 @@ a.shop-pager-num:hover {
   padding: 12px 16px;
   width: 100%;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
 }
 
 .form-row input::placeholder {
@@ -7335,7 +7570,9 @@ a.shop-pager-num:hover {
   border-radius: var(--r-sm);
   color: var(--t3);
   cursor: pointer;
-  transition: color 0.2s, background-color 0.2s;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
   padding: 0;
 }
 
@@ -7541,7 +7778,13 @@ a.shop-pager-num:hover {
 /* ─── Account Page ───────────────────────────────────────────────────────── */
 
 .account-page {
-  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124, 111, 242, 0.08) 0%, transparent 60%), var(--bg);
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      rgba(124, 111, 242, 0.08) 0%,
+      transparent 60%
+    ),
+    var(--bg);
   display: flex;
   align-items: stretch;
   min-height: 100vh;
@@ -7583,7 +7826,10 @@ a.shop-pager-num:hover {
   font-weight: 500;
   text-decoration: none;
   border: 1px solid transparent;
-  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s;
 }
 
 .account-nav-item:hover {
@@ -7646,7 +7892,8 @@ a.shop-pager-num:hover {
   min-width: 0;
   /* Clear the fixed navbar, then a consistent small gap (matches the site's
      .page-start rhythm) — the "shrink the navbar gap" requirement. */
-  padding: calc(var(--nav-h) + clamp(24px, 3.5vw, 40px)) clamp(20px, 5vw, 48px) 72px;
+  padding: calc(var(--nav-h) + clamp(24px, 3.5vw, 40px)) clamp(20px, 5vw, 48px)
+    72px;
 }
 
 .account-main-inner {
@@ -7725,7 +7972,8 @@ a.shop-pager-num:hover {
 
 .account-section--danger {
   border-color: rgba(255, 107, 107, 0.28);
-  background: linear-gradient(180deg, rgba(255, 107, 107, 0.04), transparent), var(--bg2);
+  background:
+    linear-gradient(180deg, rgba(255, 107, 107, 0.04), transparent), var(--bg2);
 }
 
 .account-section-header {
@@ -7832,7 +8080,9 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
   text-decoration: none;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .account-order-item.is-link:hover {
@@ -7948,7 +8198,8 @@ a.shop-pager-num:hover {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-}.account-order-item-name {
+}
+.account-order-item-name {
   font-size: 0.8rem;
   color: var(--t1);
   white-space: nowrap;
@@ -7977,7 +8228,9 @@ a.shop-pager-num:hover {
   border-radius: var(--r-sm);
 }
 .account-review-item.is-link {
-  transition: border-color 0.18s, background-color 0.18s;
+  transition:
+    border-color 0.18s,
+    background-color 0.18s;
 }
 .account-review-item.is-link:hover {
   border-color: var(--bdr-h);
@@ -8044,7 +8297,9 @@ a.shop-pager-num:hover {
   border-radius: 99px;
   padding: 4px 12px;
   cursor: pointer;
-  transition: background-color 0.18s, border-color 0.18s;
+  transition:
+    background-color 0.18s,
+    border-color 0.18s;
 }
 .account-delete-review:hover:not(:disabled) {
   background: rgba(255, 84, 84, 0.15);
@@ -8075,7 +8330,10 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
   text-decoration: none;
-  transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    transform 0.2s;
 }
 
 .account-action-card:hover {
@@ -8338,7 +8596,9 @@ a.shop-pager-num:hover {
   background: var(--bg3);
   border: 1px solid var(--bdr);
   flex-shrink: 0;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
 }
 
 .account-toggle-track::after {
@@ -8350,7 +8610,9 @@ a.shop-pager-num:hover {
   height: 14px;
   border-radius: 50%;
   background: var(--t3);
-  transition: transform 0.2s var(--ease-out), background-color 0.2s;
+  transition:
+    transform 0.2s var(--ease-out),
+    background-color 0.2s;
 }
 
 .account-toggle input:checked + .account-toggle-track {
@@ -8378,8 +8640,12 @@ a.shop-pager-num:hover {
 }
 
 @keyframes modal-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .account-modal {
@@ -8432,7 +8698,10 @@ a.shop-pager-num:hover {
   background: var(--bg1);
   color: var(--t2);
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .account-modal-close:hover {
@@ -8644,8 +8913,16 @@ a.shop-pager-num:hover {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(560px 380px at 78% 42%, rgba(212, 247, 0, 0.09), transparent 65%),
-    radial-gradient(700px 460px at 18% 85%, rgba(124, 92, 255, 0.07), transparent 70%);
+    radial-gradient(
+      560px 380px at 78% 42%,
+      rgba(212, 247, 0, 0.09),
+      transparent 65%
+    ),
+    radial-gradient(
+      700px 460px at 18% 85%,
+      rgba(124, 92, 255, 0.07),
+      transparent 70%
+    );
 }
 .sv-hero-inner {
   display: grid;
@@ -8691,7 +8968,12 @@ a.shop-pager-num:hover {
   font-weight: 700;
   letter-spacing: 0.02em;
   text-decoration: none;
-  transition: transform 0.2s var(--ease-out), border-color 0.2s, background-color 0.2s, color 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s var(--ease-out),
+    border-color 0.2s,
+    background-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
 }
 .sv-btn svg {
   transition: transform 0.2s var(--ease-out);
@@ -8743,11 +9025,21 @@ a.shop-pager-num:hover {
   inset: 8% 6%;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 42% 40%, rgba(212, 247, 0, 0.16), transparent 58%),
-    radial-gradient(circle at 66% 62%, rgba(124, 92, 255, 0.14), transparent 60%),
+    radial-gradient(
+      circle at 42% 40%,
+      rgba(212, 247, 0, 0.16),
+      transparent 58%
+    ),
+    radial-gradient(
+      circle at 66% 62%,
+      rgba(124, 92, 255, 0.14),
+      transparent 60%
+    ),
     var(--bg1);
   border: 1px solid var(--bdr);
-  box-shadow: inset 0 0 80px rgba(212, 247, 0, 0.06), var(--shadow-card);
+  box-shadow:
+    inset 0 0 80px rgba(212, 247, 0, 0.06),
+    var(--shadow-card);
 }
 .sv-badge {
   position: absolute;
@@ -8762,11 +9054,28 @@ a.shop-pager-num:hover {
   padding: 6px 12px;
   backdrop-filter: blur(4px);
 }
-.sv-b1 { top: 12%; left: 4%; }
-.sv-b2 { top: 34%; right: 0; color: var(--acc); border-color: rgba(212, 247, 0, 0.35); }
-.sv-b3 { bottom: 30%; left: 0; }
-.sv-b4 { bottom: 14%; right: 10%; }
-.sv-b5 { top: 56%; left: 26%; }
+.sv-b1 {
+  top: 12%;
+  left: 4%;
+}
+.sv-b2 {
+  top: 34%;
+  right: 0;
+  color: var(--acc);
+  border-color: rgba(212, 247, 0, 0.35);
+}
+.sv-b3 {
+  bottom: 30%;
+  left: 0;
+}
+.sv-b4 {
+  bottom: 14%;
+  right: 10%;
+}
+.sv-b5 {
+  top: 56%;
+  left: 26%;
+}
 
 /* Category cards */
 .sv-cats {
@@ -8784,7 +9093,10 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-lg);
   text-decoration: none;
-  transition: transform 0.25s var(--ease-out), border-color 0.25s, box-shadow 0.25s;
+  transition:
+    transform 0.25s var(--ease-out),
+    border-color 0.25s,
+    box-shadow 0.25s;
 }
 .sv-cat:hover {
   transform: translateY(-4px);
@@ -8866,7 +9178,10 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
   text-decoration: none;
-  transition: transform 0.25s var(--ease-out), border-color 0.25s, box-shadow 0.25s;
+  transition:
+    transform 0.25s var(--ease-out),
+    border-color 0.25s,
+    box-shadow 0.25s;
 }
 .sv-pop:hover {
   transform: translateY(-3px);
@@ -8911,7 +9226,9 @@ a.shop-pager-num:hover {
 }
 .sv-pop-arrow {
   color: var(--t3);
-  transition: transform 0.2s var(--ease-out), color 0.2s;
+  transition:
+    transform 0.2s var(--ease-out),
+    color 0.2s;
 }
 .sv-pop:hover .sv-pop-arrow {
   transform: translateX(3px);
@@ -8936,7 +9253,9 @@ a.shop-pager-num:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  box-shadow: inset 0 0 60px rgba(212, 247, 0, 0.04), var(--shadow-card);
+  box-shadow:
+    inset 0 0 60px rgba(212, 247, 0, 0.04),
+    var(--shadow-card);
 }
 .sv-kb-row {
   display: flex;
@@ -9030,7 +9349,11 @@ a.shop-pager-num:hover {
   gap: 32px;
   padding: clamp(32px, 5vw, 56px);
   background:
-    radial-gradient(420px 260px at 88% 50%, rgba(212, 247, 0, 0.08), transparent 65%),
+    radial-gradient(
+      420px 260px at 88% 50%,
+      rgba(212, 247, 0, 0.08),
+      transparent 65%
+    ),
     var(--bg2);
   border: 1px solid var(--bdr);
   border-radius: var(--r-lg);
@@ -9051,8 +9374,13 @@ a.shop-pager-num:hover {
   height: 100%;
 }
 @keyframes sv-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 247, 0, 0.12); }
-  50% { box-shadow: 0 0 34px 4px rgba(212, 247, 0, 0.16); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 247, 0, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 34px 4px rgba(212, 247, 0, 0.16);
+  }
 }
 
 /* How it works */
@@ -9121,7 +9449,11 @@ a.shop-pager-num:hover {
   text-align: center;
   padding: clamp(44px, 6vw, 72px) clamp(20px, 5vw, 64px);
   background:
-    radial-gradient(520px 300px at 50% 0%, rgba(212, 247, 0, 0.1), transparent 65%),
+    radial-gradient(
+      520px 300px at 50% 0%,
+      rgba(212, 247, 0, 0.1),
+      transparent 65%
+    ),
     var(--bg2);
   border: 1px solid var(--bdr);
   border-radius: var(--r-lg);
@@ -9285,15 +9617,21 @@ a.shop-pager-num:hover {
   border-radius: var(--r-md);
   padding: 18px;
   cursor: pointer;
-  transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  transition:
+    border-color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
 }
 .ri-service-card:hover {
   border-color: var(--bdr-h);
 }
 .ri-service-card.selected {
   border-color: var(--acc);
-  background: linear-gradient(180deg, var(--acc-dim), transparent 70%), var(--bg1);
-  box-shadow: 0 0 0 1px var(--acc), 0 0 24px -8px var(--acc-glow);
+  background:
+    linear-gradient(180deg, var(--acc-dim), transparent 70%), var(--bg1);
+  box-shadow:
+    0 0 0 1px var(--acc),
+    0 0 24px -8px var(--acc-glow);
 }
 .ri-service-title {
   font-family: var(--ff-display);
@@ -9328,7 +9666,10 @@ a.shop-pager-num:hover {
   border-radius: 99px;
   padding: 8px 14px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background-color 0.15s;
 }
 .ri-chip:hover {
   color: var(--t1);
@@ -9963,7 +10304,6 @@ a.shop-pager-num:hover {
   min-width: 0;
 }
 
-
 /* Photos — proper fixed-size thumbnails, cover cropped. */
 .review-photos {
   display: flex;
@@ -9977,7 +10317,9 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-sm);
   overflow: hidden;
-  transition: border-color 0.2s, transform 0.2s;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
 }
 .product-reviews-list .review-photo:hover {
   border-color: var(--bdr-h);
@@ -10211,7 +10553,9 @@ a.shop-pager-num:hover {
   border-radius: var(--r-sm);
   overflow: hidden;
   background: var(--bg2);
-  transition: border-color 0.2s, transform 0.2s;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
 }
 .reviews-grid .review-photo:hover {
   border-color: var(--bdr-h);
@@ -10255,7 +10599,10 @@ a.shop-pager-num:hover {
   color: var(--t2);
   border: 1px solid var(--bdr);
   border-radius: var(--r-sm);
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
 }
 a.reviews-page:hover {
   color: var(--t1);
@@ -10484,7 +10831,9 @@ a.reviews-page:hover {
   font-size: 0.9rem;
   font-family: inherit;
   color: var(--t1);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .write-review-input::placeholder,
 .write-review-textarea::placeholder {
@@ -10521,7 +10870,10 @@ a.reviews-page:hover {
   line-height: 1;
   cursor: pointer;
   color: var(--t3);
-  transition: color 0.15s, transform 0.15s, text-shadow 0.15s;
+  transition:
+    color 0.15s,
+    transform 0.15s,
+    text-shadow 0.15s;
 }
 .rating-picker-star:hover {
   transform: scale(1.18);
@@ -10600,7 +10952,9 @@ a.reviews-page:hover {
   color: var(--t2);
   font-size: 0.75rem;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 .wr-photo-add:hover {
   border-color: var(--acc);
@@ -10890,7 +11244,10 @@ a.reviews-page:hover {
   overflow: hidden;
   background: var(--bg1);
   box-shadow: 0 12px 28px -22px rgba(0, 0, 0, 0.85);
-  transition: transform 0.3s var(--ease-out), border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s var(--ease-out),
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 .work-showcase:hover {
   transform: translateY(-1px);
@@ -10933,7 +11290,9 @@ a.reviews-page:hover {
   height: 100%;
   object-fit: cover;
   filter: brightness(0.95) saturate(0.95);
-  transition: transform 0.8s var(--ease-out), filter 0.6s;
+  transition:
+    transform 0.8s var(--ease-out),
+    filter 0.6s;
 }
 .work-showcase:hover .work-showcase-media img {
   transform: scale(1.02);
@@ -10947,7 +11306,11 @@ a.reviews-page:hover {
   gap: 6px;
   height: 100%;
   color: var(--t3);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent 60%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.02),
+    transparent 60%
+  );
 }
 .work-media-empty span {
   font-family: var(--ff-display);
@@ -10976,7 +11339,9 @@ a.reviews-page:hover {
   letter-spacing: 0.03em;
   color: var(--acc);
   white-space: nowrap;
-  transition: transform 0.2s var(--ease-out), color 0.2s;
+  transition:
+    transform 0.2s var(--ease-out),
+    color 0.2s;
 }
 .work-showcase-link:hover {
   color: #eaff6a;
@@ -11073,7 +11438,10 @@ a.reviews-page:hover {
   border: 1px solid var(--bdr);
   background: var(--bg1);
   text-decoration: none;
-  transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s var(--ease-out);
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s var(--ease-out);
 }
 .work-card:hover {
   border-color: var(--bdr-h);
@@ -11089,7 +11457,9 @@ a.reviews-page:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.6s var(--ease-out), filter 0.5s;
+  transition:
+    transform 0.6s var(--ease-out),
+    filter 0.5s;
   filter: brightness(0.9) saturate(0.9);
 }
 .work-card:hover .work-card-media img {
@@ -11123,7 +11493,9 @@ a.reviews-page:hover {
   box-shadow: 0 8px 24px -8px rgba(201, 243, 29, 0.5);
   opacity: 0;
   transform: translateY(-6px);
-  transition: opacity 0.35s, transform 0.35s var(--ease-out);
+  transition:
+    opacity 0.35s,
+    transform 0.35s var(--ease-out);
 }
 .work-card:hover .work-card-arrow {
   opacity: 1;
@@ -11431,7 +11803,10 @@ a.reviews-page:hover {
   border: 1px solid var(--bdr);
   background: var(--bg2);
   box-shadow: 0 0 0 3px var(--bg1);
-  transition: background-color 0.2s var(--ease-out), border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  transition:
+    background-color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
 }
 .track-step.is-done .track-step-dot {
   background: var(--acc);
@@ -11440,7 +11815,10 @@ a.reviews-page:hover {
 .track-step.is-current .track-step-dot {
   background: var(--acc);
   border-color: var(--acc);
-  box-shadow: 0 0 0 3px var(--bg1), 0 0 0 6px rgba(201, 243, 29, 0.16), 0 0 16px rgba(201, 243, 29, 0.45);
+  box-shadow:
+    0 0 0 3px var(--bg1),
+    0 0 0 6px rgba(201, 243, 29, 0.16),
+    0 0 16px rgba(201, 243, 29, 0.45);
 }
 .track-step-body {
   display: flex;
@@ -11550,7 +11928,9 @@ a.reviews-page:hover {
   font-weight: 600;
   padding: 7px 12px;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 .track-timeline-btn:hover,
 .track-timeline-btn[aria-expanded="true"] {
@@ -11603,7 +11983,9 @@ a.reviews-page:hover {
 }
 .track-history-item:first-child .track-history-dot {
   background: var(--acc);
-  box-shadow: 0 0 0 3px var(--bg1), 0 0 10px rgba(201, 243, 29, 0.4);
+  box-shadow:
+    0 0 0 3px var(--bg1),
+    0 0 10px rgba(201, 243, 29, 0.4);
 }
 .track-history-body {
   min-width: 0;
@@ -12298,7 +12680,9 @@ a.reviews-page:hover {
   background: var(--bg1);
   color: var(--t3);
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 }
 .os-copy:hover {
   color: var(--acc);
@@ -12477,7 +12861,10 @@ a.reviews-page:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
   padding: 18px 20px;
-  transition: transform 0.28s var(--ease-out), border-color 0.28s, box-shadow 0.28s;
+  transition:
+    transform 0.28s var(--ease-out),
+    border-color 0.28s,
+    box-shadow 0.28s;
 }
 .contact-channel:hover {
   transform: translateY(-4px);
@@ -12548,7 +12935,9 @@ a.reviews-page:hover {
 }
 /* Form — compact premium card, no heavy shadow or glow. */
 .contact-form {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%), var(--bg1);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+    var(--bg1);
   border-color: rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: clamp(20px, 2.5vw, 26px);
@@ -12602,7 +12991,11 @@ a.reviews-page:hover {
 }
 .contact-page .cta-section::before {
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    black 30%,
+    transparent 78%
+  );
 }
 .contact-page .cta-title {
   font-size: clamp(2rem, 3.8vw, 3.1rem);
@@ -12749,7 +13142,9 @@ a.reviews-page:hover {
   border: 1px solid var(--bdr);
   border-radius: 10px;
   outline: none;
-  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  transition:
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
 }
 .coupon-input::placeholder {
   color: var(--t3);
@@ -12777,10 +13172,12 @@ a.reviews-page:hover {
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s var(--ease-out), opacity 0.2s var(--ease-out);
+  transition:
+    background 0.2s var(--ease-out),
+    opacity 0.2s var(--ease-out);
 }
 .coupon-apply:hover {
-  background: var(--acc-dim) ;
+  background: var(--acc-dim);
   color: var(--acc);
 }
 .coupon-apply:disabled {
@@ -12871,7 +13268,7 @@ a.reviews-page:hover {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-  .mods-item-card {
+.mods-item-card {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -12879,11 +13276,15 @@ a.reviews-page:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-sm);
   padding: 12px 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .mods-item-card:hover {
   border-color: var(--bdr-h);
-  box-shadow: 0 0 0 1px var(--surf), 0 6px 18px -20px var(--acc-glow);
+  box-shadow:
+    0 0 0 1px var(--surf),
+    0 6px 18px -20px var(--acc-glow);
 }
 .mods-item-info {
   flex: 1 1 170px;
@@ -12934,7 +13335,7 @@ a.reviews-page:hover {
   width: 118px;
 }
 @media (max-width: 460px) {
-.mods-item-card {
+  .mods-item-card {
     flex-wrap: wrap;
     align-items: flex-start;
   }
@@ -12961,7 +13362,12 @@ a.reviews-page:hover {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(232, 238, 248, 0.06), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(232, 238, 248, 0.06),
+    transparent
+  );
   animation: sk-shimmer 1.8s ease-in-out infinite;
 }
 @keyframes sk-shimmer {

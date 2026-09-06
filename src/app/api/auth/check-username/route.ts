@@ -13,6 +13,9 @@ export async function GET(request: NextRequest) {
   if (!USERNAME_PATTERN.test(raw)) {
     return NextResponse.json({ available: false, reason: "invalid" });
   }
-  const taken = await prisma.profile.findUnique({ where: { username: raw.toLowerCase() }, select: { id: true } });
+  const taken = await prisma.profile.findUnique({
+    where: { username: raw.toLowerCase() },
+    select: { id: true },
+  });
   return NextResponse.json({ available: !taken });
 }

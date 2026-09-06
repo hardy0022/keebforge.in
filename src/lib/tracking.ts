@@ -77,5 +77,9 @@ export async function syncTrackingCache(orderId: string): Promise<void> {
     updatedAt: new Date(),
   };
 
-  await prisma.tracking.upsert({ where: { orderId }, update: data, create: data });
+  await prisma.tracking.upsert({
+    where: { orderId },
+    update: data,
+    create: data,
+  });
 }

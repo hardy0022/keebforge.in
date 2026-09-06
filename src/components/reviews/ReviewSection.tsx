@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { getCurrentAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getProductReviews, getPublicReviews, getReviewDistribution, getReviewSummary, getSiteReviewSummary, verifiedProfileIds } from "@/lib/reviews";
+import {
+  getProductReviews,
+  getPublicReviews,
+  getReviewDistribution,
+  getReviewSummary,
+  getSiteReviewSummary,
+  verifiedProfileIds,
+} from "@/lib/reviews";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { ReviewPagination } from "@/components/reviews/ReviewPagination";
 import { ReviewSummary } from "@/components/reviews/ReviewSummary";
@@ -20,11 +27,17 @@ export async function ReviewSection({
   page: number;
   titleReveal?: boolean;
 }) {
-  const data = scope.type === "site" ? await siteReviews(page) : await productReviews(scope.product, page);
+  const data =
+    scope.type === "site"
+      ? await siteReviews(page)
+      : await productReviews(scope.product, page);
   const current = Math.min(page, data.result.pages);
 
   return (
-    <section className="svc-section reviews-section" aria-labelledby="reviews-heading">
+    <section
+      className="svc-section reviews-section"
+      aria-labelledby="reviews-heading"
+    >
       <div className="wrap">
         <div className="product-reviews">
           <header className="product-reviews-head">
@@ -55,17 +68,31 @@ export async function ReviewSection({
             </div>
           ) : (
             <>
-              <ReviewSummary count={data.summary.count} average={data.summary.average} distribution={data.distribution} />
+              <ReviewSummary
+                count={data.summary.count}
+                average={data.summary.average}
+                distribution={data.distribution}
+              />
 
               <div className="reviews-grid-wrap">
                 <p className="reviews-grid-label">Reviews</p>
                 <div className="reviews-grid">
                   {data.result.items.map((r) => (
-                    <ReviewCard key={r.id} review={r} verified={data.verifiedById.get(r.id) ?? false} />
+                    <ReviewCard
+                      key={r.id}
+                      review={r}
+                      verified={data.verifiedById.get(r.id) ?? false}
+                    />
                   ))}
                 </div>
 
-                {data.result.pages > 1 && <ReviewPagination basePath={data.basePath} current={current} pages={data.result.pages} />}
+                {data.result.pages > 1 && (
+                  <ReviewPagination
+                    basePath={data.basePath}
+                    current={current}
+                    pages={data.result.pages}
+                  />
+                )}
               </div>
             </>
           )}
@@ -89,12 +116,16 @@ async function siteReviews(page: number) {
     verifiedById,
     writeHref: "/write-review",
     writeLabel: "Write a Review",
-    emptySub: "Share your experience with KeebForge and help others choose with confidence.",
+    emptySub:
+      "Share your experience with KeebForge and help others choose with confidence.",
     basePath: "/work",
   };
 }
 
-async function productReviews(product: { id: string; name: string; slug: string }, page: number) {
+async function productReviews(
+  product: { id: string; name: string; slug: string },
+  page: number,
+) {
   const [summary, distribution, result, auth] = await Promise.all([
     getReviewSummary(product.id),
     getReviewDistribution(product.id),
@@ -102,14 +133,24 @@ async function productReviews(product: { id: string; name: string; slug: string 
     getProductReviews(product.id, { page }),
     getCurrentAuth(),
   ]);
-  const reviewerProfileIds = result.items.map((r) => r.profile?.id ?? null).filter((p): p is string => !!p);
+  const reviewerProfileIds = result.items
+    .map((r) => r.profile?.id ?? null)
+    .filter((p): p is string => !!p);
   const verified = await verifiedProfileIds(product.id, reviewerProfileIds);
   const verifiedById = new Map(
-    result.items.map((r) => [r.id, r.verified || (r.profile ? verified.has(r.profile.id) : false)])
+    result.items.map((r) => [
+      r.id,
+      r.verified || (r.profile ? verified.has(r.profile.id) : false),
+    ]),
   );
   const myReview = auth.profile
     ? await prisma.review.findUnique({
-        where: { profileId_productId: { profileId: auth.profile.id, productId: product.id } },
+        where: {
+          profileId_productId: {
+            profileId: auth.profile.id,
+            productId: product.id,
+          },
+        },
       })
     : null;
   const writeHref = auth.user

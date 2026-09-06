@@ -16,20 +16,36 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = body as {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      orderId,
+    } = body as {
       razorpay_order_id?: string;
       razorpay_payment_id?: string;
       razorpay_signature?: string;
       orderId?: string;
     };
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !orderId) {
-      return NextResponse.json({ error: "Missing payment verification data" }, { status: 400 });
+    if (
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature ||
+      !orderId
+    ) {
+      return NextResponse.json(
+        { error: "Missing payment verification data" },
+        { status: 400 },
+      );
     }
 
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keySecret) {
-      return NextResponse.json({ error: "Payments are not configured" }, { status: 503 });
+      return NextResponse.json(
+        { error: "Payments are not configured" },
+        { status: 503 },
+      );
     }
 
     const order = await prisma.order.findUnique({
@@ -41,14 +57,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Idempotency: replayed verifications are a no-op success.
-    if (order.paymentStatus === "PAID" && order.payments.some((p) => p.razorpayPaymentId === razorpay_payment_id)) {
+    if (
+      order.paymentStatus === "PAID" &&
+      order.payments.some((p) => p.razorpayPaymentId === razorpay_payment_id)
+    ) {
       return NextResponse.json({ success: true, alreadyProcessed: true });
     }
 
     // The payment must belong to the Razorpay order we created for THIS order.
-    const billing = (order.billingDetails ?? {}) as { razorpayOrderId?: string; razorpayCustomerId?: string };
-    if (!billing.razorpayOrderId || billing.razorpayOrderId !== razorpay_order_id) {
-      return NextResponse.json({ error: "Payment does not match this order" }, { status: 400 });
+    const billing = (order.billingDetails ?? {}) as {
+      razorpayOrderId?: string;
+      razorpayCustomerId?: string;
+    };
+    if (
+      !billing.razorpayOrderId ||
+      billing.razorpayOrderId !== razorpay_order_id
+    ) {
+      return NextResponse.json(
+        { error: "Payment does not match this order" },
+        { status: 400 },
+      );
     }
 
     const expectedSignature = crypto
@@ -68,15 +96,24 @@ export async function POST(req: NextRequest) {
             razorpayOrderId: razorpay_order_id,
             razorpayPaymentId: razorpay_payment_id,
             razorpaySignature: razorpay_signature,
-            ...(billing.razorpayCustomerId ? { razorpayCustomerId: billing.razorpayCustomerId } : {}),
+            ...(billing.razorpayCustomerId
+              ? { razorpayCustomerId: billing.razorpayCustomerId }
+              : {}),
             failureReason: "Signature verification failed",
           },
         }),
         prisma.orderTimeline.create({
-          data: { orderId: order.id, status: "PAYMENT_PENDING", note: `Payment signature verification failed (${razorpay_payment_id}).` },
+          data: {
+            orderId: order.id,
+            status: "PAYMENT_PENDING",
+            note: `Payment signature verification failed (${razorpay_payment_id}).`,
+          },
         }),
       ]);
-      return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid payment signature" },
+        { status: 400 },
+      );
     }
 
     // Claim-by-email: associate a guest order with the account when the emails match.
@@ -85,7 +122,11 @@ export async function POST(req: NextRequest) {
       const { profile } = await getCurrentAuth();
       const linked =
         (profile && profile.id) ||
-        (await prisma.profile.findUnique({ where: { email: order.customerEmail } }))?.id ||
+        (
+          await prisma.profile.findUnique({
+            where: { email: order.customerEmail },
+          })
+        )?.id ||
         null;
       profileId = linked;
     }
@@ -101,7 +142,9 @@ export async function POST(req: NextRequest) {
           razorpayOrderId: razorpay_order_id,
           razorpayPaymentId: razorpay_payment_id,
           razorpaySignature: razorpay_signature,
-          ...(billing.razorpayCustomerId ? { razorpayCustomerId: billing.razorpayCustomerId } : {}),
+          ...(billing.razorpayCustomerId
+            ? { razorpayCustomerId: billing.razorpayCustomerId }
+            : {}),
           paidAt: new Date(),
         },
       }),
@@ -114,7 +157,11 @@ export async function POST(req: NextRequest) {
         },
       }),
       prisma.orderTimeline.create({
-        data: { orderId: order.id, status: "PAYMENT_RECEIVED", note: `Payment captured via Razorpay (${razorpay_payment_id}).` },
+        data: {
+          orderId: order.id,
+          status: "PAYMENT_RECEIVED",
+          note: `Payment captured via Razorpay (${razorpay_payment_id}).`,
+        },
       }),
     ]);
 
@@ -123,6 +170,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, orderNumber: order.orderNumber });
   } catch (error) {
     console.error("Verify payment error:", error);
-    return NextResponse.json({ error: "Payment verification failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Payment verification failed" },
+      { status: 500 },
+    );
   }
 }

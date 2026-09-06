@@ -66,7 +66,9 @@ export function ProductConfigurator({
 
       <div className="product-price-section">
         <div className="product-price">
-          <span className="product-price-amount">{formatINR(configuredPrice)}</span>
+          <span className="product-price-amount">
+            {formatINR(configuredPrice)}
+          </span>
         </div>
       </div>
 
@@ -96,14 +98,25 @@ export function ProductConfigurator({
                     >
                       <span className="option-card-radio" aria-hidden="true">
                         {selected && (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <path d="M20 6 9 17l-5-5" />
                           </svg>
                         )}
                       </span>
                       <span className="option-card-body">
                         <span className="option-card-name">{o.name}</span>
-                        <span className={`option-card-price${isBase ? " base" : ""}`}>
+                        <span
+                          className={`option-card-price${isBase ? " base" : ""}`}
+                        >
                           {isBase ? "Base" : `+${formatINR(o.priceAddon)}`}
                         </span>
                       </span>
@@ -116,33 +129,39 @@ export function ProductConfigurator({
       </div>
 
       <div className="product-buy-actions">
+        <button
+          type="submit"
+          className="btn-prime btn-prime-lg product-buy-btn"
+          disabled={pending || out || !complete}
+          onClick={() => setBuyNow(false)}
+          onMouseEnter={() => cartIconRef.current?.startAnimation()}
+          onMouseLeave={() => cartIconRef.current?.stopAnimation()}
+        >
+          {!out && <CartIcon ref={cartIconRef} size={16} strokeWidth={1.8} />}
+          {out ? "Out of Stock" : pending ? "Adding…" : "Add to Cart"}
+        </button>
+        {!out && (
           <button
             type="submit"
-            className="btn-prime btn-prime-lg product-buy-btn"
-            disabled={pending || out || !complete}
-            onClick={() => setBuyNow(false)}
-            onMouseEnter={() => cartIconRef.current?.startAnimation()}
-            onMouseLeave={() => cartIconRef.current?.stopAnimation()}
+            className="btn-ghost product-buynow-btn"
+            disabled={pending || !complete}
+            onClick={() => setBuyNow(true)}
           >
-            {!out && <CartIcon ref={cartIconRef} size={16} strokeWidth={1.8} />}
-            {out ? "Out of Stock" : pending ? "Adding…" : "Add to Cart"}
+            Buy Now
           </button>
-          {!out && (
-            <button
-              type="submit"
-              className="btn-ghost product-buynow-btn"
-              disabled={pending || !complete}
-              onClick={() => setBuyNow(true)}
-            >
-              Buy Now
-            </button>
-          )}
-        </div>
+        )}
+      </div>
 
-      {state?.error && <p className="text-sm text-[var(--err)]">{state.error}</p>}
+      {state?.error && (
+        <p className="text-sm text-[var(--err)]">{state.error}</p>
+      )}
       {state?.ok && !buyNow && (
         <p className="text-sm text-[var(--ok)]">
-          Added to cart{state.count != null ? ` — ${state.count} item${state.count === 1 ? "" : "s"} in cart` : ""}.
+          Added to cart
+          {state.count != null
+            ? ` — ${state.count} item${state.count === 1 ? "" : "s"} in cart`
+            : ""}
+          .
         </p>
       )}
     </form>

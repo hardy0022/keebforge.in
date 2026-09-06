@@ -14,10 +14,26 @@ type Props = {
 };
 
 const STEPS = [
-  { num: "01", title: "Send it to us.", desc: "Place an order and ship your board or mouse from anywhere in India." },
-  { num: "02", title: "We diagnose and build.", desc: "We inspect, plan and do the work — lubing, tuning, soldering, firmware." },
-  { num: "03", title: "We test everything.", desc: "Every switch, stabilizer and layer is verified before it ships." },
-  { num: "04", title: "We ship it back.", desc: "Tracked, packed, and on its way back to your desk." },
+  {
+    num: "01",
+    title: "Send it to us.",
+    desc: "Place an order and ship your board or mouse from anywhere in India.",
+  },
+  {
+    num: "02",
+    title: "We diagnose and build.",
+    desc: "We inspect, plan and do the work — lubing, tuning, soldering, firmware.",
+  },
+  {
+    num: "03",
+    title: "We test everything.",
+    desc: "Every switch, stabilizer and layer is verified before it ships.",
+  },
+  {
+    num: "04",
+    title: "We ship it back.",
+    desc: "Tracked, packed, and on its way back to your desk.",
+  },
 ];
 
 /** Sticky workshop-process story: steps crossfade as the shared pinned stage scrolls. */
@@ -47,7 +63,7 @@ export function HowWeWork({ progressTargetRef }: Props) {
   const stepState = (i: number) => {
     if (i === active) return "is-active";
     const above = i < active;
-    return (dir >= 0) === above ? "is-past" : "is-next";
+    return dir >= 0 === above ? "is-past" : "is-next";
   };
 
   return (
@@ -61,12 +77,18 @@ export function HowWeWork({ progressTargetRef }: Props) {
           <br />
           process.
         </h2>
-        <p className="hp-how-sub">From arrived-in-mail to back-on-desk — four steps, handled by hand.</p>
+        <p className="hp-how-sub">
+          From arrived-in-mail to back-on-desk — four steps, handled by hand.
+        </p>
         <div className="hp-how-rail" aria-hidden="true">
-          <motion.span style={{ width: railWidth }} className="hp-how-rail-fill" />
+          <motion.span
+            style={{ width: railWidth }}
+            className="hp-how-rail-fill"
+          />
         </div>
         <p className="hp-how-count">
-          <span className="num">{String(active + 1).padStart(2, "0")}</span> / {String(STEPS.length).padStart(2, "0")}
+          <span className="num">{String(active + 1).padStart(2, "0")}</span> /{" "}
+          {String(STEPS.length).padStart(2, "0")}
         </p>
       </div>
 
@@ -84,10 +106,34 @@ export function HowWeWork({ progressTargetRef }: Props) {
               <div className="hp-how-step-body">
                 <h3>{step.title}</h3>
                 <p>{step.desc}</p>
-                {i === 0 && <img src="/Blue Truck.svg" alt="" className="hp-how-step-img" />}
-                {i === 1 && <img src="/robot process automation.svg" alt="" className="hp-how-step-img" />}
-                {i === 2 && <img src="/Testing  Checking animation.svg" alt="" className="hp-how-step-img" />}
-                {i === 3 && <img src="/Blue Truck.svg" alt="" className="hp-how-step-img hp-how-step-img-flip" />}
+                {i === 0 && (
+                  <img
+                    src="/Blue Truck.svg"
+                    alt=""
+                    className="hp-how-step-img"
+                  />
+                )}
+                {i === 1 && (
+                  <img
+                    src="/robot process automation.svg"
+                    alt=""
+                    className="hp-how-step-img"
+                  />
+                )}
+                {i === 2 && (
+                  <img
+                    src="/Testing  Checking animation.svg"
+                    alt=""
+                    className="hp-how-step-img"
+                  />
+                )}
+                {i === 3 && (
+                  <img
+                    src="/Blue Truck.svg"
+                    alt=""
+                    className="hp-how-step-img hp-how-step-img-flip"
+                  />
+                )}
               </div>
             </article>
           ))}

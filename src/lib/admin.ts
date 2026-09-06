@@ -1,16 +1,33 @@
 import "server-only";
 import { cache } from "react";
-import type { Prisma, OrderStatus, PaymentStatus, ReviewStatus, ReviewType } from "@prisma/client";
+import type {
+  Prisma,
+  OrderStatus,
+  PaymentStatus,
+  ReviewStatus,
+  ReviewType,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { defineCached, TAG, TTL } from "@/lib/cache";
+import { defineCached, TAG, TTL } from "@/lib/caching/cache";
 
-import { fmtIST, istDayEnd, istDayKey, istDayStart, startOfTodayIST, endOfTodayIST, daysAgoISTDayStart } from "@/lib/ist";
+import {
+  fmtIST,
+  istDayEnd,
+  istDayKey,
+  istDayStart,
+  startOfTodayIST,
+  endOfTodayIST,
+  daysAgoISTDayStart,
+} from "@/lib/ist";
 
 /** Terminal / non-active order statuses (used for pipeline + "active" counts). */
 const TERMINAL: OrderStatus[] = ["DELIVERED", "ORDER_COMPLETED"];
 
 /** Revenue timestamp for a paid order: the actual capture, else order creation. */
-export const revenueTime = (o: { createdAt: Date; payments?: { status: PaymentStatus; paidAt: Date | null }[] | null }) => {
+export const revenueTime = (o: {
+  createdAt: Date;
+  payments?: { status: PaymentStatus; paidAt: Date | null }[] | null;
+}) => {
   const captured = (o.payments ?? [])
     .filter((p) => p.status === "PAID" && p.paidAt)
     .map((p) => p.paidAt as Date)
@@ -22,21 +39,41 @@ export const revenueTime = (o: { createdAt: Date; payments?: { status: PaymentSt
 
 export const getAdminStats = cache(async () => {
   const [startToday, endToday] = [startOfTodayIST(), endOfTodayIST()];
-  const [todayOrders, todayRevenue, pendingOrders, pendingPayments, totalCustomers, activeProducts, lowStock] =
-    await Promise.all([
-      prisma.order.count({ where: { isDeleted: false, createdAt: { gte: startToday, lt: endToday } } }),
-      prisma.order.aggregate({
-        where: { isDeleted: false, paymentStatus: "PAID", createdAt: { gte: startToday, lt: endToday } },
-        _sum: { total: true },
-      }),
-      prisma.order.count({ where: { isDeleted: false, status: "PAYMENT_PENDING" } }),
-      prisma.order.count({ where: { isDeleted: false, paymentStatus: "PENDING" } }),
-      prisma.profile.count(),
-      prisma.product.count({ where: { active: true } }),
-      prisma.product.count({
-        where: { active: true, stock: { lte: prisma.product.fields.lowStockThreshold } },
-      }),
-    ]);
+  const [
+    todayOrders,
+    todayRevenue,
+    pendingOrders,
+    pendingPayments,
+    totalCustomers,
+    activeProducts,
+    lowStock,
+  ] = await Promise.all([
+    prisma.order.count({
+      where: { isDeleted: false, createdAt: { gte: startToday, lt: endToday } },
+    }),
+    prisma.order.aggregate({
+      where: {
+        isDeleted: false,
+        paymentStatus: "PAID",
+        createdAt: { gte: startToday, lt: endToday },
+      },
+      _sum: { total: true },
+    }),
+    prisma.order.count({
+      where: { isDeleted: false, status: "PAYMENT_PENDING" },
+    }),
+    prisma.order.count({
+      where: { isDeleted: false, paymentStatus: "PENDING" },
+    }),
+    prisma.profile.count(),
+    prisma.product.count({ where: { active: true } }),
+    prisma.product.count({
+      where: {
+        active: true,
+        stock: { lte: prisma.product.fields.lowStockThreshold },
+      },
+    }),
+  ]);
 
   const activeRepairs = await prisma.order.count({
     where: {
@@ -62,11 +99,18 @@ export const getAdminStats = cache(async () => {
 export const getRevenueSeries = cache(async (days: number) => {
   const from = daysAgoISTDayStart(days - 1);
   const orders = await prisma.order.findMany({
-    where: { isDeleted: false, paymentStatus: "PAID", createdAt: { gte: from } },
+    where: {
+      isDeleted: false,
+      paymentStatus: "PAID",
+      createdAt: { gte: from },
+    },
     select: {
       createdAt: true,
       total: true,
-      payments: { where: { status: "PAID" }, select: { status: true, paidAt: true } },
+      payments: {
+        where: { status: "PAID" },
+        select: { status: true, paidAt: true },
+      },
     },
   });
   const buckets: { date: string; label: string; total: number }[] = [];
@@ -100,7 +144,10 @@ export const getRepairPipeline = cache(async () => {
 
 export const getLowStockProducts = cache(async (take = 8) =>
   prisma.product.findMany({
-    where: { active: true, stock: { lte: prisma.product.fields.lowStockThreshold } },
+    where: {
+      active: true,
+      stock: { lte: prisma.product.fields.lowStockThreshold },
+    },
     orderBy: { stock: "asc" },
     take,
     select: {
@@ -112,7 +159,7 @@ export const getLowStockProducts = cache(async (take = 8) =>
       lowStockThreshold: true,
       category: { select: { name: true } },
     },
-  })
+  }),
 );
 
 export const getRecentOrders = cache(async (take = 8) =>
@@ -130,7 +177,7 @@ export const getRecentOrders = cache(async (take = 8) =>
       total: true,
       createdAt: true,
     },
-  })
+  }),
 );
 
 export const getRecentActivity = cache(async (take = 10) =>
@@ -144,7 +191,7 @@ export const getRecentActivity = cache(async (take = 10) =>
       createdAt: true,
       order: { select: { orderNumber: true } },
     },
-  })
+  }),
 );
 
 // ─── Orders list ────────────────────────────────────────────────────────────
@@ -164,10 +211,24 @@ export type AdminOrdersQuery = {
 };
 
 /** Statuses treated as a finished/completed order. */
-export const COMPLETED_STATUSES: OrderStatus[] = ["DELIVERED", "ORDER_COMPLETED"];
+export const COMPLETED_STATUSES: OrderStatus[] = [
+  "DELIVERED",
+  "ORDER_COMPLETED",
+];
 
 export const getAdminOrders = cache((params: AdminOrdersQuery) => {
-  const { q, status, payment, from, to, sort = "newest", page = 1, pageSize = 20, completed, excludeCompleted } = params;
+  const {
+    q,
+    status,
+    payment,
+    from,
+    to,
+    sort = "newest",
+    page = 1,
+    pageSize = 20,
+    completed,
+    excludeCompleted,
+  } = params;
   const statusFilter = completed
     ? { status: { in: COMPLETED_STATUSES } }
     : excludeCompleted
@@ -178,9 +239,24 @@ export const getAdminOrders = cache((params: AdminOrdersQuery) => {
   const where: Prisma.OrderWhereInput = {
     isDeleted: false,
     ...statusFilter,
-    ...(q ? { OR: [{ orderNumber: { contains: q, mode: "insensitive" } }, { customerName: { contains: q, mode: "insensitive" } }, { customerEmail: { contains: q, mode: "insensitive" } }] } : {}),
+    ...(q
+      ? {
+          OR: [
+            { orderNumber: { contains: q, mode: "insensitive" } },
+            { customerName: { contains: q, mode: "insensitive" } },
+            { customerEmail: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
     ...(payment ? { paymentStatus: payment } : {}),
-    ...(from || to ? { createdAt: { gte: from ? istDayStart(from) : undefined, lte: to ? istDayEnd(to) : undefined } } : {}),
+    ...(from || to
+      ? {
+          createdAt: {
+            gte: from ? istDayStart(from) : undefined,
+            lte: to ? istDayEnd(to) : undefined,
+          },
+        }
+      : {}),
   };
   const orderBy =
     sort === "oldest"
@@ -206,8 +282,19 @@ export const getAdminOrders = cache((params: AdminOrdersQuery) => {
 
   return Promise.all([
     prisma.order.count({ where }),
-    prisma.order.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize, select }),
-  ]).then(([total, items]) => ({ items, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) }));
+    prisma.order.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select,
+    }),
+  ]).then(([total, items]) => ({
+    items,
+    total,
+    page,
+    pages: Math.max(1, Math.ceil(total / pageSize)),
+  }));
 });
 
 // ─── Order detail ───────────────────────────────────────────────────────────
@@ -227,7 +314,7 @@ export const getAdminOrder = cache((orderNumber: string) =>
       warranty: true,
       profile: { select: { id: true, email: true, phone: true, name: true } },
     },
-  })
+  }),
 );
 
 // ─── Reviews (moderation) ───────────────────────────────────────────────────
@@ -296,7 +383,13 @@ const adminReviewsPage = cache(async (params: AdminReviewsQuery) => {
 
   const pageResults = await Promise.all([
     prisma.review.count({ where }),
-    prisma.review.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize, select }),
+    prisma.review.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select,
+    }),
   ]);
   const [total, items] = pageResults;
   const media = await prisma.media.findMany({
@@ -309,8 +402,16 @@ const adminReviewsPage = cache(async (params: AdminReviewsQuery) => {
     list.push({ url: m.secureUrl });
     byReview.set(m.entityId, list);
   }
-  const rows: AdminReviewRow[] = items.map((r) => ({ ...r, images: byReview.get(r.id) ?? [] }));
-  return { items: rows, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
+  const rows: AdminReviewRow[] = items.map((r) => ({
+    ...r,
+    images: byReview.get(r.id) ?? [],
+  }));
+  return {
+    items: rows,
+    total,
+    page,
+    pages: Math.max(1, Math.ceil(total / pageSize)),
+  };
 });
 
 const cachedAdminReviews = defineCached(adminReviewsPage, {

@@ -14,8 +14,20 @@ export const ORDER_BUCKET_LABELS: Record<string, string> = {
 };
 
 const STATUS_BUCKETS: Record<string, string[]> = {
-  placed: ["ORDER_RECEIVED", "ORDER_CONFIRMED", "PAYMENT_PENDING", "PAYMENT_RECEIVED"],
-  inWorkshop: ["PARTS_BOOKED", "PARTS_SHIPPED", "PARTS_RECEIVED", "IN_QUEUE", "WORK_STARTED", "COMPLETED"],
+  placed: [
+    "ORDER_RECEIVED",
+    "ORDER_CONFIRMED",
+    "PAYMENT_PENDING",
+    "PAYMENT_RECEIVED",
+  ],
+  inWorkshop: [
+    "PARTS_BOOKED",
+    "PARTS_SHIPPED",
+    "PARTS_RECEIVED",
+    "IN_QUEUE",
+    "WORK_STARTED",
+    "COMPLETED",
+  ],
   qualityCheck: ["TESTING"],
   shipped: ["PACKING", "SHIPMENT_BOOKED", "SHIPMENT_PICKED_UP", "IN_TRANSIT"],
   delivered: ["DELIVERED", "ORDER_COMPLETED", "TESTING_WARRANTY_ACTIVE"],
@@ -33,29 +45,68 @@ export const getAnalyticsKPIs = cache(async (rangeDays: number) => {
     ...(lt ? { lt } : {}),
   });
 
-  const [revenue, prevRevenue, orders, prevOrders, newCustomers, prevNewCustomers, activeWorkshop] =
-    await Promise.all([
-      prisma.order.aggregate({
-        where: { isDeleted: false, paymentStatus: "PAID", ...(from ? { createdAt: { gte: from } } : {}) },
-        _sum: { total: true },
-      }),
-      prisma.order.aggregate({
-        where: { isDeleted: false, paymentStatus: "PAID", createdAt: timeFilter(prevFrom, prevTo) },
-        _sum: { total: true },
-      }),
-      prisma.order.count({ where: { isDeleted: false, ...(from ? { createdAt: { gte: from } } : {}) } }),
-      prisma.order.count({ where: { isDeleted: false, createdAt: timeFilter(prevFrom, prevTo) } }),
-      prisma.profile.count({ where: { role: "CUSTOMER", ...(from ? { createdAt: { gte: from } } : {}) } }),
-      prisma.profile.count({ where: { role: "CUSTOMER", createdAt: timeFilter(prevFrom, prevTo) } }),
-      prisma.order.count({
-        where: {
-          isDeleted: false,
-          status: { in: ["IN_QUEUE", "WORK_STARTED", "TESTING", "COMPLETED", "PARTS_BOOKED", "PARTS_RECEIVED"] },
+  const [
+    revenue,
+    prevRevenue,
+    orders,
+    prevOrders,
+    newCustomers,
+    prevNewCustomers,
+    activeWorkshop,
+  ] = await Promise.all([
+    prisma.order.aggregate({
+      where: {
+        isDeleted: false,
+        paymentStatus: "PAID",
+        ...(from ? { createdAt: { gte: from } } : {}),
+      },
+      _sum: { total: true },
+    }),
+    prisma.order.aggregate({
+      where: {
+        isDeleted: false,
+        paymentStatus: "PAID",
+        createdAt: timeFilter(prevFrom, prevTo),
+      },
+      _sum: { total: true },
+    }),
+    prisma.order.count({
+      where: {
+        isDeleted: false,
+        ...(from ? { createdAt: { gte: from } } : {}),
+      },
+    }),
+    prisma.order.count({
+      where: { isDeleted: false, createdAt: timeFilter(prevFrom, prevTo) },
+    }),
+    prisma.profile.count({
+      where: {
+        role: "CUSTOMER",
+        ...(from ? { createdAt: { gte: from } } : {}),
+      },
+    }),
+    prisma.profile.count({
+      where: { role: "CUSTOMER", createdAt: timeFilter(prevFrom, prevTo) },
+    }),
+    prisma.order.count({
+      where: {
+        isDeleted: false,
+        status: {
+          in: [
+            "IN_QUEUE",
+            "WORK_STARTED",
+            "TESTING",
+            "COMPLETED",
+            "PARTS_BOOKED",
+            "PARTS_RECEIVED",
+          ],
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
-  const pct = (cur: number, prev: number) => (allTime || prev <= 0 ? null : Math.round(((cur - prev) / prev) * 100));
+  const pct = (cur: number, prev: number) =>
+    allTime || prev <= 0 ? null : Math.round(((cur - prev) / prev) * 100);
 
   return {
     revenue: revenue._sum.total ?? 0,
@@ -74,14 +125,26 @@ export const getAnalyticsSeries = cache(async (rangeDays: number) => {
   const days = rangeDays > 0 ? rangeDays : 365;
   const from = daysAgoISTDayStart(days - 1);
   const orders = await prisma.order.findMany({
-    where: { isDeleted: false, paymentStatus: "PAID", createdAt: { gte: from } },
+    where: {
+      isDeleted: false,
+      paymentStatus: "PAID",
+      createdAt: { gte: from },
+    },
     select: {
       createdAt: true,
       total: true,
-      payments: { where: { status: "PAID" }, select: { status: true, paidAt: true } },
+      payments: {
+        where: { status: "PAID" },
+        select: { status: true, paidAt: true },
+      },
     },
   });
-  const series: { date: string; label: string; revenue: number; orders: number }[] = [];
+  const series: {
+    date: string;
+    label: string;
+    revenue: number;
+    orders: number;
+  }[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = daysAgoISTDayStart(i);
     series.push({
@@ -109,7 +172,13 @@ export const getOrderStatusBreakdown = cache(async () => {
     where: { isDeleted: false },
     select: { status: true },
   });
-  const buckets: Record<string, number> = { placed: 0, inWorkshop: 0, qualityCheck: 0, shipped: 0, delivered: 0 };
+  const buckets: Record<string, number> = {
+    placed: 0,
+    inWorkshop: 0,
+    qualityCheck: 0,
+    shipped: 0,
+    delivered: 0,
+  };
   for (const r of rows) {
     for (const [key, statuses] of Object.entries(STATUS_BUCKETS)) {
       if (statuses.includes(r.status)) {
@@ -127,7 +196,10 @@ export const getWorkshopMods = cache(async (rangeDays: number, take = 6) => {
   const from = rangeDays > 0 ? daysAgoISTDayStart(rangeDays - 1) : undefined;
   const rows = await prisma.orderService.findMany({
     where: { ...(from ? { createdAt: { gte: from } } : {}) },
-    select: { lineTotal: true, service: { select: { group: { select: { name: true } } } } },
+    select: {
+      lineTotal: true,
+      service: { select: { group: { select: { name: true } } } },
+    },
   });
   const byGroup: Record<string, { count: number; revenue: number }> = {};
   for (const r of rows) {

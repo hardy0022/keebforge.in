@@ -4,11 +4,11 @@ import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
-import type { AnimatedIconHandle } from "@/components/ui/types";
-import TravelBag from "@/components/ui/travel-bag";
-import SlidersHorizontalIcon from "@/components/ui/sliders-horizontal-icon";
-import CpuIcon from "@/components/ui/cpu-icon";
-import PlugConnectedIcon from "@/components/ui/plug-connected-icon";
+import type { AnimatedIconHandle } from "@/components/icons/types";
+import TravelBag from "@/components/icons/travel-bag";
+import SlidersHorizontalIcon from "@/components/icons/sliders-horizontal-icon";
+import CpuIcon from "@/components/icons/cpu-icon";
+import PlugConnectedIcon from "@/components/icons/plug-connected-icon";
 
 const SERVICE_ICONS = {
   customBuilds: TravelBag,
@@ -18,10 +18,26 @@ const SERVICE_ICONS = {
 };
 
 const SERVICES = [
-  { title: "Custom Builds", desc: "Handcrafted keyboards built around your needs.", icon: SERVICE_ICONS.customBuilds },
-  { title: "Tuning", desc: "Switch lubing, stabilizer tuning, foam mod & more.", icon: SERVICE_ICONS.tuning },
-  { title: "Soldering", desc: "Professional soldering for mods and custom builds.", icon: SERVICE_ICONS.soldering },
-  { title: "Repairs", desc: "Keyboard & mouse repairs done right.", icon: SERVICE_ICONS.repairs },
+  {
+    title: "Custom Builds",
+    desc: "Handcrafted keyboards built around your needs.",
+    icon: SERVICE_ICONS.customBuilds,
+  },
+  {
+    title: "Tuning",
+    desc: "Switch lubing, stabilizer tuning, foam mod & more.",
+    icon: SERVICE_ICONS.tuning,
+  },
+  {
+    title: "Soldering",
+    desc: "Professional soldering for mods and custom builds.",
+    icon: SERVICE_ICONS.soldering,
+  },
+  {
+    title: "Repairs",
+    desc: "Keyboard & mouse repairs done right.",
+    icon: SERVICE_ICONS.repairs,
+  },
 ];
 
 type Service = (typeof SERVICES)[number];
@@ -48,7 +64,10 @@ function ServiceItem({ service }: { service: Service }) {
 
 export function HomeHero() {
   return (
-    <section className="hp-hero" aria-label="KeebForge — precision keyboard builds, tuning and repairs">
+    <section
+      className="hp-hero"
+      aria-label="KeebForge — precision keyboard builds, tuning and repairs"
+    >
       <div className="hp-hero-glow" aria-hidden="true" />
 
       <div className="hp-hero-main">
@@ -92,7 +111,9 @@ export function HomeHero() {
             <div className="hp-hero-frame">
               <div className="hp-hero-note hp-hero-note-tl" aria-hidden="true">
                 <span className="hp-note-bracket hp-note-bracket-tl" />
-                <span className="hp-note-text hp-note-text-tl">BUILT WITH PRECISION</span>
+                <span className="hp-note-text hp-note-text-tl">
+                  BUILT WITH PRECISION
+                </span>
               </div>
               <div className="hp-hero-visual-frame">
                 <Image

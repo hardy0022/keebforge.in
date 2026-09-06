@@ -10,6 +10,8 @@ export const authClient = createAuthClient({
   plugins: [
     // Public ingestion URL (not a secret) — inlined at build time; without it
     // Sentinel falls back to global identify ingestion with a console warning.
-    sentinelClient({ identifyUrl: process.env.NEXT_PUBLIC_BETTER_AUTH_IDENTIFY_URL }),
+    sentinelClient({
+      identifyUrl: process.env.NEXT_PUBLIC_BETTER_AUTH_IDENTIFY_URL,
+    }),
   ],
 });

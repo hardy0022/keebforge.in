@@ -31,11 +31,45 @@ export async function GET() {
     const s = String(v ?? "");
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const header = ["name", "slug", "type", "status", "category", "brand", "sku", "barcode", "price", "compareAtPrice", "costPrice", "stock", "lowStockThreshold", "gstRate", "featured"];
+  const header = [
+    "name",
+    "slug",
+    "type",
+    "status",
+    "category",
+    "brand",
+    "sku",
+    "barcode",
+    "price",
+    "compareAtPrice",
+    "costPrice",
+    "stock",
+    "lowStockThreshold",
+    "gstRate",
+    "featured",
+  ];
   const lines = [
     header.join(","),
     ...products.map((p) =>
-      [p.name, p.slug, p.type, p.status, p.category.slug, p.brand?.slug ?? "", p.sku ?? "", p.barcode ?? "", (p.price / 100).toFixed(2), p.compareAtPrice ? (p.compareAtPrice / 100).toFixed(2) : "", p.costPrice ? (p.costPrice / 100).toFixed(2) : "", p.stock, p.lowStockThreshold, p.gstRate, p.featured ? "1" : "0"].map(esc).join(",")
+      [
+        p.name,
+        p.slug,
+        p.type,
+        p.status,
+        p.category.slug,
+        p.brand?.slug ?? "",
+        p.sku ?? "",
+        p.barcode ?? "",
+        (p.price / 100).toFixed(2),
+        p.compareAtPrice ? (p.compareAtPrice / 100).toFixed(2) : "",
+        p.costPrice ? (p.costPrice / 100).toFixed(2) : "",
+        p.stock,
+        p.lowStockThreshold,
+        p.gstRate,
+        p.featured ? "1" : "0",
+      ]
+        .map(esc)
+        .join(","),
     ),
   ];
 

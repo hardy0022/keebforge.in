@@ -6,7 +6,11 @@ import { cldUrl } from "@/lib/cloudinary-url";
 import type { ReviewCardItem } from "@/components/reviews/ReviewCard";
 
 function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function ReviewBody({ review }: { review: ReviewCardItem }) {
@@ -42,7 +46,9 @@ export function ReviewBody({ review }: { review: ReviewCardItem }) {
 
   return (
     <>
-      <div className={`review-body${clickable ? " review-body-clickable" : ""}`}>
+      <div
+        className={`review-body${clickable ? " review-body-clickable" : ""}`}
+      >
         <div ref={ref} className="review-text">
           {review.body}
         </div>
@@ -84,7 +90,9 @@ export function ReviewBody({ review }: { review: ReviewCardItem }) {
                 <ReviewStars rating={review.rating} />
               </div>
             )}
-            {review.title && <h3 className="review-modal-title">{review.title}</h3>}
+            {review.title && (
+              <h3 className="review-modal-title">{review.title}</h3>
+            )}
           </div>
 
           <div className="review-modal-scroll">
@@ -93,7 +101,13 @@ export function ReviewBody({ review }: { review: ReviewCardItem }) {
             {review.images.length > 0 && (
               <div className="review-modal-photos">
                 {review.images.map((img) => (
-                  <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="review-modal-photo">
+                  <a
+                    key={img.id}
+                    href={img.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="review-modal-photo"
+                  >
                     <img src={cldUrl(img.url, 1600)} alt="" loading="lazy" />
                   </a>
                 ))}
@@ -109,18 +123,31 @@ export function ReviewBody({ review }: { review: ReviewCardItem }) {
                 </span>
               ) : (
                 <span className="review-avatar" aria-hidden="true">
-                  {(review.profile?.name?.trim() || review.authorName?.trim() || "?").charAt(0)}
+                  {(
+                    review.profile?.name?.trim() ||
+                    review.authorName?.trim() ||
+                    "?"
+                  ).charAt(0)}
                 </span>
               )}
               <div className="review-author-meta">
                 <div className="review-name">
-                  {review.profile?.name?.trim() || review.authorName?.trim() || "Verified customer"}
+                  {review.profile?.name?.trim() ||
+                    review.authorName?.trim() ||
+                    "Verified customer"}
                 </div>
-                {review.verified && <span className="review-verified">Verified Purchase</span>}
-                {review.authorLocation && <div className="review-location">{review.authorLocation}</div>}
+                {review.verified && (
+                  <span className="review-verified">Verified Purchase</span>
+                )}
+                {review.authorLocation && (
+                  <div className="review-location">{review.authorLocation}</div>
+                )}
               </div>
             </div>
-            <time className="review-date" dateTime={review.createdAt.toISOString()}>
+            <time
+              className="review-date"
+              dateTime={review.createdAt.toISOString()}
+            >
               {formatDate(review.createdAt)}
             </time>
           </div>

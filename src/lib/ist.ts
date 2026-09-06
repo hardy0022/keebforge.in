@@ -48,7 +48,10 @@ export function daysAgoISTDayStart(offsetDays: number): Date {
 }
 
 /** Format a UTC Date for display as IST (throws nothing; returns "" for null). */
-export function fmtIST(d: Date | null | undefined, opts: Intl.DateTimeFormatOptions): string {
+export function fmtIST(
+  d: Date | null | undefined,
+  opts: Intl.DateTimeFormatOptions,
+): string {
   if (!d) return "";
   return d.toLocaleString("en-IN", { timeZone: BUSINESS_TZ, ...opts });
 }
@@ -75,12 +78,34 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const assert = (cond: boolean, msg: string) => {
     if (!cond) throw new Error(`[ist] ${msg}`);
   };
-  assert(istDayKey(new Date("2026-09-01T07:12:00Z")) === "2026-09-01", "1 Sep 12:42 IST must bucket to 2026-09-01");
-  assert(istDayKey(new Date("2026-08-31T18:25:00Z")) === "2026-08-31", "31 Aug 11:55 PM IST must bucket to 2026-08-31");
-  assert(istDayKey(new Date("2026-08-31T18:35:00Z")) === "2026-09-01", "1 Sep 12:05 AM IST must bucket to 2026-09-01");
-  assert(istDayStart("2026-09-01").toISOString() === "2026-08-31T18:30:00.000Z", "01 Sep IST day start UTC instant");
-  assert(istDayEnd("2026-09-01").toISOString() === "2026-09-01T18:29:59.999Z", "01 Sep IST day end UTC instant");
-  assert(parseISTDateKeyStart("2026-09-01")!.getUTCHours() === 18, "startsAt parsed to IST day start");
-  assert(parseISTDateKeyEnd("2026-09-01")!.toISOString() === "2026-09-01T18:29:59.999Z", "expiresAt parsed to IST day end");
+  assert(
+    istDayKey(new Date("2026-09-01T07:12:00Z")) === "2026-09-01",
+    "1 Sep 12:42 IST must bucket to 2026-09-01",
+  );
+  assert(
+    istDayKey(new Date("2026-08-31T18:25:00Z")) === "2026-08-31",
+    "31 Aug 11:55 PM IST must bucket to 2026-08-31",
+  );
+  assert(
+    istDayKey(new Date("2026-08-31T18:35:00Z")) === "2026-09-01",
+    "1 Sep 12:05 AM IST must bucket to 2026-09-01",
+  );
+  assert(
+    istDayStart("2026-09-01").toISOString() === "2026-08-31T18:30:00.000Z",
+    "01 Sep IST day start UTC instant",
+  );
+  assert(
+    istDayEnd("2026-09-01").toISOString() === "2026-09-01T18:29:59.999Z",
+    "01 Sep IST day end UTC instant",
+  );
+  assert(
+    parseISTDateKeyStart("2026-09-01")!.getUTCHours() === 18,
+    "startsAt parsed to IST day start",
+  );
+  assert(
+    parseISTDateKeyEnd("2026-09-01")!.toISOString() ===
+      "2026-09-01T18:29:59.999Z",
+    "expiresAt parsed to IST day end",
+  );
   console.log("[ist] boundary self-check OK");
 }

@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { buildMetadata } from "@/lib/seo";
 import { getModsCatalog } from "@/lib/data";
 import { DEFAULT_SHIPPING_MODE, enabledShippingModes } from "@/lib/delhivery";
-import { ModConfigurator, type ConfigService } from "@/components/mods/ModConfigurator";
+import {
+  ModConfigurator,
+  type ConfigService,
+} from "@/components/mods/ModConfigurator";
 import { WhyForge } from "@/components/home/WhyForge";
 
 export const metadata: Metadata = buildMetadata({
@@ -33,41 +36,48 @@ export default async function ModsPage() {
 
   const visibleGroups = groups
     .filter((g) => !HIDDEN_GROUP_SLUGS.has(g.slug))
-    .map((g) => ({ ...g, services: g.services.filter((s) => !HIDDEN_MOD_SLUGS.has(s.slug)) }))
+    .map((g) => ({
+      ...g,
+      services: g.services.filter((s) => !HIDDEN_MOD_SLUGS.has(s.slug)),
+    }))
     .filter((g) => g.services.length > 0);
 
-  const config: { name: string; slug: string; services: ConfigService[] }[] = visibleGroups.map((g) => ({
-    name: g.name,
-    slug: g.slug,
-    services: g.services.map((svc) => ({
-      id: svc.id,
-      slug: svc.slug,
-      name: svc.name,
-      description: svc.description,
-      device: svc.device,
-      unit: svc.unit,
-      price: svc.price,
-      priceMin: svc.priceMin,
-      priceMax: svc.priceMax,
-      priceLabel: svc.priceLabel,
-      combo: svc.combo,
-      popular: svc.popular,
-      highlight: svc.highlight,
-      replaces: (svc.replaces as string[] | null) ?? null,
-      exclusiveWith: (svc.exclusiveWith as string[] | null) ?? null,
-      groupName: g.name,
-      groupSlug: g.slug,
-    })),
-  }));
+  const config: { name: string; slug: string; services: ConfigService[] }[] =
+    visibleGroups.map((g) => ({
+      name: g.name,
+      slug: g.slug,
+      services: g.services.map((svc) => ({
+        id: svc.id,
+        slug: svc.slug,
+        name: svc.name,
+        description: svc.description,
+        device: svc.device,
+        unit: svc.unit,
+        price: svc.price,
+        priceMin: svc.priceMin,
+        priceMax: svc.priceMax,
+        priceLabel: svc.priceLabel,
+        combo: svc.combo,
+        popular: svc.popular,
+        highlight: svc.highlight,
+        replaces: (svc.replaces as string[] | null) ?? null,
+        exclusiveWith: (svc.exclusiveWith as string[] | null) ?? null,
+        groupName: g.name,
+        groupSlug: g.slug,
+      })),
+    }));
 
   return (
     <main className="config-page">
       <header className="ri-hero">
         <p className="sec-num sv-kicker">{"// Keyboard & Mouse Mods"}</p>
-        <h1 className="ri-hero-title">Mods that improve performance, feel, sound, and function.</h1>
+        <h1 className="ri-hero-title">
+          Mods that improve performance, feel, sound, and function.
+        </h1>
         <p className="ri-hero-desc">
-          Keyboard and mouse modifications — switch lubing, stabilizer work, soldering, tape mods, mouse switch
-          swaps and more. Choose what you need and we&apos;ll take care of the rest.
+          Keyboard and mouse modifications — switch lubing, stabilizer work,
+          soldering, tape mods, mouse switch swaps and more. Choose what you
+          need and we&apos;ll take care of the rest.
         </p>
       </header>
 

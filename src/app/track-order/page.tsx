@@ -11,7 +11,11 @@ export const metadata: Metadata = buildMetadata({
   path: "/track-order",
 });
 
-export default async function TrackOrderPage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
+export default async function TrackOrderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ order?: string }>;
+}) {
   const { order } = await searchParams;
   return (
     <main className="track-page">
@@ -26,7 +30,8 @@ export default async function TrackOrderPage({ searchParams }: { searchParams: P
           <div>
             <p className="track-help-title">Need help?</p>
             <p className="track-help-desc">
-              Something wrong with your order, or can&apos;t find what you&apos;re looking for?
+              Something wrong with your order, or can&apos;t find what
+              you&apos;re looking for?
             </p>
           </div>
           <Link href="/contact" className="btn-prime">

@@ -16,8 +16,12 @@ export function ReviewSummary({
       <div className="reviews-summary-avg">
         <div className="reviews-summary-avg-main">
           <span className="reviews-avg-num">
-                  <NumberTicker value={Math.max(0, average ?? 0)} decimalPlaces={1} className="reviews-avg-num" />
-                </span>
+            <NumberTicker
+              value={Math.max(0, average ?? 0)}
+              decimalPlaces={1}
+              className="reviews-avg-num"
+            />
+          </span>
           <span className="reviews-avg-label">out of 5</span>
         </div>
         <ReviewStars rating={average ?? 0} size="lg" />
@@ -35,7 +39,10 @@ export function ReviewSummary({
               <div key={stars} className="reviews-dist-row">
                 <span className="reviews-dist-label">{stars}★</span>
                 <span className="reviews-dist-bar">
-                  <span className="reviews-dist-fill" style={{ width: `${pct}%` }} />
+                  <span
+                    className="reviews-dist-fill"
+                    style={{ width: `${pct}%` }}
+                  />
                 </span>
                 <span className="reviews-dist-count num">{n}</span>
               </div>

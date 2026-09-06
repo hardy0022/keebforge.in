@@ -16,8 +16,9 @@ export function ProductCard({ product }: { product: ShopProduct }) {
   const [manual, setManual] = useState<number | null>(null);
   const compareAt = product.compareAtPrice;
   const buyable = isPurchasable(product);
-  const feats = (Array.isArray(product.cardFeatures) ? product.cardFeatures : [])
-    .slice(0, MAX_CARD_FEATURES) as ProductCardFeature[];
+  const feats = (
+    Array.isArray(product.cardFeatures) ? product.cardFeatures : []
+  ).slice(0, MAX_CARD_FEATURES) as ProductCardFeature[];
 
   // Price can vary when the customer picks between variants or add-ons, or the
   // product is made to order — mirror the detail page's "From" semantics.
@@ -25,18 +26,22 @@ export function ProductCard({ product }: { product: ShopProduct }) {
   const variableConfig =
     product.variants.length > 1 ||
     new Set(variantPrices).size > 1 ||
-    product.optionGroups.some((g) => g.enabled && g.options.some((o) => o.enabled && o.priceAddon > 0));
+    product.optionGroups.some(
+      (g) => g.enabled && g.options.some((o) => o.enabled && o.priceAddon > 0),
+    );
   const fromPrice = product.productType === "CUSTOM" || variableConfig;
 
   // Compare-at only surfaces for a genuinely single-price product (never next to "From").
-  const showCompareAt = !fromPrice && compareAt != null && compareAt > product.price;
+  const showCompareAt =
+    !fromPrice && compareAt != null && compareAt > product.price;
 
   // Small section marker above the title: custom/clearance communicate themselves, NEW stays quiet.
   const kicker =
     product.productType === "CUSTOM"
       ? "Custom Order"
       : product.productType === "CLEARANCE"
-        ? (product.condition && CONDITION_LABELS[product.condition]) || "Clearance"
+        ? (product.condition && CONDITION_LABELS[product.condition]) ||
+          "Clearance"
         : null;
 
   // Hover swap is pure CSS (no re-render → no flicker). Arrows only move a
@@ -45,8 +50,15 @@ export function ProductCard({ product }: { product: ShopProduct }) {
   const prevImage = () => setManual((m) => ((m ?? 0) - 1 + count) % count);
 
   return (
-    <article className={`shop-card${buyable ? "" : " shop-card--unavailable"}`} onMouseLeave={() => setManual(null)}>
-      <Link href={`/product/${product.slug}`} className="shop-card-media" aria-label={product.name}>
+    <article
+      className={`shop-card${buyable ? "" : " shop-card--unavailable"}`}
+      onMouseLeave={() => setManual(null)}
+    >
+      <Link
+        href={`/product/${product.slug}`}
+        className="shop-card-media"
+        aria-label={product.name}
+      >
         {count > 0 ? (
           <>
             <BlurFadeImage className="absolute inset-0">
@@ -58,7 +70,11 @@ export function ProductCard({ product }: { product: ShopProduct }) {
                   fill
                   sizes="(min-width: 1200px) 25vw, (min-width: 850px) 33vw, (min-width: 600px) 50vw, 100vw"
                   className="shop-card-img"
-                  style={manual !== null ? { opacity: i === manual ? 1 : 0 } : undefined}
+                  style={
+                    manual !== null
+                      ? { opacity: i === manual ? 1 : 0 }
+                      : undefined
+                  }
                 />
               ))}
             </BlurFadeImage>
@@ -72,7 +88,17 @@ export function ProductCard({ product }: { product: ShopProduct }) {
                     prevImage();
                   }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
                     <path d="M15 18l-6-6 6-6" />
                   </svg>
                 </button>
@@ -84,7 +110,17 @@ export function ProductCard({ product }: { product: ShopProduct }) {
                     nextImage();
                   }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
                     <path d="M9 18l6-6-6-6" />
                   </svg>
                 </button>
@@ -98,16 +134,28 @@ export function ProductCard({ product }: { product: ShopProduct }) {
         )}
       </Link>
       <div className="shop-card-body">
-        {kicker && <span className={`shop-card-kicker${product.productType === "CUSTOM" ? " acc" : ""}`}>{kicker}</span>}
+        {kicker && (
+          <span
+            className={`shop-card-kicker${product.productType === "CUSTOM" ? " acc" : ""}`}
+          >
+            {kicker}
+          </span>
+        )}
         <h3 className="shop-card-title">
           <Link href={`/product/${product.slug}`}>{product.name}</Link>
         </h3>
         <div className="shop-card-foot">
           <div className="shop-card-pricing">
             <span className="shop-card-price">
-              {fromPrice && <span className="shop-card-price-from">From&nbsp;</span>}
+              {fromPrice && (
+                <span className="shop-card-price-from">From&nbsp;</span>
+              )}
               {formatINR(product.price)}
-              {showCompareAt && <span className="shop-card-price-was">{formatINR(compareAt!)}</span>}
+              {showCompareAt && (
+                <span className="shop-card-price-was">
+                  {formatINR(compareAt!)}
+                </span>
+              )}
             </span>
           </div>
           <CardAddToCart productId={product.id} disabled={!buyable} />

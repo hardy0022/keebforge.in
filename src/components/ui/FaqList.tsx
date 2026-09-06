@@ -1,7 +1,15 @@
 import type { FaqItem } from "@/lib/faq";
 import { SectionHead } from "@/components/ui/SectionHead";
 
-export function FaqList({ items, title, desc }: { items: FaqItem[]; title?: string; desc?: string }) {
+export function FaqList({
+  items,
+  title,
+  desc,
+}: {
+  items: FaqItem[];
+  title?: string;
+  desc?: string;
+}) {
   return (
     <section className="info-section" aria-labelledby="t-faq">
       <div className="wrap">

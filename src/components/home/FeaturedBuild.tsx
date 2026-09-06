@@ -12,8 +12,8 @@ import {
 } from "motion/react";
 import { formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import ArrowBigLeftIcon from "@/components/ui/arrow-big-left-icon";
-import ArrowBigRightIcon from "@/components/ui/arrow-big-right-icon";
+import ArrowBigLeftIcon from "@/components/icons/arrow-big-left-icon";
+import ArrowBigRightIcon from "@/components/icons/arrow-big-right-icon";
 import type { HomeProduct } from "@/lib/home";
 
 const WORDS = 30;
@@ -33,13 +33,19 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
 
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
   const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.94, 1, 1.02]);
   const frameY = useTransform(scrollYProgress, [0, 1], [30, 0]);
 
   useEffect(() => {
     if (products.length < 2 || reduced) return;
-    const id = setInterval(() => setIndex((i) => (i + 1) % products.length), SLIDE_MS);
+    const id = setInterval(
+      () => setIndex((i) => (i + 1) % products.length),
+      SLIDE_MS,
+    );
     return () => clearInterval(id);
   }, [products.length, reduced, index]);
 
@@ -51,7 +57,9 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
   const product = products[Math.min(index, products.length - 1)];
   const image = product.images[1] ?? product.images[0];
   const description = truncateWords(product.description);
-  const transition = reduced ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const };
+  const transition = reduced
+    ? { duration: 0 }
+    : { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const };
 
   return (
     <section ref={ref} className="hp-feature" aria-labelledby="featured-build">
@@ -105,22 +113,33 @@ export function FeaturedBuild({ products }: { products: HomeProduct[] }) {
                 {product.name}
               </h2>
               <p className="hp-feature-desc">
-                {description || "Bespoke keyboards built, tuned and finished around how you actually use them."}
+                {description ||
+                  "Bespoke keyboards built, tuned and finished around how you actually use them."}
               </p>
               <p className="hp-feature-price">
-                Starting from <span className="num">{formatINR(product.price)}</span>
+                Starting from{" "}
+                <span className="num">{formatINR(product.price)}</span>
               </p>
-              <Link href={`/product/${product.slug}`} className="btn-prime btn-prime-lg">
+              <Link
+                href={`/product/${product.slug}`}
+                className="btn-prime btn-prime-lg"
+              >
                 View Build <span aria-hidden="true">→</span>
               </Link>
-              <p className="hp-feature-cat num">{product.category?.name ?? "Keyboards"}</p>
+              <p className="hp-feature-cat num">
+                {product.category?.name ?? "Keyboards"}
+              </p>
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
 
       {products.length > 1 && (
-        <div className="hp-feature-dots" role="group" aria-label="Featured products">
+        <div
+          className="hp-feature-dots"
+          role="group"
+          aria-label="Featured products"
+        >
           <button
             type="button"
             className="hp-feature-arrow hp-feature-arrow-prev"

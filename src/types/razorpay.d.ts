@@ -51,7 +51,11 @@ interface AffordabilitySuiteConfig {
     widget?: {
       main?: {
         heading?: { color?: string; fontSize?: string };
-        content?: { color?: string; fontSize?: string; backgroundColor?: string };
+        content?: {
+          color?: string;
+          fontSize?: string;
+          backgroundColor?: string;
+        };
         discount?: { color?: string };
         link?: { button?: boolean; color?: string; fontSize?: string };
         footer?: { color?: string; fontSize?: string; darkLogo?: boolean };
@@ -66,5 +70,7 @@ interface RazorpayAffordabilitySuiteInstance {
 }
 
 interface Window {
-  RazorpayAffordabilitySuite: new (config: AffordabilitySuiteConfig) => RazorpayAffordabilitySuiteInstance;
+  RazorpayAffordabilitySuite: new (
+    config: AffordabilitySuiteConfig,
+  ) => RazorpayAffordabilitySuiteInstance;
 }

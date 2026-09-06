@@ -16,7 +16,11 @@ type BlurFadeImageProps = {
  * transactional/admin pages should stay plain. Reduced-motion users get a
  * static image via BlurFade's built-in bypass.
  */
-export function BlurFadeImage({ children, className, delay = 0 }: BlurFadeImageProps) {
+export function BlurFadeImage({
+  children,
+  className,
+  delay = 0,
+}: BlurFadeImageProps) {
   return (
     <BlurFade inView className={className} delay={delay}>
       {children}

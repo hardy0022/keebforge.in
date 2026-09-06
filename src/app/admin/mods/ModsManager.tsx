@@ -38,7 +38,15 @@ export function ModsManager({
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       {/* Page header */}
       <div>
-        <h1 style={{ fontFamily: "var(--ff-display)", fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>
+        <h1
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: 24,
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            margin: 0,
+          }}
+        >
           Mods
         </h1>
         <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.88rem" }}>
@@ -47,33 +55,90 @@ export function ModsManager({
       </div>
 
       {/* Summary stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-        <div className="admin-stat lime"><b>{totals.keyboard}</b><span>Keyboard Mods</span></div>
-        <div className="admin-stat purple"><b>{totals.mouse}</b><span>Mouse Mods</span></div>
-        <div className="admin-stat"><b>{totals.mods}</b><span>Active Mods</span></div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 12,
+        }}
+      >
+        <div className="admin-stat lime">
+          <b>{totals.keyboard}</b>
+          <span>Keyboard Mods</span>
+        </div>
+        <div className="admin-stat purple">
+          <b>{totals.mouse}</b>
+          <span>Mouse Mods</span>
+        </div>
+        <div className="admin-stat">
+          <b>{totals.mods}</b>
+          <span>Active Mods</span>
+        </div>
       </div>
 
       {devices.map((d) => (
-        <section key={d.device} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <section
+          key={d.device}
+          style={{ display: "flex", flexDirection: "column", gap: 20 }}
+        >
           {/* Device heading */}
           <div className="mods-device">
-            <h2 style={{ fontFamily: "var(--ff-display)", fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>
+            <h2
+              style={{
+                fontFamily: "var(--ff-display)",
+                fontSize: 18,
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+                margin: 0,
+              }}
+            >
               {d.title}
             </h2>
-            <span className="muted" style={{ fontSize: "0.82rem" }}>{d.subtitle}</span>
+            <span className="muted" style={{ fontSize: "0.82rem" }}>
+              {d.subtitle}
+            </span>
           </div>
 
           {d.groups.map((g) => (
-            <div key={g.id} style={{ display: "flex", flexDirection: "column" }}>
-              <h3 className="mods-cat-label" style={{ marginBottom: 10 }}>{g.name}</h3>
-              {g.desc && <p className="muted" style={{ margin: "-6px 0 10px", fontSize: "0.78rem" }}>{g.desc}</p>}
+            <div
+              key={g.id}
+              style={{ display: "flex", flexDirection: "column" }}
+            >
+              <h3 className="mods-cat-label" style={{ marginBottom: 10 }}>
+                {g.name}
+              </h3>
+              {g.desc && (
+                <p
+                  className="muted"
+                  style={{ margin: "-6px 0 10px", fontSize: "0.78rem" }}
+                >
+                  {g.desc}
+                </p>
+              )}
               <div className="mods-grid">
                 {g.items.map((svc) => (
                   <div key={svc.id} className="mods-item-card">
                     <div className="mods-item-info">
-                      <div style={{ fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.25 }}>{svc.name}</div>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: "0.9rem",
+                          lineHeight: 1.25,
+                        }}
+                      >
+                        {svc.name}
+                      </div>
                       {svc.description && (
-                        <div className="muted" style={{ fontSize: "0.74rem", marginTop: 2, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div
+                          className="muted"
+                          style={{
+                            fontSize: "0.74rem",
+                            marginTop: 2,
+                            lineHeight: 1.4,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
                           {svc.description}
                         </div>
                       )}

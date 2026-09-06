@@ -13,7 +13,12 @@ import {
   quoteFingerprint,
   toShippingMode,
 } from "@/lib/delhivery";
-import { validateCoupon, couponOrderCreateData, incrementCouponUsage, type CouponEligible } from "@/lib/coupons";
+import {
+  validateCoupon,
+  couponOrderCreateData,
+  incrementCouponUsage,
+  type CouponEligible,
+} from "@/lib/coupons";
 import { ensureRazorpayCustomer } from "@/lib/razorpay-customer";
 import { Prisma } from "@prisma/client";
 import Razorpay from "razorpay";
@@ -33,7 +38,10 @@ const addressSchema = z.object({
   apartment: z.string().trim().max(120).optional(),
   city: z.string().trim().min(1, "City is required.").max(100),
   state: z.string().trim().min(1, "State is required.").max(100),
-  postalCode: z.string().trim().regex(/^[1-9]\d{5}$/, "Enter a valid 6-digit PIN code."),
+  postalCode: z
+    .string()
+    .trim()
+    .regex(/^[1-9]\d{5}$/, "Enter a valid 6-digit PIN code."),
   phone: z
     .string()
     .trim()
@@ -48,7 +56,10 @@ const billingSchema = z.object({
   addressLine2: z.string().trim().max(120).optional(),
   city: z.string().trim().min(1, "City is required.").max(100),
   state: z.string().trim().min(1, "State is required.").max(100),
-  pinCode: z.string().trim().regex(/^[1-9]\d{5}$/, "Enter a valid 6-digit PIN code."),
+  pinCode: z
+    .string()
+    .trim()
+    .regex(/^[1-9]\d{5}$/, "Enter a valid 6-digit PIN code."),
   phone: z.string().trim().min(10, "Enter a valid phone number.").max(15),
 });
 
@@ -64,7 +75,11 @@ const bodySchema = z.object({
 
 /** Shipping-mode error taxonomy mapped to HTTP status. */
 function shipErrorStatus(errorCode: string): number {
-  if (errorCode === "PINCODE_UNAVAILABLE" || errorCode === "MISSING_SHIPPING_CONFIGURATION") return 422;
+  if (
+    errorCode === "PINCODE_UNAVAILABLE" ||
+    errorCode === "MISSING_SHIPPING_CONFIGURATION"
+  )
+    return 422;
   if (errorCode === "RATE_LIMITED") return 429;
   return 502;
 }
@@ -87,39 +102,67 @@ export async function POST(req: NextRequest) {
     const raw = await req.json().catch(() => null);
     const parsed = bodySchema.safeParse(raw ?? {});
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid delivery details." }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: parsed.error.issues[0]?.message ?? "Invalid delivery details.",
+        },
+        { status: 400 },
+      );
     }
     const { shippingAddress: addr, saveAddress } = parsed.data;
     const billingAddr = parsed.data.billingAddress;
-    const requestedModeRaw = parsed.data.mode == null ? DEFAULT_SHIPPING_MODE : toShippingMode(parsed.data.mode);
-    if (!requestedModeRaw || !enabledShippingModes().includes(requestedModeRaw)) {
-      return NextResponse.json({ error: "Invalid shipping method." }, { status: 400 });
+    const requestedModeRaw =
+      parsed.data.mode == null
+        ? DEFAULT_SHIPPING_MODE
+        : toShippingMode(parsed.data.mode);
+    if (
+      !requestedModeRaw ||
+      !enabledShippingModes().includes(requestedModeRaw)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid shipping method." },
+        { status: 400 },
+      );
     }
     const shippingMode = requestedModeRaw;
 
     const email = user?.email ?? parsed.data.email;
     if (!email) {
-      return NextResponse.json({ error: "Email is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email is required." },
+        { status: 400 },
+      );
     }
 
     // ── Server-side cart is the single source of truth ──────────────────────
     const cart = await getCartWithItems();
     const items = cart?.items ?? [];
     if (items.length === 0) {
-      return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Your cart is empty." },
+        { status: 400 },
+      );
     }
 
     const productIds = items.map((i) => i.productId);
-    const variantIds = items.map((i) => i.variantId).filter((v): v is string => Boolean(v));
+    const variantIds = items
+      .map((i) => i.variantId)
+      .filter((v): v is string => Boolean(v));
     const [products, variants] = await Promise.all([
       prisma.product.findMany({
         where: { id: { in: productIds } },
         include: {
-          images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }], take: 1 },
+          images: {
+            where: { active: true },
+            orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
+            take: 1,
+          },
           optionGroups: {
             where: { enabled: true },
             orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-            include: { options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
+            include: {
+              options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+            },
           },
         },
       }),
@@ -151,33 +194,54 @@ export async function POST(req: NextRequest) {
     for (const item of items) {
       const product = productMap.get(item.productId);
       if (!product || !product.active) {
-        return NextResponse.json({ error: `${item.product.name} is no longer available.` }, { status: 400 });
+        return NextResponse.json(
+          { error: `${item.product.name} is no longer available.` },
+          { status: 400 },
+        );
       }
 
       let variant = null;
       let unitPrice = product.price;
-      let available = availableQuantity(product.stock, product.reservedQuantity);
+      let available = availableQuantity(
+        product.stock,
+        product.reservedQuantity,
+      );
       let configSnapshotData: Prisma.InputJsonValue | undefined;
 
       const cfg = item.config as { kind?: string; optionIds?: string[] } | null;
       if (cfg?.kind === "options" && cfg.optionIds?.length) {
-        const resolved = resolveConfiguredPrice(product.optionGroups, product.price, cfg.optionIds);
+        const resolved = resolveConfiguredPrice(
+          product.optionGroups,
+          product.price,
+          cfg.optionIds,
+        );
         if (!resolved.ok) {
-          return NextResponse.json({ error: `${product.name}: ${resolved.error}` }, { status: 400 });
+          return NextResponse.json(
+            { error: `${product.name}: ${resolved.error}` },
+            { status: 400 },
+          );
         }
         unitPrice = resolved.unitPrice;
-        configSnapshotData = configSnapshot(resolved) as unknown as Prisma.InputJsonValue;
+        configSnapshotData = configSnapshot(
+          resolved,
+        ) as unknown as Prisma.InputJsonValue;
       } else if (item.variantId) {
         variant = variantMap.get(item.variantId);
         if (!variant || !variant.active) {
-          return NextResponse.json({ error: `A selected variant is no longer available.` }, { status: 400 });
+          return NextResponse.json(
+            { error: `A selected variant is no longer available.` },
+            { status: 400 },
+          );
         }
         unitPrice = variant.price ?? product.price;
         available = availableQuantity(variant.stock, variant.reservedQuantity);
       }
 
       if (item.quantity > available) {
-        return NextResponse.json({ error: `Only ${available} left in stock for ${product.name}.` }, { status: 400 });
+        return NextResponse.json(
+          { error: `Only ${available} left in stock for ${product.name}.` },
+          { status: 400 },
+        );
       }
 
       const lineTotal = unitPrice * item.quantity;
@@ -201,7 +265,13 @@ export async function POST(req: NextRequest) {
         imageUrl: product.images[0]?.url ?? null,
         ...(configSnapshotData ? { variantInfo: configSnapshotData } : {}),
         ...(variant && !configSnapshotData
-          ? { variantInfo: { id: variant.id, name: variant.name, options: (variant.options ?? {}) as Prisma.InputJsonValue } }
+          ? {
+              variantInfo: {
+                id: variant.id,
+                name: variant.name,
+                options: (variant.options ?? {}) as Prisma.InputJsonValue,
+              },
+            }
           : {}),
       });
     }
@@ -221,13 +291,28 @@ export async function POST(req: NextRequest) {
       quotedAt: Date;
       fingerprint: string;
     } | null = null;
-    if (!isFreeShipping({ items: items.map((i) => ({ freeShipping: i.product.freeShipping })), subtotalPaise: subtotal })) {
+    if (
+      !isFreeShipping({
+        items: items.map((i) => ({ freeShipping: i.product.freeShipping })),
+        subtotalPaise: subtotal,
+      })
+    ) {
       let weightGrams: number;
       try {
         weightGrams = chargeableWeightGrams(weightRows).weightGrams;
       } catch {
-        console.error("[create-order] product(s) missing shipping weight:", weightRows.length);
-        return NextResponse.json({ error: "Shipping information is unavailable for one or more products.", errorCode: "MISSING_SHIPPING_CONFIGURATION" }, { status: 422 });
+        console.error(
+          "[create-order] product(s) missing shipping weight:",
+          weightRows.length,
+        );
+        return NextResponse.json(
+          {
+            error:
+              "Shipping information is unavailable for one or more products.",
+            errorCode: "MISSING_SHIPPING_CONFIGURATION",
+          },
+          { status: 422 },
+        );
       }
       const ship = await calculateShipping({
         destinationPincode: addr.postalCode,
@@ -236,7 +321,10 @@ export async function POST(req: NextRequest) {
         mode: shippingMode,
       });
       if (!ship.ok) {
-        return NextResponse.json({ error: ship.message, errorCode: ship.errorCode }, { status: shipErrorStatus(ship.errorCode) });
+        return NextResponse.json(
+          { error: ship.message, errorCode: ship.errorCode },
+          { status: shipErrorStatus(ship.errorCode) },
+        );
       }
       shippingAmount = ship.quote.amountPaise;
       shippingSnapshot = {
@@ -251,10 +339,14 @@ export async function POST(req: NextRequest) {
           mode: shippingMode,
           weightGrams,
           subtotalPaise: subtotal,
-          itemKeys: items.map((i) => `${i.productId}:${i.variantId ?? "-"}:${i.quantity}`),
+          itemKeys: items.map(
+            (i) => `${i.productId}:${i.variantId ?? "-"}:${i.quantity}`,
+          ),
         }),
       };
-      console.log(`[create-order] quote validated fp=${shippingSnapshot.fingerprint} amount=${shippingAmount}`);
+      console.log(
+        `[create-order] quote validated fp=${shippingSnapshot.fingerprint} amount=${shippingAmount}`,
+      );
     }
 
     // ── Coupon: validated server-side against the authoritative subtotal ────
@@ -275,12 +367,17 @@ export async function POST(req: NextRequest) {
     const taxAmount = 0;
     const totalAmount = subtotal + shippingAmount - discountAmount + taxAmount;
     if (totalAmount <= 0) {
-      return NextResponse.json({ error: "Invalid order amount" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid order amount" },
+        { status: 400 },
+      );
     }
 
     // ── Persist saved address BEFORE the gateway call (first one = default) ──
     if (profile && saveAddress) {
-      const existingCount = await prisma.address.count({ where: { profileId: profile.id } });
+      const existingCount = await prisma.address.count({
+        where: { profileId: profile.id },
+      });
       await prisma.address.create({
         data: {
           profileId: profile.id,
@@ -306,7 +403,11 @@ export async function POST(req: NextRequest) {
         status: "ORDER_RECEIVED",
         paymentStatus: "PENDING",
         profileId: profile?.id ?? null,
-        customerName: [addr.firstName, addr.lastName].filter(Boolean).join(" ") || profile?.name || user?.name || "Customer",
+        customerName:
+          [addr.firstName, addr.lastName].filter(Boolean).join(" ") ||
+          profile?.name ||
+          user?.name ||
+          "Customer",
         customerEmail: email,
         customerPhone: addr.phone,
         subtotal,
@@ -326,7 +427,10 @@ export async function POST(req: NextRequest) {
             }
           : {}),
         ...(couponEligible
-          ? couponOrderCreateData(couponEligible, discountAmount, { profileId: profile?.id ?? null, email })
+          ? couponOrderCreateData(couponEligible, discountAmount, {
+              profileId: profile?.id ?? null,
+              email,
+            })
           : {}),
         items: { create: orderItems },
         shippingAddress: {
@@ -347,7 +451,11 @@ export async function POST(req: NextRequest) {
     const razorpay = getRazorpay();
     const razorpayCustomerId = await ensureRazorpayCustomer(razorpay, {
       profile,
-      name: [addr.firstName, addr.lastName].filter(Boolean).join(" ") || profile?.name || user?.name || "Customer",
+      name:
+        [addr.firstName, addr.lastName].filter(Boolean).join(" ") ||
+        profile?.name ||
+        user?.name ||
+        "Customer",
       email,
       contact: addr.phone,
     });
@@ -369,7 +477,9 @@ export async function POST(req: NextRequest) {
           razorpayOrderId: rzpOrder.id,
           razorpayOrderAmount: rzpOrder.amount,
           ...(razorpayCustomerId ? { razorpayCustomerId } : {}),
-          ...(shippingSnapshot ? { shippingFingerprint: shippingSnapshot.fingerprint } : {}),
+          ...(shippingSnapshot
+            ? { shippingFingerprint: shippingSnapshot.fingerprint }
+            : {}),
           ...(billingAddr
             ? {
                 billingAddress: {
@@ -395,13 +505,17 @@ export async function POST(req: NextRequest) {
       razorpayOrderId: rzpOrder.id,
       amount: rzpOrder.amount,
       currency: rzpOrder.currency,
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? process.env.RAZORPAY_KEY_ID,
+      keyId:
+        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? process.env.RAZORPAY_KEY_ID,
       customerName: order.customerName,
       customerEmail: email,
       customerPhone: addr.phone,
     });
   } catch (error) {
     console.error("Create Razorpay order error:", error);
-    return NextResponse.json({ error: "Failed to create payment order" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create payment order" },
+      { status: 500 },
+    );
   }
 }

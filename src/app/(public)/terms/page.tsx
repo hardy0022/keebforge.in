@@ -111,7 +111,10 @@ export default function TermsPage() {
           </div>
 
           <div className="mt-10">
-            <SectionHead title="Questions About These Terms?" desc="Reach out any time — email replies are fast." />
+            <SectionHead
+              title="Questions About These Terms?"
+              desc="Reach out any time — email replies are fast."
+            />
             <a href="mailto:contact@keebforge.in" className="btn-prime">
               Email Us: contact@keebforge.in
             </a>

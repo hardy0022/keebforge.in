@@ -13,9 +13,17 @@ const inquirySchema = z.object({
     .min(10, "Please enter a valid phone number.")
     .max(20)
     .regex(/^[0-9+\-\s()]+$/, "Only digits, +, - and spaces are allowed."),
-  email: z.string().trim().email("Please enter a valid email address.").max(120),
+  email: z
+    .string()
+    .trim()
+    .email("Please enter a valid email address.")
+    .max(120),
   deviceModel: z.string().trim().max(120).default(""),
-  issue: z.string().trim().min(20, "Please describe the issue in a little more detail.").max(2000),
+  issue: z
+    .string()
+    .trim()
+    .min(20, "Please describe the issue in a little more detail.")
+    .max(2000),
 });
 
 const MAX_IMAGES = 5;
@@ -23,7 +31,10 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export type InquiryState = { ok?: boolean; error?: string };
 
-export async function sendInquiry(_prev: InquiryState, formData: FormData): Promise<InquiryState> {
+export async function sendInquiry(
+  _prev: InquiryState,
+  formData: FormData,
+): Promise<InquiryState> {
   const parsed = inquirySchema.safeParse({
     name: formData.get("name"),
     phone: formData.get("phone"),
@@ -33,12 +44,18 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Please check your details and try again." };
+    return {
+      error:
+        parsed.error.issues[0]?.message ??
+        "Please check your details and try again.",
+    };
   }
 
   const { name, phone, email, deviceModel, issue } = parsed.data;
 
-  const rawImages = formData.getAll("images").filter((f): f is File => f instanceof File);
+  const rawImages = formData
+    .getAll("images")
+    .filter((f): f is File => f instanceof File);
   if (rawImages.length > MAX_IMAGES) {
     return { error: `You can attach at most ${MAX_IMAGES} photos.` };
   }
@@ -46,13 +63,20 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
   // serialization often turns gallery picks into generic "blob" files with a
   // lost MIME type while the bytes are valid JPEG/PNG. Same path as reviews.
   const images = await Promise.all(
-    rawImages.map(async (f) => ({ name: f.name, buffer: Buffer.from(await f.arrayBuffer()) })),
+    rawImages.map(async (f) => ({
+      name: f.name,
+      buffer: Buffer.from(await f.arrayBuffer()),
+    })),
   );
   for (const img of images) {
     if (img.buffer.length > MAX_IMAGE_BYTES)
-      return { error: `Each photo must be under 5 MB — "${img.name}" is too large.` };
+      return {
+        error: `Each photo must be under 5 MB — "${img.name}" is too large.`,
+      };
     if (!sniffImageType(img.buffer))
-      return { error: `"${img.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}` };
+      return {
+        error: `"${img.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}`,
+      };
   }
 
   const uploaded: { url: string; publicId: string }[] = [];
@@ -65,11 +89,16 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
     }
     for (const img of images) {
       try {
-        const r = await uploadBuffer(img.buffer, { folder: "keebforge/repairs/inquiries" });
+        const r = await uploadBuffer(img.buffer, {
+          folder: "keebforge/repairs/inquiries",
+        });
         uploaded.push({ url: r.url, publicId: r.publicId });
       } catch (e) {
         console.error("Cloudinary upload error:", e);
-        return { error: "One or more photos failed to upload. Please retry, or send the inquiry without photos." };
+        return {
+          error:
+            "One or more photos failed to upload. Please retry, or send the inquiry without photos.",
+        };
       }
     }
   }
@@ -93,7 +122,9 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
         ${
           uploaded.length > 0
             ? `<h3>Photos (${uploaded.length})</h3>` +
-              uploaded.map((u) => `<p><a href="${esc(u.url)}">${esc(u.url)}</a></p>`).join("")
+              uploaded
+                .map((u) => `<p><a href="${esc(u.url)}">${esc(u.url)}</a></p>`)
+                .join("")
             : ""
         }
         <p style="color:#888">Reply to this inquiry by clicking Reply — it goes straight back to the customer.</p>
@@ -101,16 +132,28 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
     });
     if (error) {
       console.error("Resend send error:", error);
-      return { error: "The inquiry could not be sent right now. Please email contact@keebforge.in directly." };
+      return {
+        error:
+          "The inquiry could not be sent right now. Please email contact@keebforge.in directly.",
+      };
     }
   } catch (e) {
     console.error("Resend error:", e);
-    return { error: "The inquiry could not be sent right now. Please email contact@keebforge.in directly." };
+    return {
+      error:
+        "The inquiry could not be sent right now. Please email contact@keebforge.in directly.",
+    };
   }
 
   return { ok: true };
 }
 
 function esc(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  return s.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ]!,
+  );
 }

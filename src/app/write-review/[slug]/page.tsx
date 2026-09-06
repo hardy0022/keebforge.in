@@ -11,7 +11,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function WriteReviewPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function WriteReviewPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const { user, profile } = await getCurrentAuth();
   if (!user || !profile) {
@@ -22,7 +26,9 @@ export default async function WriteReviewPage({ params }: { params: Promise<{ sl
   if (!product) notFound();
 
   const existing = await prisma.review.findUnique({
-    where: { profileId_productId: { profileId: profile.id, productId: product.id } },
+    where: {
+      profileId_productId: { profileId: profile.id, productId: product.id },
+    },
   });
   const editReview = existing?.type === "PRODUCT" ? existing : null;
   const reviewMedia = editReview
@@ -37,8 +43,12 @@ export default async function WriteReviewPage({ params }: { params: Promise<{ sl
       <div className="wrap page-start">
         <div className="write-review">
           <header className="write-review-head">
-            <h1 className="product-title">{editReview ? "Edit your review" : "Write a Review"}</h1>
-            <p className="write-review-sub">Share your experience with this product.</p>
+            <h1 className="product-title">
+              {editReview ? "Edit your review" : "Write a Review"}
+            </h1>
+            <p className="write-review-sub">
+              Share your experience with this product.
+            </p>
             {editReview && (
               <p className="review-status-note">
                 {editReview.status === "APPROVED"
@@ -52,7 +62,13 @@ export default async function WriteReviewPage({ params }: { params: Promise<{ sl
 
           <div className="write-review-product-card">
             {product.images[0] && (
-              <img src={cldUrl(product.images[0].url, 168)} alt="" width={84} height={53} className="write-review-thumb" />
+              <img
+                src={cldUrl(product.images[0].url, 168)}
+                alt=""
+                width={84}
+                height={53}
+                className="write-review-thumb"
+              />
             )}
             <div className="write-review-product-meta">
               <span className="write-review-product-cat">
@@ -79,11 +95,17 @@ export default async function WriteReviewPage({ params }: { params: Promise<{ sl
                     rating: editReview.rating,
                     title: editReview.title ?? "",
                     body: editReview.body,
-                    images: reviewMedia.map((m) => ({ id: m.id, url: m.secureUrl })),
+                    images: reviewMedia.map((m) => ({
+                      id: m.id,
+                      url: m.secureUrl,
+                    })),
                   }
                 : null
             }
-            preview={{ name: profile.name ?? "Customer", avatarUrl: profile.avatarUrl ?? null }}
+            preview={{
+              name: profile.name ?? "Customer",
+              avatarUrl: profile.avatarUrl ?? null,
+            }}
           />
         </div>
       </div>

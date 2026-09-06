@@ -4,7 +4,17 @@
 //
 // Run: npx tsx prisma/seed.ts  (or npm run db:seed)
 
-import { PrismaClient, Prisma, Device, ServiceUnit, ReviewType, ReviewStatus, Role, ProductType, ProductStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+  Device,
+  ServiceUnit,
+  ReviewType,
+  ReviewStatus,
+  Role,
+  ProductType,
+  ProductStatus,
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -69,7 +79,13 @@ async function main() {
           combo: true,
           popular: true,
           highlight: true,
-          replaces: ["krytox-205g0-lubing", "durock-films", "tx-films", "spring-swap-oil", "switch-stem-tuning"],
+          replaces: [
+            "krytox-205g0-lubing",
+            "durock-films",
+            "tx-films",
+            "spring-swap-oil",
+            "switch-stem-tuning",
+          ],
           sortOrder: 99,
         },
       ],
@@ -228,7 +244,8 @@ async function main() {
         {
           slug: "switch-swap",
           name: "Switch Swap (Left / Right Click)",
-          description: "Replace worn, double-clicking, or mushy main switches — bring your own switches or ask us to source.",
+          description:
+            "Replace worn, double-clicking, or mushy main switches — bring your own switches or ask us to source.",
           unit: ServiceUnit.PER_SWITCH,
           price: p(100),
         },
@@ -250,7 +267,8 @@ async function main() {
         {
           slug: "tape-mod",
           name: "Tape Mod",
-          description: "Internal shell taping to reduce flex, rattle, and hollow acoustics.",
+          description:
+            "Internal shell taping to reduce flex, rattle, and hollow acoustics.",
           unit: ServiceUnit.FLAT,
           price: p(300),
         },
@@ -264,7 +282,8 @@ async function main() {
         {
           slug: "encoder-replacement",
           name: "Encoder Replacement (Scroll Wheel)",
-          description: "Fix inconsistent, skipping, or dead scroll — encoder sourced to match your model.",
+          description:
+            "Fix inconsistent, skipping, or dead scroll — encoder sourced to match your model.",
           unit: ServiceUnit.QUOTE,
           sortOrder: 3,
         },
@@ -286,7 +305,9 @@ async function main() {
       update: groupData,
       create: groupData,
     });
-    const dbGroup = await prisma.mods.findUniqueOrThrow({ where: { slug: groupData.slug } });
+    const dbGroup = await prisma.mods.findUniqueOrThrow({
+      where: { slug: groupData.slug },
+    });
     for (const svc of services) {
       await prisma.service.upsert({
         where: { slug: svc.slug },
@@ -310,7 +331,11 @@ async function main() {
     { name: "Lubricants", slug: "lubricants", sortOrder: 10 },
   ];
   for (const c of categories) {
-    await prisma.category.upsert({ where: { slug: c.slug }, update: c, create: c });
+    await prisma.category.upsert({
+      where: { slug: c.slug },
+      update: c,
+      create: c,
+    });
   }
 
   // ─── Brands & demo product catalogue ───────────────────────────────────────
@@ -327,7 +352,11 @@ async function main() {
     { name: "Logitech", slug: "logitech", website: "https://www.logitech.com" },
   ];
   for (const b of brands) {
-    await prisma.brand.upsert({ where: { slug: b.slug }, update: b, create: b });
+    await prisma.brand.upsert({
+      where: { slug: b.slug },
+      update: b,
+      create: b,
+    });
   }
 
   const products: {
@@ -363,9 +392,25 @@ async function main() {
       featured: true,
       popular: true,
       isNew: true,
-      features: ["Aluminium CNC case, gasket mount", "Hall-effect magnetic switches", "QMK / VIA support out of the box", "South-facing RGB, PBT double-shot keycaps"],
-      whatsIncluded: ["Keyboard with pre-installed switches", "Coiled USB-C cable", "Keycap puller, switch puller", "Extra magnetic switches (4)"],
-      specifications: { "Layout": "75%", "Mount": "Gasket", "Case": "Aluminium CNC", "Connectivity": "USB-C wired", "Hot-swap": "Yes" },
+      features: [
+        "Aluminium CNC case, gasket mount",
+        "Hall-effect magnetic switches",
+        "QMK / VIA support out of the box",
+        "South-facing RGB, PBT double-shot keycaps",
+      ],
+      whatsIncluded: [
+        "Keyboard with pre-installed switches",
+        "Coiled USB-C cable",
+        "Keycap puller, switch puller",
+        "Extra magnetic switches (4)",
+      ],
+      specifications: {
+        Layout: "75%",
+        Mount: "Gasket",
+        Case: "Aluminium CNC",
+        Connectivity: "USB-C wired",
+        "Hot-swap": "Yes",
+      },
       image: "/images/work/sample-04.webp",
     },
     {
@@ -378,9 +423,19 @@ async function main() {
       costPrice: p(15200),
       stock: 4,
       gstRate: 18,
-      features: ["EC (electrostatic capacitive) switches", "Full-size 108-key layout", "Dye-sub PBT keycaps", "USB-C, dual-mode (wired + Bluetooth)"],
+      features: [
+        "EC (electrostatic capacitive) switches",
+        "Full-size 108-key layout",
+        "Dye-sub PBT keycaps",
+        "USB-C, dual-mode (wired + Bluetooth)",
+      ],
       whatsIncluded: ["Keyboard", "USB-C cable", "Keycap puller", "Dust cover"],
-      specifications: { "Layout": "Full-size (108)", "Switch": "Varmilo EC V2", "Keycaps": "Dye-sub PBT", "Connectivity": "Wired + BT 5.1" },
+      specifications: {
+        Layout: "Full-size (108)",
+        Switch: "Varmilo EC V2",
+        Keycaps: "Dye-sub PBT",
+        Connectivity: "Wired + BT 5.1",
+      },
       image: "/images/work/sample-03.webp",
     },
     {
@@ -396,9 +451,19 @@ async function main() {
       gstRate: 12,
       featured: true,
       popular: true,
-      features: ["Linear, 50gf bottom-out", "Milky translucent housing", "Factory-lubed", "5-pin PCB mount"],
+      features: [
+        "Linear, 50gf bottom-out",
+        "Milky translucent housing",
+        "Factory-lubed",
+        "5-pin PCB mount",
+      ],
       whatsIncluded: ["70 switches", "Switch puller"],
-      specifications: { "Type": "Linear", "Actuation": "50gf", "Travel": "4.0mm", "Mount": "5-pin" },
+      specifications: {
+        Type: "Linear",
+        Actuation: "50gf",
+        Travel: "4.0mm",
+        Mount: "5-pin",
+      },
       image: "/images/work/sample-02.webp",
     },
     {
@@ -412,9 +477,19 @@ async function main() {
       stock: 25,
       gstRate: 12,
       isNew: true,
-      features: ["All-POM housing", "Ultra-smooth linear travel", "Great with 205g0 lubing", "5-pin PCB mount"],
+      features: [
+        "All-POM housing",
+        "Ultra-smooth linear travel",
+        "Great with 205g0 lubing",
+        "5-pin PCB mount",
+      ],
       whatsIncluded: ["90 switches"],
-      specifications: { "Type": "Linear", "Actuation": "45gf", "Travel": "3.6mm", "Mount": "5-pin" },
+      specifications: {
+        Type: "Linear",
+        Actuation: "45gf",
+        Travel: "3.6mm",
+        Mount: "5-pin",
+      },
       image: "/images/work/sample-02.webp",
     },
     {
@@ -428,9 +503,18 @@ async function main() {
       stock: 3,
       gstRate: 12,
       featured: true,
-      features: ["Double-shot ABS, cherry profile", "Synthwave colourway with novelties", "Full TKL + numpad coverage", "Legends that never fade"],
+      features: [
+        "Double-shot ABS, cherry profile",
+        "Synthwave colourway with novelties",
+        "Full TKL + numpad coverage",
+        "Legends that never fade",
+      ],
       whatsIncluded: ["Base kit (TKL + numpad)", "Novelty kit"],
-      specifications: { "Profile": "Cherry", "Material": "Double-shot ABS", "Coverage": "TKL + numpad" },
+      specifications: {
+        Profile: "Cherry",
+        Material: "Double-shot ABS",
+        Coverage: "TKL + numpad",
+      },
       image: "/images/work/sample-05.webp",
     },
     {
@@ -444,9 +528,18 @@ async function main() {
       stock: 18,
       gstRate: 12,
       isNew: true,
-      features: ["PBT, dye-sub printed", "Sculpted ASA profile", "1800 layout coverage", "Macaron pastel colourway"],
+      features: [
+        "PBT, dye-sub printed",
+        "Sculpted ASA profile",
+        "1800 layout coverage",
+        "Macaron pastel colourway",
+      ],
       whatsIncluded: ["Full keycap set", "Keycap puller"],
-      specifications: { "Profile": "ASA", "Material": "PBT dye-sub", "Coverage": "1800 layout" },
+      specifications: {
+        Profile: "ASA",
+        Material: "PBT dye-sub",
+        Coverage: "1800 layout",
+      },
       image: "/images/work/sample-05.webp",
     },
     {
@@ -459,9 +552,23 @@ async function main() {
       costPrice: p(620),
       stock: 30,
       gstRate: 12,
-      features: ["Screw-in mount for solid stabilisation", "Gold-plated wires", "Pre-greased housings", "1x 7u spacebar kit"],
-      whatsIncluded: ["2x 2u stabilizers", "1x 7u spacebar stabilizer", "Screws + washers", "Wire puller"],
-      specifications: { "Kit": "2x 2u + 1x 7u", "Mount": "Screw-in", "Wire": "Gold-plated" },
+      features: [
+        "Screw-in mount for solid stabilisation",
+        "Gold-plated wires",
+        "Pre-greased housings",
+        "1x 7u spacebar kit",
+      ],
+      whatsIncluded: [
+        "2x 2u stabilizers",
+        "1x 7u spacebar stabilizer",
+        "Screws + washers",
+        "Wire puller",
+      ],
+      specifications: {
+        Kit: "2x 2u + 1x 7u",
+        Mount: "Screw-in",
+        Wire: "Gold-plated",
+      },
       image: "/images/work/sample-01.webp",
     },
     {
@@ -477,9 +584,24 @@ async function main() {
       gstRate: 18,
       featured: true,
       popular: true,
-      features: ["54g ultra-lightweight design", "Focus Pro 30K optical sensor", "90-hour battery life", "8K Hz HyperPolling ready"],
-      whatsIncluded: ["Mouse", "2.4GHz dongle + receiver dock", "USB-C charging cable", "PTFE feet + grip tape"],
-      specifications: { "Weight": "54g", "Sensor": "Focus Pro 30K", "Battery": "90h", "Polling": "8K Hz" },
+      features: [
+        "54g ultra-lightweight design",
+        "Focus Pro 30K optical sensor",
+        "90-hour battery life",
+        "8K Hz HyperPolling ready",
+      ],
+      whatsIncluded: [
+        "Mouse",
+        "2.4GHz dongle + receiver dock",
+        "USB-C charging cable",
+        "PTFE feet + grip tape",
+      ],
+      specifications: {
+        Weight: "54g",
+        Sensor: "Focus Pro 30K",
+        Battery: "90h",
+        Polling: "8K Hz",
+      },
       image: "/images/work/sample-06.webp",
     },
     {
@@ -493,9 +615,19 @@ async function main() {
       costPrice: p(7200),
       stock: 12,
       gstRate: 18,
-      features: ["LIGHTFORCE hybrid optical-mechanical switches", "HERO 25K sensor", "Adjustable weights (0–16g)", "13 programmable controls"],
+      features: [
+        "LIGHTFORCE hybrid optical-mechanical switches",
+        "HERO 25K sensor",
+        "Adjustable weights (0–16g)",
+        "13 programmable controls",
+      ],
       whatsIncluded: ["Mouse", "USB-C cable", "Weight kit"],
-      specifications: { "Weight": "89g", "Sensor": "HERO 25K", "Switch": "LIGHTFORCE", "Buttons": "13" },
+      specifications: {
+        Weight: "89g",
+        Sensor: "HERO 25K",
+        Switch: "LIGHTFORCE",
+        Buttons: "13",
+      },
       image: "/images/work/sample-06.webp",
     },
     {
@@ -509,9 +641,14 @@ async function main() {
       stock: 60,
       gstRate: 12,
       popular: true,
-      features: ["2ml syringe of genuine Krytox GPL 205g0", "Thick, long-lasting lube", "Perfect for linears and stabilizers", "Food-safe grade 0 grease"],
+      features: [
+        "2ml syringe of genuine Krytox GPL 205g0",
+        "Thick, long-lasting lube",
+        "Perfect for linears and stabilizers",
+        "Food-safe grade 0 grease",
+      ],
       whatsIncluded: ["1x 2ml syringe", "Applicator brush"],
-      specifications: { "Size": "2ml", "Grade": "GPL 205g0", "Type": "Grease" },
+      specifications: { Size: "2ml", Grade: "GPL 205g0", Type: "Grease" },
       image: "/images/work/sample-01.webp",
     },
     {
@@ -524,16 +661,33 @@ async function main() {
       costPrice: p(1100),
       stock: 0,
       gstRate: 18,
-      features: ["Hand-coiled in-house", "Detachable GX16 aviator connector", "Custom lengths and colours", "Braided, double-sleeved"],
-      whatsIncluded: ["Coiled cable (device end)", "Straight cable (host end)", "Cable strap"],
-      specifications: { "Connector": "USB-C", "Coil": "5–7 turns", "Length": "Custom" },
+      features: [
+        "Hand-coiled in-house",
+        "Detachable GX16 aviator connector",
+        "Custom lengths and colours",
+        "Braided, double-sleeved",
+      ],
+      whatsIncluded: [
+        "Coiled cable (device end)",
+        "Straight cable (host end)",
+        "Cable strap",
+      ],
+      specifications: {
+        Connector: "USB-C",
+        Coil: "5–7 turns",
+        Length: "Custom",
+      },
       image: "/images/work/sample-03.webp",
     },
   ];
 
   for (const pr of products) {
-    const category = await prisma.category.findUniqueOrThrow({ where: { slug: pr.categorySlug } });
-    const brand = pr.brandSlug ? await prisma.brand.findUnique({ where: { slug: pr.brandSlug } }) : null;
+    const category = await prisma.category.findUniqueOrThrow({
+      where: { slug: pr.categorySlug },
+    });
+    const brand = pr.brandSlug
+      ? await prisma.brand.findUnique({ where: { slug: pr.brandSlug } })
+      : null;
     const data = {
       name: pr.name,
       slug: pr.slug,
@@ -559,12 +713,28 @@ async function main() {
       seoTitle: `${pr.name} | KeebForge Shop`,
       canonicalUrl: `https://keebforge.in/product/${pr.slug}`,
     };
-    await prisma.product.upsert({ where: { slug: pr.slug }, update: data, create: data });
-    const dbProduct = await prisma.product.findUniqueOrThrow({ where: { slug: pr.slug } });
-    const existingImg = await prisma.productImage.findUnique({ where: { id: `img:${dbProduct.id}:${pr.image}` } });
+    await prisma.product.upsert({
+      where: { slug: pr.slug },
+      update: data,
+      create: data,
+    });
+    const dbProduct = await prisma.product.findUniqueOrThrow({
+      where: { slug: pr.slug },
+    });
+    const existingImg = await prisma.productImage.findUnique({
+      where: { id: `img:${dbProduct.id}:${pr.image}` },
+    });
     if (!existingImg) {
       await prisma.productImage.create({
-        data: { id: `img:${dbProduct.id}:${pr.image}`, productId: dbProduct.id, url: pr.image, alt: pr.name, sortOrder: 0, primary: true, active: true },
+        data: {
+          id: `img:${dbProduct.id}:${pr.image}`,
+          productId: dbProduct.id,
+          url: pr.image,
+          alt: pr.name,
+          sortOrder: 0,
+          primary: true,
+          active: true,
+        },
       });
     }
   }
@@ -583,14 +753,16 @@ async function main() {
     "contact.portfolio": "https://portfolio.shadow269.in/",
     "location.region": "IN-JK",
     "location.place": "Jammu & Kashmir",
-    "shipping.model": "Mail-in service across India. Ship your device to us from anywhere in India and we ship it back after the work is completed.",
+    "shipping.model":
+      "Mail-in service across India. Ship your device to us from anywhere in India and we ship it back after the work is completed.",
     "shipping.terms": "Buyer covers shipping costs in both directions.",
-    "acceptingOrders": true,
-    "maintenanceMode": false,
+    acceptingOrders: true,
+    maintenanceMode: false,
     "maintenanceMode.production": false,
     "maintenanceMode.development": false,
-    "turnaround": "5–7 days depending on order complexity and queue.",
-    "payment.terms": "Payment before work begins — it books any parts needed and secures your order.",
+    turnaround: "5–7 days depending on order complexity and queue.",
+    "payment.terms":
+      "Payment before work begins — it books any parts needed and secures your order.",
     "analytics.umamiId": "db504642-e075-4a18-9da3-02f971af33c5",
     "seo.organizationJsonLd": {
       "@type": "Organization",
@@ -598,32 +770,106 @@ async function main() {
       url: "https://keebforge.in/",
       logo: "https://keebforge.in/favicon.png",
       email: "contact@keebforge.in",
-      foundingLocation: { addressLocality: "Jammu and Kashmir", addressCountry: "IN" },
+      foundingLocation: {
+        addressLocality: "Jammu and Kashmir",
+        addressCountry: "IN",
+      },
       areaServed: { "@type": "Country", name: "India" },
     },
   };
   for (const [key, value] of Object.entries(settings)) {
-    await prisma.siteSetting.upsert({ where: { key }, update: { value: value as Prisma.InputJsonValue }, create: { key, value: value as Prisma.InputJsonValue } });
+    await prisma.siteSetting.upsert({
+      where: { key },
+      update: { value: value as Prisma.InputJsonValue },
+      create: { key, value: value as Prisma.InputJsonValue },
+    });
   }
 
   // ─── Reviews (migrated from static.keebforge.in/assets/js/reviews.js) ─────
   const reviews = [
-    { name: "Shadow", location: "Managluru", rating: 5, service: "Switch Lubing & Spring Swap", date: "Apr 2026", text: "Got all 80 switches lubed and spring-swapped. The difference is night and day — absolutely buttery and no more wobble. Turnaround was quick and packaging was solid. Highly recommend." },
-    { name: "kaezr", location: "Bangalore", rating: 4, service: "Keyboard Build", date: "June 2026", text: "got my first split keyboard from them, the led stopped working when i got it first but he repaired it for free. Overall I am happy with the product." },
-    { name: "Bacon Ball", location: "", rating: 5, service: "Keyboard Build", date: "July 2026", text: "really a great guy and I am absolutely loving his build. He went over all the details and made absolutely clear each every aspect of the build and provided good options for it as well. He also kept me updated during each segment of the build. If I had to build a keyboard again I would definitely choose him." },
-    { name: "DeLTa", location: "", rating: 5, service: "Soldering Work", date: "July 2026", text: "Best guy for a clean soldering work on the hoshizora pcb" },
-    { name: "Muzammil", location: "", rating: 5, service: "Mouse Repair", date: "August 2026", text: "I'm very satisfied with the service. He kept me updated on every step and even handled the shipping. The repair was really quick and the price was very reasonable. Overall really happy with the service" },
-    { name: "Thockblock", location: "", rating: 5, service: "Keyboard Build", date: "August 2026", text: "got a num pad and 2 macro pads built from him, from getting all the parts to getting the right colour acrylic sheets, he was very easy to work with even added the screen for free, would recommend anytime of the day" },
-    { name: "bayernlad", location: "", rating: 4, service: "Soldering Work", date: "August 2026", text: "millmaxed neo60 core pcb. It works well. He is very accommodating with requests and goes out of his way." },
+    {
+      name: "Shadow",
+      location: "Managluru",
+      rating: 5,
+      service: "Switch Lubing & Spring Swap",
+      date: "Apr 2026",
+      text: "Got all 80 switches lubed and spring-swapped. The difference is night and day — absolutely buttery and no more wobble. Turnaround was quick and packaging was solid. Highly recommend.",
+    },
+    {
+      name: "kaezr",
+      location: "Bangalore",
+      rating: 4,
+      service: "Keyboard Build",
+      date: "June 2026",
+      text: "got my first split keyboard from them, the led stopped working when i got it first but he repaired it for free. Overall I am happy with the product.",
+    },
+    {
+      name: "Bacon Ball",
+      location: "",
+      rating: 5,
+      service: "Keyboard Build",
+      date: "July 2026",
+      text: "really a great guy and I am absolutely loving his build. He went over all the details and made absolutely clear each every aspect of the build and provided good options for it as well. He also kept me updated during each segment of the build. If I had to build a keyboard again I would definitely choose him.",
+    },
+    {
+      name: "DeLTa",
+      location: "",
+      rating: 5,
+      service: "Soldering Work",
+      date: "July 2026",
+      text: "Best guy for a clean soldering work on the hoshizora pcb",
+    },
+    {
+      name: "Muzammil",
+      location: "",
+      rating: 5,
+      service: "Mouse Repair",
+      date: "August 2026",
+      text: "I'm very satisfied with the service. He kept me updated on every step and even handled the shipping. The repair was really quick and the price was very reasonable. Overall really happy with the service",
+    },
+    {
+      name: "Thockblock",
+      location: "",
+      rating: 5,
+      service: "Keyboard Build",
+      date: "August 2026",
+      text: "got a num pad and 2 macro pads built from him, from getting all the parts to getting the right colour acrylic sheets, he was very easy to work with even added the screen for free, would recommend anytime of the day",
+    },
+    {
+      name: "bayernlad",
+      location: "",
+      rating: 4,
+      service: "Soldering Work",
+      date: "August 2026",
+      text: "millmaxed neo60 core pcb. It works well. He is very accommodating with requests and goes out of his way.",
+    },
   ];
 
   const admin = await prisma.profile.upsert({
     where: { email: "shadow269@keebforge.in" },
     update: { role: Role.ADMIN },
-    create: { id: "seed-admin", email: "shadow269@keebforge.in", name: "KeebForge Owner", role: Role.ADMIN },
+    create: {
+      id: "seed-admin",
+      email: "shadow269@keebforge.in",
+      name: "KeebForge Owner",
+      role: Role.ADMIN,
+    },
   });
 
-  const MONTHS: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+  const MONTHS: Record<string, number> = {
+    Jan: 0,
+    Feb: 1,
+    Mar: 2,
+    Apr: 3,
+    May: 4,
+    Jun: 5,
+    Jul: 6,
+    Aug: 7,
+    Sep: 8,
+    Oct: 9,
+    Nov: 10,
+    Dec: 11,
+  };
   const parseDate = (d: string) => {
     const [mon, yr] = d.split(" ");
     return new Date(Number(yr), MONTHS[mon] ?? 0, 1);
@@ -661,12 +907,54 @@ async function main() {
 
   // ─── Work portfolio (from homepage gallery) ────────────────────────────────
   const work = [
-    { title: "Split Keyboard Repair", slug: "split-keyboard-repair", description: "Diagnosed and repaired a split keyboard — full PCB fault isolation and component-level fix.", category: "REPAIR", image: "/images/work/sample-01.webp" },
-    { title: "Switch Service", slug: "switch-service", description: "Complete switch service — lubed, filmed and spring-swapped to a buttery, thocky finish.", category: "MOD", image: "/images/work/sample-02.webp" },
-    { title: "Split Keyboard Build", slug: "split-keyboard-build", description: "Custom split keyboard assembled from parts — wiring, firmware and full testing included.", category: "CUSTOM_BUILD", image: "/images/work/sample-03.webp" },
-    { title: "Full Builds", slug: "full-builds", description: "Complete builds assembled, soldered and tuned to the customer's spec.", category: "CUSTOM_BUILD", image: "/images/work/sample-04.webp" },
-    { title: "PCB & Firmware Troubleshooting", slug: "pcb-firmware-troubleshooting", description: "Traced and resolved firmware and PCB faults, restored the board to fully working order.", category: "PCB", image: "/images/work/sample-05.webp" },
-    { title: "PCB Testing", slug: "pcb-testing", description: "Verification and quality testing of PCBs before final assembly.", category: "PCB", image: "/images/work/sample-06.webp" },
+    {
+      title: "Split Keyboard Repair",
+      slug: "split-keyboard-repair",
+      description:
+        "Diagnosed and repaired a split keyboard — full PCB fault isolation and component-level fix.",
+      category: "REPAIR",
+      image: "/images/work/sample-01.webp",
+    },
+    {
+      title: "Switch Service",
+      slug: "switch-service",
+      description:
+        "Complete switch service — lubed, filmed and spring-swapped to a buttery, thocky finish.",
+      category: "MOD",
+      image: "/images/work/sample-02.webp",
+    },
+    {
+      title: "Split Keyboard Build",
+      slug: "split-keyboard-build",
+      description:
+        "Custom split keyboard assembled from parts — wiring, firmware and full testing included.",
+      category: "CUSTOM_BUILD",
+      image: "/images/work/sample-03.webp",
+    },
+    {
+      title: "Full Builds",
+      slug: "full-builds",
+      description:
+        "Complete builds assembled, soldered and tuned to the customer's spec.",
+      category: "CUSTOM_BUILD",
+      image: "/images/work/sample-04.webp",
+    },
+    {
+      title: "PCB & Firmware Troubleshooting",
+      slug: "pcb-firmware-troubleshooting",
+      description:
+        "Traced and resolved firmware and PCB faults, restored the board to fully working order.",
+      category: "PCB",
+      image: "/images/work/sample-05.webp",
+    },
+    {
+      title: "PCB Testing",
+      slug: "pcb-testing",
+      description:
+        "Verification and quality testing of PCBs before final assembly.",
+      category: "PCB",
+      image: "/images/work/sample-06.webp",
+    },
   ];
 
   const catMap: Record<string, string> = {

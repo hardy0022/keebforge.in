@@ -10,21 +10,42 @@ import { getWorkProjectBySlug } from "@/lib/data";
 
 type WorkImage = { url: string; alt?: string; publicId?: string };
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
   const p = await getWorkProjectBySlug(slug);
-  if (!p) return buildMetadata({ title: "Project not found | KeebForge", description: "", path: "/work", noIndex: true });
-  return buildMetadata({ title: `${p.title} | KeebForge`, description: p.description, path: `/work/${p.slug}` });
+  if (!p)
+    return buildMetadata({
+      title: "Project not found | KeebForge",
+      description: "",
+      path: "/work",
+      noIndex: true,
+    });
+  return buildMetadata({
+    title: `${p.title} | KeebForge`,
+    description: p.description,
+    path: `/work/${p.slug}`,
+  });
 }
 
-export default async function WorkDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function WorkDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const project = await getWorkProjectBySlug(slug);
   if (!project) notFound();
 
   const imgs = (project.images as WorkImage[] | null) ?? [];
   const date = project.date
-    ? project.date.toLocaleDateString("en-IN", { month: "short", year: "numeric" })
+    ? project.date.toLocaleDateString("en-IN", {
+        month: "short",
+        year: "numeric",
+      })
     : null;
 
   return (
@@ -32,7 +53,10 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="pt-[calc(var(--nav-h)+44px)] pb-14 md:pb-20">
         <div className="wrap">
-          <Breadcrumbs className="breadcrumbs-lime" items={[{ name: "Work", href: "/work" }, { name: project.title }]} />
+          <Breadcrumbs
+            className="breadcrumbs-lime"
+            items={[{ name: "Work", href: "/work" }, { name: project.title }]}
+          />
 
           <div className="mt-10 grid items-center gap-10 md:mt-14 md:grid-cols-[45%_55%] md:gap-12">
             <div className="max-w-[540px]">
@@ -40,14 +64,20 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
                 {project.title}
               </h1>
               {date && (
-                <p className="mt-4 text-[0.7rem] uppercase tracking-[0.12em] text-[var(--t3)]">Completed {date}</p>
+                <p className="mt-4 text-[0.7rem] uppercase tracking-[0.12em] text-[var(--t3)]">
+                  Completed {date}
+                </p>
               )}
               <div className="mt-6 text-[0.95rem] leading-relaxed text-[var(--t2)] md-content">
-                <ReactMarkdown remarkPlugins={[remarkBreaks]}>{project.description}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>
+                  {project.description}
+                </ReactMarkdown>
               </div>
             </div>
 
-            {imgs.length > 0 && <WorkImageSlider images={imgs} projectName={project.title} />}
+            {imgs.length > 0 && (
+              <WorkImageSlider images={imgs} projectName={project.title} />
+            )}
           </div>
         </div>
       </section>
@@ -61,7 +91,9 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
                 About this project
               </h2>
               <div className="mt-5 text-[0.95rem] leading-relaxed text-[var(--t2)] md-content">
-                <ReactMarkdown remarkPlugins={[remarkBreaks]}>{project.workPerformed}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>
+                  {project.workPerformed}
+                </ReactMarkdown>
               </div>
             </div>
           </div>

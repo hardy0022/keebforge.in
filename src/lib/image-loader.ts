@@ -10,7 +10,10 @@ type ImageLoaderArgs = { src: string; width: number; quality?: number };
 // bytes through Vercel. Local /public assets pass through as-is: they're
 // pre-optimized (see public/hero-background.webp) and the built-in optimizer
 // endpoint isn't mounted when a custom loader is configured.
-export default function cldImageLoader({ src, width }: ImageLoaderArgs): string {
+export default function cldImageLoader({
+  src,
+  width,
+}: ImageLoaderArgs): string {
   if (src.startsWith("https://res.cloudinary.com/")) return cldUrl(src, width);
   return src;
 }

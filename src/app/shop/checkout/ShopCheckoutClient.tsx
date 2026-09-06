@@ -9,5 +9,10 @@ export default function ShopCheckoutClient({
   shippingModes: ("surface" | "express")[];
   razorpayKeyId: string | null;
 }) {
-  return <ProductCheckout shippingModes={shippingModes} razorpayKeyId={razorpayKeyId} />;
+  return (
+    <ProductCheckout
+      shippingModes={shippingModes}
+      razorpayKeyId={razorpayKeyId}
+    />
+  );
 }

@@ -3,11 +3,20 @@
 import Link from "next/link";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import type { OrderStatus } from "@prisma/client";
-import { trackOrder, fetchShipmentScans, type TrackData, type TrackState, type ShipmentScanState } from "@/app/actions/track-order";
+import {
+  trackOrder,
+  fetchShipmentScans,
+  type TrackData,
+  type TrackState,
+  type ShipmentScanState,
+} from "@/app/actions/track-order";
 import { ORDER_PHASE_LABELS, orderPhaseFor } from "@/lib/track-phases";
 import { formatINR } from "@/lib/money";
 import { RazorpayScript } from "@/components/payments/RazorpayScript";
-import { launchRazorpayPayment, type CreateOrderResponse } from "@/lib/razorpay-pay";
+import {
+  launchRazorpayPayment,
+  type CreateOrderResponse,
+} from "@/lib/razorpay-pay";
 
 const SHIPMENT_LABELS: Record<string, string> = {
   NOT_DISPATCHED: "Not dispatched",
@@ -27,20 +36,34 @@ function fmtDate(v: string | null | undefined): string {
   if (!v) return "";
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function fmtDateTime(v: string | null | undefined): string {
   if (!v) return "";
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return "";
-  const date = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  const time = d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+  const date = d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
   return `${date} · ${time}`;
 }
 
 export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
-  const [state, formAction, pending] = useActionState<TrackState, FormData>(trackOrder, { ok: false, error: "" });
+  const [state, formAction, pending] = useActionState<TrackState, FormData>(
+    trackOrder,
+    { ok: false, error: "" },
+  );
   const [orderNumber, setOrderNumber] = useState(initialOrder ?? "");
 
   function reTrack(orderNumber: string) {
@@ -63,7 +86,9 @@ export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
             <p className="track-card-title" id="track-order-label">
               Order Number
             </p>
-            <p className="track-card-desc">Enter your order number to track your order.</p>
+            <p className="track-card-desc">
+              Enter your order number to track your order.
+            </p>
             <div className="track-row">
               <div className="track-field">
                 <span className="track-field-prefix" aria-hidden="true">
@@ -93,25 +118,41 @@ export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
               </button>
             </div>
             <p id="track-hint" className="track-hint">
-              Order numbers look like KF30X2A — yours is in your order confirmation email.
+              Order numbers look like KF30X2A — yours is in your order
+              confirmation email.
             </p>
           </form>
 
           {!state.ok && state.error && (
             <div role="alert" className="track-error">
-              <p className="track-error-title">We couldn&apos;t find that order</p>
+              <p className="track-error-title">
+                We couldn&apos;t find that order
+              </p>
               <p className="track-error-body">{state.error}</p>
             </div>
           )}
 
-          {state.ok && <TrackResult data={state.data} onPaid={() => reTrack(state.data.orderNumber)} />}
+          {state.ok && (
+            <TrackResult
+              data={state.data}
+              onPaid={() => reTrack(state.data.orderNumber)}
+            />
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function PayNowInline({ orderNumber, total, onPaid }: { orderNumber: string; total: number; onPaid: () => void }) {
+function PayNowInline({
+  orderNumber,
+  total,
+  onPaid,
+}: {
+  orderNumber: string;
+  total: number;
+  onPaid: () => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,7 +165,9 @@ function PayNowInline({ orderNumber, total, onPaid }: { orderNumber: string; tot
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderNumber }),
       });
-      const data = (await res.json().catch(() => null)) as CreateOrderResponse | null;
+      const data = (await res
+        .json()
+        .catch(() => null)) as CreateOrderResponse | null;
       if (!res.ok || !data) {
         setError(data?.error ?? "Could not start payment.");
         setBusy(false);
@@ -133,10 +176,20 @@ function PayNowInline({ orderNumber, total, onPaid }: { orderNumber: string; tot
       launchRazorpayPayment({
         order: data,
         description: `Payment for order ${data.orderNumber}`,
-        prefill: { name: data.customerName ?? "", email: data.customerEmail ?? "", contact: data.customerPhone ?? "" },
-        onVerified: () => { setBusy(false); onPaid(); },
+        prefill: {
+          name: data.customerName ?? "",
+          email: data.customerEmail ?? "",
+          contact: data.customerPhone ?? "",
+        },
+        onVerified: () => {
+          setBusy(false);
+          onPaid();
+        },
         onDismissed: () => setBusy(false),
-        onError: (msg) => { setError(msg); setBusy(false); },
+        onError: (msg) => {
+          setError(msg);
+          setBusy(false);
+        },
       });
     } catch {
       setError("Could not reach the payment server.");
@@ -146,16 +199,28 @@ function PayNowInline({ orderNumber, total, onPaid }: { orderNumber: string; tot
 
   return (
     <>
-      <button type="button" className="btn-prime btn-sm" onClick={() => void pay()} disabled={busy}>
+      <button
+        type="button"
+        className="btn-prime btn-sm"
+        onClick={() => void pay()}
+        disabled={busy}
+      >
         {busy ? "Opening payment…" : `Pay ${formatINR(total)} now`}
       </button>
-      {error && <span className="track-pay-error-inline" role="alert">{error}</span>}
+      {error && (
+        <span className="track-pay-error-inline" role="alert">
+          {error}
+        </span>
+      )}
     </>
   );
 }
 
 function LiveTracking({ waybill }: { waybill: string }) {
-  const [state, formAction, pending] = useActionState<ShipmentScanState, FormData>(fetchShipmentScans, { ok: false, error: "" });
+  const [state, formAction, pending] = useActionState<
+    ShipmentScanState,
+    FormData
+  >(fetchShipmentScans, { ok: false, error: "" });
   const [open, setOpen] = useState(false);
 
   if (!open) {
@@ -163,7 +228,11 @@ function LiveTracking({ waybill }: { waybill: string }) {
       <div className="track-detail">
         <dt>Live tracking</dt>
         <dd>
-          <button type="button" className="track-timeline-btn" onClick={() => setOpen(true)}>
+          <button
+            type="button"
+            className="track-timeline-btn"
+            onClick={() => setOpen(true)}
+          >
             View latest scans
           </button>
         </dd>
@@ -175,35 +244,69 @@ function LiveTracking({ waybill }: { waybill: string }) {
     <div className="track-detail">
       <dt>Live tracking</dt>
       <dd>
-        <form action={formAction} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <form
+          action={formAction}
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <input type="hidden" name="waybill" value={waybill} />
           <span className="font-mono text-xs">{waybill}</span>
-          <button type="submit" className="track-timeline-btn" disabled={pending}>
+          <button
+            type="submit"
+            className="track-timeline-btn"
+            disabled={pending}
+          >
             {pending ? "Fetching…" : state.ok ? "Refresh" : "Fetch scans"}
           </button>
         </form>
         {state.ok ? (
-          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{
+              marginTop: 10,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
             <p className="track-history-title">
-              {state.status || "In transit"} {state.destination ? `· ${state.destination}` : ""}
+              {state.status || "In transit"}{" "}
+              {state.destination ? `· ${state.destination}` : ""}
             </p>
-            <ol className="track-history-list" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            <ol
+              className="track-history-list"
+              style={{ listStyle: "none", padding: 0, margin: 0 }}
+            >
               {[...state.scans].reverse().map((sc, i) => (
                 <li key={i} className="track-history-item">
                   <span className="track-history-dot" aria-hidden="true" />
                   <div className="track-history-body">
                     <p className="track-history-title">
-                      {sc.status || "Scan"} {sc.location ? ` · ${sc.location}` : ""}
+                      {sc.status || "Scan"}{" "}
+                      {sc.location ? ` · ${sc.location}` : ""}
                     </p>
-                    {sc.instructions && <p className="track-history-note">{sc.instructions}</p>}
-                    {sc.scannedAt && <p className="track-history-date">{fmtDateTime(sc.scannedAt)}</p>}
+                    {sc.instructions && (
+                      <p className="track-history-note">{sc.instructions}</p>
+                    )}
+                    {sc.scannedAt && (
+                      <p className="track-history-date">
+                        {fmtDateTime(sc.scannedAt)}
+                      </p>
+                    )}
                   </div>
                 </li>
               ))}
             </ol>
           </div>
         ) : state.error ? (
-          <p className="track-history-note" role="alert" style={{ marginTop: 8 }}>
+          <p
+            className="track-history-note"
+            role="alert"
+            style={{ marginTop: 8 }}
+          >
             {state.error}
           </p>
         ) : null}
@@ -212,13 +315,26 @@ function LiveTracking({ waybill }: { waybill: string }) {
   );
 }
 
-function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) {
+function TrackResult({
+  data,
+  onPaid,
+}: {
+  data: TrackData;
+  onPaid: () => void;
+}) {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const phase = orderPhaseFor(data.status as OrderStatus);
   const shipment = data.shipment;
   const firstRepair = data.repairs[0];
   const hasLines = data.items.length > 0 || data.services.length > 0;
-  const hasShipment = !!(shipment && (shipment.courier || shipment.trackingNumber || shipment.trackingUrl || shipment.status || shipment.estimatedDeliveryDate));
+  const hasShipment = !!(
+    shipment &&
+    (shipment.courier ||
+      shipment.trackingNumber ||
+      shipment.trackingUrl ||
+      shipment.status ||
+      shipment.estimatedDeliveryDate)
+  );
   const paid = data.paymentStatus === "PAID";
   const amountNotSet = data.total <= 0;
 
@@ -234,7 +350,12 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
   const stageDate = (stageIndex: number): string => {
     let date = "";
     for (const t of data.timeline) {
-      if (orderPhaseFor(t.status as OrderStatus).index === stageIndex && t.createdAt && !date) date = t.createdAt;
+      if (
+        orderPhaseFor(t.status as OrderStatus).index === stageIndex &&
+        t.createdAt &&
+        !date
+      )
+        date = t.createdAt;
     }
     return date ? fmtDate(date) : "";
   };
@@ -259,7 +380,11 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
             ) : amountNotSet ? (
               <span className="badge badge-warn">Payment Pending</span>
             ) : (
-              <PayNowInline orderNumber={data.orderNumber} total={data.total} onPaid={onPaid} />
+              <PayNowInline
+                orderNumber={data.orderNumber}
+                total={data.total}
+                onPaid={onPaid}
+              />
             )}
           </div>
         </div>
@@ -278,7 +403,9 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="track-step-label">{label}</span>
-                  {stageDate(i) && <span className="track-step-date">{stageDate(i)}</span>}
+                  {stageDate(i) && (
+                    <span className="track-step-date">{stageDate(i)}</span>
+                  )}
                 </div>
               </div>
             ))}
@@ -286,7 +413,11 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
         </div>
 
         <div className="track-foot">
-          <span>{data.updatedAt ? `Last updated ${fmtDate(data.updatedAt)}` : "Last updated —"}</span>
+          <span>
+            {data.updatedAt
+              ? `Last updated ${fmtDate(data.updatedAt)}`
+              : "Last updated —"}
+          </span>
           {data.timeline.length > 0 && (
             <button
               type="button"
@@ -313,7 +444,11 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
                   <div className="track-history-body">
                     <p className="track-history-title">{u.label}</p>
                     {u.note && <p className="track-history-note">{u.note}</p>}
-                    {u.createdAt && <p className="track-history-date">{fmtDateTime(u.createdAt)}</p>}
+                    {u.createdAt && (
+                      <p className="track-history-date">
+                        {fmtDateTime(u.createdAt)}
+                      </p>
+                    )}
                   </div>
                 </li>
               ))}
@@ -331,26 +466,34 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
           <div className="track-card track-items-card">
             {data.services.map((s, i) => (
               <div key={`srv-${i}`} className="track-item-row">
-                <span className="track-item-thumb" aria-hidden="true">🛠</span>
+                <span className="track-item-thumb" aria-hidden="true">
+                  🛠
+                </span>
                 <div className="track-item-main">
                   <p className="track-item-name">{s.name}</p>
                   <p className="track-item-meta">
                     {s.quantity > 1 ? `Qty ${s.quantity}` : ""}
                   </p>
                 </div>
-                <span className="track-item-total">{formatINR(s.lineTotal)}</span>
+                <span className="track-item-total">
+                  {formatINR(s.lineTotal)}
+                </span>
               </div>
             ))}
             {data.items.map((it, i) => (
               <div key={`item-${i}`} className="track-item-row">
-                <span className="track-item-thumb" aria-hidden="true">⌨</span>
+                <span className="track-item-thumb" aria-hidden="true">
+                  ⌨
+                </span>
                 <div className="track-item-main">
                   <p className="track-item-name">{it.name}</p>
                   <p className="track-item-meta">
                     {it.quantity > 1 ? `Qty ${it.quantity}` : ""}
                   </p>
                 </div>
-                <span className="track-item-total">{formatINR(it.lineTotal)}</span>
+                <span className="track-item-total">
+                  {formatINR(it.lineTotal)}
+                </span>
               </div>
             ))}
           </div>
@@ -364,7 +507,12 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
               <div className="track-detail">
                 <dt>Device</dt>
                 <dd>
-                  <b>{firstRepair.deviceModel ? `${humanize(firstRepair.deviceType)} — ${firstRepair.deviceModel}` : firstRepair.deviceModel || humanize(firstRepair.deviceType)}</b>
+                  <b>
+                    {firstRepair.deviceModel
+                      ? `${humanize(firstRepair.deviceType)} — ${firstRepair.deviceModel}`
+                      : firstRepair.deviceModel ||
+                        humanize(firstRepair.deviceType)}
+                  </b>
                 </dd>
               </div>
               <div className="track-detail">
@@ -385,17 +533,28 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
               {shipment!.status && (
                 <div className="track-detail">
                   <dt>Shipment</dt>
-                  <dd>{SHIPMENT_LABELS[shipment!.status] ?? humanize(shipment!.status)}</dd>
+                  <dd>
+                    {SHIPMENT_LABELS[shipment!.status] ??
+                      humanize(shipment!.status)}
+                  </dd>
                 </div>
               )}
               {(shipment!.trackingNumber || shipment!.trackingUrl) && (
                 <div className="track-detail">
                   <dt>Tracking</dt>
                   <dd>
-                    {shipment!.trackingNumber && <span className="font-mono text-xs">{shipment!.trackingNumber}</span>}
+                    {shipment!.trackingNumber && (
+                      <span className="font-mono text-xs">
+                        {shipment!.trackingNumber}
+                      </span>
+                    )}
                     {shipment!.trackingNumber && shipment!.trackingUrl && " · "}
                     {shipment!.trackingUrl && (
-                      <Link href={shipment!.trackingUrl} target="_blank" rel="noopener noreferrer">
+                      <Link
+                        href={shipment!.trackingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         open courier ↗
                       </Link>
                     )}
@@ -408,7 +567,9 @@ function TrackResult({ data, onPaid }: { data: TrackData; onPaid: () => void }) 
                   <dd>{fmtDate(shipment!.estimatedDeliveryDate)}</dd>
                 </div>
               )}
-              {shipment!.trackingNumber && <LiveTracking waybill={shipment!.trackingNumber} />}
+              {shipment!.trackingNumber && (
+                <LiveTracking waybill={shipment!.trackingNumber} />
+              )}
             </>
           )}
         </dl>

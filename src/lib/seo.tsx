@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 type SEOInput = {
   title: string;
@@ -23,7 +24,16 @@ export function buildMetadata({
   noIndex = false,
 }: SEOInput): Metadata {
   const url = `${SITE_URL}${path}`;
-  const ogImages = image ? [{ url: `${SITE_URL}${image}`, width: 1200, height: 630, alt: "KeebForge.in" }] : undefined;
+  const ogImages = image
+    ? [
+        {
+          url: `${SITE_URL}${image}`,
+          width: 1200,
+          height: 630,
+          alt: "KeebForge.in",
+        },
+      ]
+    : undefined;
   return {
     title,
     description,
@@ -56,12 +66,16 @@ export function JsonLd({ data }: { data: JsonLd | JsonLd[] }) {
     <script
       key={i}
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", ...block }) }}
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({ "@context": "https://schema.org", ...block }),
+      }}
     />
   ));
 }
 
-export function breadcrumbJsonLd(items: { name: string; path: string }[]): JsonLd {
+export function breadcrumbJsonLd(
+  items: { name: string; path: string }[],
+): JsonLd {
   return {
     "@type": "BreadcrumbList",
     itemListElement: items.map((item, i) => ({

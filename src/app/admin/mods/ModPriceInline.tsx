@@ -24,7 +24,12 @@ export function ModPriceInline({ svc }: { svc: Prop }) {
 
   if (svc.unit === "QUOTE") {
     return (
-      <span className="muted" style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>Quote — priced offline</span>
+      <span
+        className="muted"
+        style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}
+      >
+        Quote — priced offline
+      </span>
     );
   }
 
@@ -35,32 +40,81 @@ export function ModPriceInline({ svc }: { svc: Prop }) {
         <>
           <label className="mods-field">
             <span className="mods-field-label">Min ₹</span>
-            <input className="input" name="priceMin" type="number" step="0.01" min="0" placeholder="Min" defaultValue={toRs(svc.priceMin)} disabled={pending} />
+            <input
+              className="input"
+              name="priceMin"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Min"
+              defaultValue={toRs(svc.priceMin)}
+              disabled={pending}
+            />
           </label>
           <label className="mods-field">
             <span className="mods-field-label">Max ₹</span>
-            <input className="input" name="priceMax" type="number" step="0.01" min="0" placeholder="Max" defaultValue={toRs(svc.priceMax)} disabled={pending} />
+            <input
+              className="input"
+              name="priceMax"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Max"
+              defaultValue={toRs(svc.priceMax)}
+              disabled={pending}
+            />
           </label>
         </>
       ) : (
         <label className="mods-field">
           <span className="mods-field-label">Price ₹</span>
-          <input className="input" name="price" type="number" step="0.01" min="0" placeholder="0" defaultValue={toRs(svc.price)} disabled={pending} />
+          <input
+            className="input"
+            name="price"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0"
+            defaultValue={toRs(svc.price)}
+            disabled={pending}
+          />
         </label>
       )}
       <label className="mods-field wide">
         <span className="mods-field-label">Label</span>
-        <input className="input" name="priceLabel" type="text" placeholder="₹18/SK" defaultValue={svc.priceLabel ?? ""} disabled={pending} />
+        <input
+          className="input"
+          name="priceLabel"
+          type="text"
+          placeholder="₹18/SK"
+          defaultValue={svc.priceLabel ?? ""}
+          disabled={pending}
+        />
       </label>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: 4,
+        }}
+      >
         {state.ok ? (
-          <span style={{ fontSize: "0.66rem", color: "var(--ok)" }}>✓ Saved</span>
+          <span style={{ fontSize: "0.66rem", color: "var(--ok)" }}>
+            ✓ Saved
+          </span>
         ) : state.error ? (
-          <span style={{ fontSize: "0.66rem", color: "var(--err)" }}>{state.error}</span>
+          <span style={{ fontSize: "0.66rem", color: "var(--err)" }}>
+            {state.error}
+          </span>
         ) : (
           <span style={{ fontSize: "0.66rem" }}>&nbsp;</span>
         )}
-        <button className="btn-admin sm primary" type="submit" disabled={pending}>
+        <button
+          className="btn-admin sm primary"
+          type="submit"
+          disabled={pending}
+        >
           {pending ? <Spinner /> : "Save"}
         </button>
       </div>

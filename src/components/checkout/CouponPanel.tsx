@@ -22,7 +22,9 @@ export function CouponPanel({
   setCoupon: (c: AppliedCoupon | null) => void;
 }) {
   const [code, setCode] = useState("");
-  const [state, setState] = useState<"idle" | "loading" | "applied" | "error">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "applied" | "error">(
+    "idle",
+  );
   const [error, setError] = useState<string | null>(null);
 
   async function apply() {
@@ -76,7 +78,9 @@ export function CouponPanel({
             </div>
             <p className="coupon-desc">
               {coupon.label ?? `${formatINR(coupon.discount)} off`}
-              <span className="coupon-amount">−{formatINR(coupon.discount)}</span>
+              <span className="coupon-amount">
+                −{formatINR(coupon.discount)}
+              </span>
             </p>
           </div>
         </>

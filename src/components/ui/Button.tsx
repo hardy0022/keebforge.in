@@ -12,7 +12,14 @@ type Props = {
   children: React.ReactNode;
 } & Omit<ComponentProps<"button">, "className" | "children">;
 
-export function Button({ variant = "prime", size = "md", href, className, children, ...rest }: Props) {
+export function Button({
+  variant = "prime",
+  size = "md",
+  href,
+  className,
+  children,
+  ...rest
+}: Props) {
   const cls = [
     variant === "prime" ? "btn-prime" : "btn-ghost",
     size === "lg" ? "btn-prime-lg" : "",

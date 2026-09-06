@@ -11,7 +11,7 @@ async function getCurrentProfile() {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const profile = await getCurrentProfile();
   if (!profile) {
@@ -32,7 +32,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const profile = await getCurrentProfile();
   if (!profile) {
@@ -51,14 +51,36 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { label, firstName, lastName, email, streetAddress, city, state, postalCode, country, phone, isDefault } = body;
+    const {
+      label,
+      firstName,
+      lastName,
+      email,
+      streetAddress,
+      city,
+      state,
+      postalCode,
+      country,
+      phone,
+      isDefault,
+    } = body;
     const name = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
 
     if (phone != null && phone !== "" && !/^\d{10}$/.test(phone)) {
-      return NextResponse.json({ error: "Phone number must be exactly 10 digits." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Phone number must be exactly 10 digits." },
+        { status: 400 },
+      );
     }
-    if (email != null && email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+    if (
+      email != null &&
+      email !== "" &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
+      return NextResponse.json(
+        { error: "Enter a valid email address." },
+        { status: 400 },
+      );
     }
 
     if (isDefault && !existing.isDefault) {
@@ -79,20 +101,23 @@ export async function PATCH(
         state: state ?? existing.state,
         postalCode: postalCode ?? existing.postalCode,
         country: country ?? existing.country,
-        phone: phone === "" ? null : phone ?? existing.phone,
+        phone: phone === "" ? null : (phone ?? existing.phone),
         isDefault: isDefault ?? existing.isDefault,
       },
     });
 
     return NextResponse.json(address);
   } catch {
-    return NextResponse.json({ error: "Failed to update address" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update address" },
+      { status: 500 },
+    );
   }
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const profile = await getCurrentProfile();
   if (!profile) {
@@ -113,6 +138,9 @@ export async function DELETE(
     await prisma.address.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch {
-    return NextResponse.json({ error: "Failed to delete address" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete address" },
+      { status: 500 },
+    );
   }
 }

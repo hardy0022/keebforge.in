@@ -18,8 +18,8 @@ export default function Unauthorized() {
             permission for this.
           </h1>
           <p className="cta-desc">
-            This area is restricted to KeebForge administrators. If you believe this is a mistake,
-            contact a KeebForge administrator.
+            This area is restricted to KeebForge administrators. If you believe
+            this is a mistake, contact a KeebForge administrator.
           </p>
           <div className="flex gap-3.5 justify-center flex-wrap">
             <Link href="/" className="btn-prime btn-prime-lg">

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ElementType,
+  type ReactNode,
+} from "react";
 import { cn } from "@/lib/utils";
 
 type RevealProps = {
@@ -16,7 +22,13 @@ type RevealProps = {
  * viewport; CSS (`.hp-reveal`) owns the actual fade/translate/blur so reduced
  * motion and zero-JS collapse to a plain visible element.
  */
-export function Reveal({ as = "div", className, delay = 0, children, ...rest }: RevealProps) {
+export function Reveal({
+  as = "div",
+  className,
+  delay = 0,
+  children,
+  ...rest
+}: RevealProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
 
@@ -30,7 +42,7 @@ export function Reveal({ as = "div", className, delay = 0, children, ...rest }: 
           io.disconnect();
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -6% 0px" }
+      { threshold: 0.15, rootMargin: "0px 0px -6% 0px" },
     );
     io.observe(el);
     return () => io.disconnect();

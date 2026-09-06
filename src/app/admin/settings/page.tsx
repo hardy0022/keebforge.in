@@ -15,42 +15,100 @@ export const metadata: Metadata = {
 export default async function AdminSettingsPage() {
   await requirePermission("setting", "view");
 
-  const [productionEnabled, developmentEnabled, pickupSetting] = await Promise.all([
-    (await getSiteSetting(MAINTENANCE_KEY.production)) === true,
-    (await getSiteSetting(MAINTENANCE_KEY.development)) === true,
-    getSiteSetting(PICKUP_SETTING_KEY),
-  ]);
+  const [productionEnabled, developmentEnabled, pickupSetting] =
+    await Promise.all([
+      (await getSiteSetting(MAINTENANCE_KEY.production)) === true,
+      (await getSiteSetting(MAINTENANCE_KEY.development)) === true,
+      getSiteSetting(PICKUP_SETTING_KEY),
+    ]);
 
   const pickupInitial =
-    pickupSetting && typeof pickupSetting === "object" && !Array.isArray(pickupSetting)
+    pickupSetting &&
+    typeof pickupSetting === "object" &&
+    !Array.isArray(pickupSetting)
       ? (pickupSetting as Record<string, string>)
       : null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 960 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 24,
+        maxWidth: 960,
+      }}
+    >
       <div>
         <span className="sec-num">{"// System Settings"}</span>
       </div>
 
       <div>
-        <h2 style={{ fontFamily: "var(--ff-display)", fontSize: "1.05rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 12 }}>
+        <h2
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            marginBottom: 12,
+          }}
+        >
           Catalog
         </h2>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <Link href="/admin/settings/brands" className="admin-card" style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
+          <Link
+            href="/admin/settings/brands"
+            className="admin-card"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              textDecoration: "none",
+            }}
+          >
             <span style={{ fontSize: "1.4rem" }}>🏷️</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "var(--ff-display)", fontWeight: 700, fontSize: "0.95rem", color: "var(--t1)" }}>Brands</div>
-              <div className="muted" style={{ fontSize: "0.8rem" }}>Manage brand catalogue</div>
+              <div
+                style={{
+                  fontFamily: "var(--ff-display)",
+                  fontWeight: 700,
+                  fontSize: "0.95rem",
+                  color: "var(--t1)",
+                }}
+              >
+                Brands
+              </div>
+              <div className="muted" style={{ fontSize: "0.8rem" }}>
+                Manage brand catalogue
+              </div>
             </div>
             <span className="btn-admin sm">Open →</span>
           </Link>
-          <Link href="/admin/settings/categories" className="admin-card" style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
+          <Link
+            href="/admin/settings/categories"
+            className="admin-card"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              textDecoration: "none",
+            }}
+          >
             <span style={{ fontSize: "1.4rem" }}>🗂️</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "var(--ff-display)", fontWeight: 700, fontSize: "0.95rem", color: "var(--t1)" }}>Categories</div>
-              <div className="muted" style={{ fontSize: "0.8rem" }}>Manage product categories</div>
+              <div
+                style={{
+                  fontFamily: "var(--ff-display)",
+                  fontWeight: 700,
+                  fontSize: "0.95rem",
+                  color: "var(--t1)",
+                }}
+              >
+                Categories
+              </div>
+              <div className="muted" style={{ fontSize: "0.8rem" }}>
+                Manage product categories
+              </div>
             </div>
             <span className="btn-admin sm">Open →</span>
           </Link>
@@ -58,7 +116,15 @@ export default async function AdminSettingsPage() {
       </div>
 
       <div>
-        <h2 style={{ fontFamily: "var(--ff-display)", fontSize: "1.05rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 12 }}>
+        <h2
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            marginBottom: 12,
+          }}
+        >
           Maintenance Mode
         </h2>
       </div>
@@ -85,7 +151,15 @@ export default async function AdminSettingsPage() {
       />
 
       <div>
-        <h2 style={{ fontFamily: "var(--ff-display)", fontSize: "1.05rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 12 }}>
+        <h2
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            marginBottom: 12,
+          }}
+        >
           Shipping
         </h2>
       </div>

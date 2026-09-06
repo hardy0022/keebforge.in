@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (!webhookSecret) {
       console.error("RAZORPAY_WEBHOOK_SECRET not configured");
-      return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Webhook not configured" },
+        { status: 500 },
+      );
     }
 
     const signature = req.headers.get("x-razorpay-signature");
@@ -56,7 +59,8 @@ export async function POST(req: NextRequest) {
     const amount = payload.amount;
     const status = payload.status;
     const method = payload.method;
-    const customerId = typeof payload.customer_id === "string" ? payload.customer_id : null;
+    const customerId =
+      typeof payload.customer_id === "string" ? payload.customer_id : null;
 
     const existingPayment = await prisma.payment.findUnique({
       where: { razorpayPaymentId: paymentId },
@@ -64,7 +68,10 @@ export async function POST(req: NextRequest) {
 
     // Duplicate delivery of an event we already actioned: acknowledge and stop.
     if (existingPayment) {
-      if (existingPayment.status === "PAID" && (status === "captured" || status === "authorized")) {
+      if (
+        existingPayment.status === "PAID" &&
+        (status === "captured" || status === "authorized")
+      ) {
         return NextResponse.json({ received: true });
       }
     }
@@ -81,13 +88,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    const orderBilling = (order.billingDetails ?? {}) as { razorpayCustomerId?: string };
-    const resolvedCustomerId = customerId ?? orderBilling.razorpayCustomerId ?? null;
+    const orderBilling = (order.billingDetails ?? {}) as {
+      razorpayCustomerId?: string;
+    };
+    const resolvedCustomerId =
+      customerId ?? orderBilling.razorpayCustomerId ?? null;
 
     if (status === "captured" || status === "authorized") {
       // The PAID path must be idempotent: the order-level guard makes the whole
       // transition run at most once even if identical events arrive back-to-back.
-      const isAlreadyPaid = existingPayment?.status === "PAID" || order.paymentStatus === "PAID";
+      const isAlreadyPaid =
+        existingPayment?.status === "PAID" || order.paymentStatus === "PAID";
 
       if (!isAlreadyPaid) {
         await prisma.$transaction(async (tx) => {
@@ -97,7 +108,9 @@ export async function POST(req: NextRequest) {
               status: "PAID",
               method: method ?? "razorpay",
               paidAt: new Date(),
-              ...(resolvedCustomerId ? { razorpayCustomerId: resolvedCustomerId } : {}),
+              ...(resolvedCustomerId
+                ? { razorpayCustomerId: resolvedCustomerId }
+                : {}),
             },
             create: {
               orderId: order.id,
@@ -108,7 +121,9 @@ export async function POST(req: NextRequest) {
               razorpayOrderId: orderId,
               razorpayPaymentId: paymentId,
               razorpaySignature: "",
-              ...(resolvedCustomerId ? { razorpayCustomerId: resolvedCustomerId } : {}),
+              ...(resolvedCustomerId
+                ? { razorpayCustomerId: resolvedCustomerId }
+                : {}),
               paidAt: new Date(),
             },
           });
@@ -136,7 +151,9 @@ export async function POST(req: NextRequest) {
         update: {
           status: "FAILED",
           failureReason: payload.error_description ?? "Payment failed",
-          ...(resolvedCustomerId ? { razorpayCustomerId: resolvedCustomerId } : {}),
+          ...(resolvedCustomerId
+            ? { razorpayCustomerId: resolvedCustomerId }
+            : {}),
         },
         create: {
           orderId: order.id,
@@ -147,7 +164,9 @@ export async function POST(req: NextRequest) {
           razorpayOrderId: orderId,
           razorpayPaymentId: paymentId,
           razorpaySignature: "",
-          ...(resolvedCustomerId ? { razorpayCustomerId: resolvedCustomerId } : {}),
+          ...(resolvedCustomerId
+            ? { razorpayCustomerId: resolvedCustomerId }
+            : {}),
           failureReason: payload.error_description ?? "Payment failed",
         },
       });
@@ -192,6 +211,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error("Webhook processing error:", error);
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Webhook processing failed" },
+      { status: 500 },
+    );
   }
 }

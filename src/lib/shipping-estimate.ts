@@ -9,9 +9,14 @@
 
 export const PICKUP_ESTIMATE_MULTIPLIER = 1.5;
 
-export function deriveLegs(forwardPaise: number, method: "pickup" | "customer_shipping") {
+export function deriveLegs(
+  forwardPaise: number,
+  method: "pickup" | "customer_shipping",
+) {
   const returnPaise = forwardPaise;
   const pickupPaise =
-    method === "pickup" ? Math.ceil((forwardPaise / 100) * PICKUP_ESTIMATE_MULTIPLIER) * 100 : 0;
+    method === "pickup"
+      ? Math.ceil((forwardPaise / 100) * PICKUP_ESTIMATE_MULTIPLIER) * 100
+      : 0;
   return { pickupPaise, returnPaise, totalPaise: pickupPaise + returnPaise };
 }

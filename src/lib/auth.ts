@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import type { Profile, Role } from "@prisma/client";
+import type { Profile } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth/better-auth";
 import { requireAdminContext, type AdminContext } from "@/lib/auth/admin";
@@ -42,7 +42,10 @@ export async function getCurrentAuth() {
 export type CurrentAuth = Awaited<ReturnType<typeof getCurrentAuth>>;
 
 /** Server-side guard for customer pages. Redirects to /login when signed out. */
-export async function requireUser(): Promise<{ user: Exclude<CurrentAuth["user"], null>; profile: Profile }> {
+export async function requireUser(): Promise<{
+  user: Exclude<CurrentAuth["user"], null>;
+  profile: Profile;
+}> {
   const auth = await getCurrentAuth();
   if (!auth.user) redirect("/auth/login");
   return { user: auth.user, profile: auth.profile! };
@@ -54,9 +57,4 @@ export async function requireUser(): Promise<{ user: Exclude<CurrentAuth["user"]
  */
 export async function requireAdmin(): Promise<AdminContext> {
   return requireAdminContext();
-}
-
-/** @legacy — Profile-role helper kept for display/redirect heuristics only. NOT an authorization check. */
-export function isAdminRole(role: Role) {
-  return role === "ADMIN" || role === "STAFF" || role === "DEVELOPER";
 }

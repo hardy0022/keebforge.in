@@ -27,23 +27,56 @@ export default async function AdminCustomersPage() {
   ]);
 
   const withOrders = customers.filter((c) => c._count.orders > 0).length;
-  const totalPaid = customers.reduce((sum, c) => sum + c.orders.reduce((s, o) => s + o.total, 0), 0);
+  const totalPaid = customers.reduce(
+    (sum, c) => sum + c.orders.reduce((s, o) => s + o.total, 0),
+    0,
+  );
 
   const join = (d: Date) =>
     fmtIST(d, { year: "numeric", month: "short", day: "numeric" });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ fontFamily: "var(--ff-display)", fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <h1
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.35rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+          }}
+        >
           Customers <span className="muted num">({total})</span>
         </h1>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-        <div className="admin-stat lime"><b>{total}</b><span>Registered</span></div>
-        <div className="admin-stat"><b>{withOrders}</b><span>With Orders</span></div>
-        <div className="admin-stat purple"><b>{formatINR(totalPaid)}</b><span>Total Spent (All Time)</span></div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 12,
+        }}
+      >
+        <div className="admin-stat lime">
+          <b>{total}</b>
+          <span>Registered</span>
+        </div>
+        <div className="admin-stat">
+          <b>{withOrders}</b>
+          <span>With Orders</span>
+        </div>
+        <div className="admin-stat purple">
+          <b>{formatINR(totalPaid)}</b>
+          <span>Total Spent (All Time)</span>
+        </div>
       </div>
 
       <div className="admin-card" style={{ overflow: "auto" }}>
@@ -61,29 +94,61 @@ export default async function AdminCustomersPage() {
             {customers.map((c) => (
               <tr key={c.id}>
                 <td>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span className="avatar" style={{ width: 30, height: 30, fontSize: "0.62rem", flexShrink: 0 }}>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
+                  >
+                    <span
+                      className="avatar"
+                      style={{
+                        width: 30,
+                        height: 30,
+                        fontSize: "0.62rem",
+                        flexShrink: 0,
+                      }}
+                    >
                       {(c.name || c.email)[0]?.toUpperCase() ?? "?"}
                     </span>
                     <div>
-                      <div style={{ fontWeight: 600 }}>{c.name || "Unnamed"}</div>
-                      {c.username && <div className="muted" style={{ fontSize: "0.7rem" }}>@{c.username}</div>}
+                      <div style={{ fontWeight: 600 }}>
+                        {c.name || "Unnamed"}
+                      </div>
+                      {c.username && (
+                        <div className="muted" style={{ fontSize: "0.7rem" }}>
+                          @{c.username}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>
                 <td>
                   <div style={{ fontSize: "0.82rem" }}>{c.email}</div>
-                  {c.phone && <div className="muted" style={{ fontSize: "0.72rem" }}>{c.phone}</div>}
-                  {c.customer?.discordHandle && <div className="muted" style={{ fontSize: "0.72rem" }}>Discord: {c.customer.discordHandle}</div>}
+                  {c.phone && (
+                    <div className="muted" style={{ fontSize: "0.72rem" }}>
+                      {c.phone}
+                    </div>
+                  )}
+                  {c.customer?.discordHandle && (
+                    <div className="muted" style={{ fontSize: "0.72rem" }}>
+                      Discord: {c.customer.discordHandle}
+                    </div>
+                  )}
                 </td>
-                <td className="muted" style={{ whiteSpace: "nowrap" }}>{join(c.createdAt)}</td>
+                <td className="muted" style={{ whiteSpace: "nowrap" }}>
+                  {join(c.createdAt)}
+                </td>
                 <td className="num">{c._count.orders}</td>
-                <td className="num">{formatINR(c.orders.reduce((s, o) => s + o.total, 0))}</td>
+                <td className="num">
+                  {formatINR(c.orders.reduce((s, o) => s + o.total, 0))}
+                </td>
               </tr>
             ))}
             {customers.length === 0 && (
               <tr>
-                <td colSpan={5} className="muted" style={{ textAlign: "center", padding: 30 }}>
+                <td
+                  colSpan={5}
+                  className="muted"
+                  style={{ textAlign: "center", padding: 30 }}
+                >
                   No registered customers yet.
                 </td>
               </tr>
@@ -92,7 +157,9 @@ export default async function AdminCustomersPage() {
         </table>
       </div>
 
-      <Link href="/admin" className="muted" style={{ fontSize: "0.75rem" }}>← Dashboard</Link>
+      <Link href="/admin" className="muted" style={{ fontSize: "0.75rem" }}>
+        ← Dashboard
+      </Link>
     </div>
   );
 }

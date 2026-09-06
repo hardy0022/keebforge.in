@@ -26,7 +26,12 @@ export function DeleteReviewButton({ reviewId }: { reviewId: string }) {
 
   return (
     <div className="account-review-actions">
-      <button type="button" className="account-delete-review" onClick={handleDelete} disabled={pending}>
+      <button
+        type="button"
+        className="account-delete-review"
+        onClick={handleDelete}
+        disabled={pending}
+      >
         {pending ? "Deleting…" : "Delete"}
       </button>
       {error && <span className="account-delete-error">{error}</span>}

@@ -1,4 +1,12 @@
-export function SectionHead({ num, title, desc }: { num?: string; title: string; desc?: string }) {
+export function SectionHead({
+  num,
+  title,
+  desc,
+}: {
+  num?: string;
+  title: string;
+  desc?: string;
+}) {
   return (
     <header className="sec-head">
       {num && <span className="sec-num">{num}</span>}

@@ -7,8 +7,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Role } from "@prisma/client";
 
-
-const NAV_GROUPS: { label: string; items: { href: string; label: string; icon: string }[] }[] = [
+const NAV_GROUPS: {
+  label: string;
+  items: { href: string; label: string; icon: string }[];
+}[] = [
   {
     label: "Overview",
     items: [
@@ -68,7 +70,8 @@ export function AdminShell({
   const [collapsed, setCollapsed] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const isActive = (href: string) => (href === "/admin" ? path === "/admin" : path.startsWith(href));
+  const isActive = (href: string) =>
+    href === "/admin" ? path === "/admin" : path.startsWith(href);
 
   async function signOut() {
     await authClient.signOut();
@@ -97,26 +100,52 @@ export function AdminShell({
       >
         <span style={{ fontSize: "1.2rem" }}>⌨️</span>
         {!collapsed && (
-          <span style={{ fontFamily: "var(--ff-display)", fontWeight: 700, letterSpacing: "-0.02em" }}>
+          <span
+            style={{
+              fontFamily: "var(--ff-display)",
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+            }}
+          >
             KeebForge
             <span style={{ color: "var(--acc)" }}> Admin</span>
           </span>
         )}
       </div>
-      <nav style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: collapsed ? 8 : 16 }}>
+      <nav
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "10px",
+          display: "flex",
+          flexDirection: "column",
+          gap: collapsed ? 8 : 16,
+        }}
+      >
         {NAV_GROUPS.map((group) => {
-          const items = group.items.filter((item) => item.href === "/admin" || allowedNav.includes(item.href));
+          const items = group.items.filter(
+            (item) => item.href === "/admin" || allowedNav.includes(item.href),
+          );
           if (items.length === 0) return null;
           return (
-            <div key={group.label} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              {!collapsed && <span className="nav-group-label">{group.label}</span>}
+            <div
+              key={group.label}
+              style={{ display: "flex", flexDirection: "column", gap: "2px" }}
+            >
+              {!collapsed && (
+                <span className="nav-group-label">{group.label}</span>
+              )}
               {items.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   title={collapsed ? item.label : undefined}
                   className={`sidebar-link${isActive(item.href) ? " active" : ""}`}
-                  style={collapsed ? { justifyContent: "center", padding: "9px 0" } : undefined}
+                  style={
+                    collapsed
+                      ? { justifyContent: "center", padding: "9px 0" }
+                      : undefined
+                  }
                   onClick={() => setOpen(false)}
                 >
                   <span className="ico">{item.icon}</span>
@@ -136,12 +165,23 @@ export function AdminShell({
           gap: "10px",
         }}
       >
-        <span className="avatar" style={{ width: 30, height: 30, fontSize: "0.62rem" }}>
+        <span
+          className="avatar"
+          style={{ width: 30, height: 30, fontSize: "0.62rem" }}
+        >
           {initials}
         </span>
         {!collapsed && (
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "0.78rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div
+              style={{
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
               {name || email}
             </div>
             <div className="muted" style={{ fontSize: "0.68rem" }}>
@@ -149,7 +189,12 @@ export function AdminShell({
             </div>
           </div>
         )}
-        <button className="btn-admin sm" style={{ padding: "5px 8px" }} onClick={signOut} title="Sign out">
+        <button
+          className="btn-admin sm"
+          style={{ padding: "5px 8px" }}
+          onClick={signOut}
+          title="Sign out"
+        >
           ⏻
         </button>
       </div>
@@ -165,7 +210,8 @@ export function AdminShell({
           position: "fixed",
           inset: "0 auto 0 0",
           width: collapsed ? 60 : 230,
-          background: "linear-gradient(180deg, var(--surf), transparent), var(--bg1)",
+          background:
+            "linear-gradient(180deg, var(--surf), transparent), var(--bg1)",
           borderRight: "1px solid var(--bdr)",
           zIndex: 50,
           transition: "width 0.22s var(--ease-out)",
@@ -205,7 +251,13 @@ export function AdminShell({
       </aside>
 
       {/* Main */}
-      <div style={{ marginLeft: collapsed ? 60 : 230, transition: "margin 0.22s var(--ease-out)" }} className="kf-admin-main">
+      <div
+        style={{
+          marginLeft: collapsed ? 60 : 230,
+          transition: "margin 0.22s var(--ease-out)",
+        }}
+        className="kf-admin-main"
+      >
         <header
           style={{
             position: "sticky",
@@ -220,17 +272,33 @@ export function AdminShell({
             borderBottom: "1px solid var(--bdr)",
           }}
         >
-          <button className="btn-admin sm kf-sidebar-toggle" onClick={() => setCollapsed((c) => !c)} title="Toggle sidebar">
+          <button
+            className="btn-admin sm kf-sidebar-toggle"
+            onClick={() => setCollapsed((c) => !c)}
+            title="Toggle sidebar"
+          >
             ◀
           </button>
-          <button className="btn-admin sm kf-drawer-open" onClick={() => setOpen(true)} title="Menu">
+          <button
+            className="btn-admin sm kf-drawer-open"
+            onClick={() => setOpen(true)}
+            title="Menu"
+          >
             ☰
           </button>
           <div className="muted" style={{ fontSize: "0.8rem" }}>
             {path.split("/").filter(Boolean).join(" / ") || "dashboard"}
           </div>
         </header>
-        <main style={{ padding: "24px var(--pad-x) 64px", maxWidth: 1400, margin: "0 auto" }}>{children}</main>
+        <main
+          style={{
+            padding: "24px var(--pad-x) 64px",
+            maxWidth: 1400,
+            margin: "0 auto",
+          }}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

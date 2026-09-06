@@ -95,7 +95,9 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
     });
     setPwBusy(false);
     if (res.error) {
-      setPwError(res.error.message ?? "Unable to change password. Please try again.");
+      setPwError(
+        res.error.message ?? "Unable to change password. Please try again.",
+      );
       return;
     }
     setPwDone(true);
@@ -112,11 +114,13 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
     const res = await authClient.deleteUser(
       hasPassword
         ? { password: delPassword, callbackURL: "/" }
-        : { callbackURL: "/" }
+        : { callbackURL: "/" },
     );
     setDelBusy(false);
     if (res.error) {
-      setDelError(res.error.message ?? "Unable to delete your account. Please try again.");
+      setDelError(
+        res.error.message ?? "Unable to delete your account. Please try again.",
+      );
       return;
     }
     router.push("/");
@@ -175,9 +179,17 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
           <div className="account-settings-item">
             <div>
               <h3>Change Password</h3>
-              <p>{hasPassword ? "Update your password to keep your account secure" : "No password set yet. Add one for password sign-in"}</p>
+              <p>
+                {hasPassword
+                  ? "Update your password to keep your account secure"
+                  : "No password set yet. Add one for password sign-in"}
+              </p>
             </div>
-            <button type="button" className="btn-ghost btn-sm" onClick={() => setPwOpen(true)}>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => setPwOpen(true)}
+            >
               {hasPassword ? "Change" : "Set Password"}
             </button>
           </div>
@@ -187,7 +199,11 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
               <h3>Connected Accounts</h3>
               <p>Manage Google and Discord sign-in methods</p>
             </div>
-            <button type="button" className="btn-ghost btn-sm" onClick={openConnections}>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={openConnections}
+            >
               Manage
             </button>
           </div>
@@ -195,7 +211,9 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
       </section>
 
       <section className="account-section account-section--danger">
-        <span className="account-kicker account-kicker--danger">{"// Danger Zone"}</span>
+        <span className="account-kicker account-kicker--danger">
+          {"// Danger Zone"}
+        </span>
 
         <div className="account-danger-zone">
           <div className="account-danger-item">
@@ -203,7 +221,11 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
               <h3>Delete Account</h3>
               <p>Permanently delete your account and all associated data</p>
             </div>
-            <button type="button" className="btn-ghost btn-sm btn-danger" onClick={() => setDelOpen(true)}>
+            <button
+              type="button"
+              className="btn-ghost btn-sm btn-danger"
+              onClick={() => setDelOpen(true)}
+            >
               Delete Account
             </button>
           </div>
@@ -211,12 +233,35 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
       </section>
 
       {pwOpen && (
-        <div className="account-modal-overlay" onClick={() => setPwOpen(false)} role="dialog" aria-modal="true" aria-labelledby="pw-modal-title">
+        <div
+          className="account-modal-overlay"
+          onClick={() => setPwOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pw-modal-title"
+        >
           <div className="account-modal" onClick={(e) => e.stopPropagation()}>
             <header className="account-modal-header">
-              <h3 id="pw-modal-title">{hasPassword ? "Change Password" : "Set Password"}</h3>
-              <button type="button" className="account-modal-close" onClick={() => setPwOpen(false)} aria-label="Close">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <h3 id="pw-modal-title">
+                {hasPassword ? "Change Password" : "Set Password"}
+              </h3>
+              <button
+                type="button"
+                className="account-modal-close"
+                onClick={() => setPwOpen(false)}
+                aria-label="Close"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -266,7 +311,9 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
               </div>
 
               <p className="account-password-hint">
-                Needs {PASSWORD_RULES.length} things: at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.
+                Needs {PASSWORD_RULES.length} things: at least 8 characters, an
+                uppercase letter, a lowercase letter, a number, and a special
+                character.
               </p>
 
               {pwError && (
@@ -281,10 +328,18 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
               )}
 
               <div className="account-modal-actions">
-                <button type="button" className="btn-ghost" onClick={() => setPwOpen(false)}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setPwOpen(false)}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn-form-submit" disabled={pwBusy}>
+                <button
+                  type="submit"
+                  className="btn-form-submit"
+                  disabled={pwBusy}
+                >
                   {pwBusy ? "Updating…" : "Update Password"}
                 </button>
               </div>
@@ -294,12 +349,33 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
       )}
 
       {connOpen && (
-        <div className="account-modal-overlay" onClick={() => setConnOpen(false)} role="dialog" aria-modal="true" aria-labelledby="conn-modal-title">
+        <div
+          className="account-modal-overlay"
+          onClick={() => setConnOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="conn-modal-title"
+        >
           <div className="account-modal" onClick={(e) => e.stopPropagation()}>
             <header className="account-modal-header">
               <h3 id="conn-modal-title">Connected Accounts</h3>
-              <button type="button" className="account-modal-close" onClick={() => setConnOpen(false)} aria-label="Close">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <button
+                type="button"
+                className="account-modal-close"
+                onClick={() => setConnOpen(false)}
+                aria-label="Close"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -315,7 +391,11 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
                 accounts.map((account) => (
                   <div key={account.id} className="account-settings-item">
                     <div>
-                      <h3 className="capitalize">{account.providerId === "credential" ? "Email" : account.providerId}</h3>
+                      <h3 className="capitalize">
+                        {account.providerId === "credential"
+                          ? "Email"
+                          : account.providerId}
+                      </h3>
                       <p>{account.accountId}</p>
                     </div>
                     {accounts.length > 1 ? (
@@ -328,7 +408,9 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
                         {unnlinkingId === account.id ? "Removing…" : "Remove"}
                       </button>
                     ) : (
-                      <span className="account-address-default-text">Connected</span>
+                      <span className="account-address-default-text">
+                        Connected
+                      </span>
                     )}
                   </div>
                 ))
@@ -336,7 +418,11 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
             </div>
 
             <div className="account-modal-actions">
-              <button type="button" className="btn-ghost" onClick={() => setConnOpen(false)}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setConnOpen(false)}
+              >
                 Close
               </button>
             </div>
@@ -345,12 +431,33 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
       )}
 
       {delOpen && (
-        <div className="account-modal-overlay" onClick={() => setDelOpen(false)} role="dialog" aria-modal="true" aria-labelledby="del-modal-title">
+        <div
+          className="account-modal-overlay"
+          onClick={() => setDelOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="del-modal-title"
+        >
           <div className="account-modal" onClick={(e) => e.stopPropagation()}>
             <header className="account-modal-header">
               <h3 id="del-modal-title">Delete Account</h3>
-              <button type="button" className="account-modal-close" onClick={() => setDelOpen(false)} aria-label="Close">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <button
+                type="button"
+                className="account-modal-close"
+                onClick={() => setDelOpen(false)}
+                aria-label="Close"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -359,7 +466,8 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
 
             <form onSubmit={onDeleteAccount} className="account-form">
               <p className="account-password-hint">
-                This permanently deletes your account, orders, addresses, and all associated data. This action cannot be undone.
+                This permanently deletes your account, orders, addresses, and
+                all associated data. This action cannot be undone.
               </p>
               {hasPassword && (
                 <div className="form-row">
@@ -396,7 +504,11 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
               )}
 
               <div className="account-modal-actions">
-                <button type="button" className="btn-ghost" onClick={() => setDelOpen(false)}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setDelOpen(false)}
+                >
                   Cancel
                 </button>
                 <button

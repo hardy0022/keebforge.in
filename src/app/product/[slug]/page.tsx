@@ -10,7 +10,10 @@ import { WhyForge } from "@/components/home/WhyForge";
 import { ProductGallery } from "@/components/shop/ProductGallery";
 import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { RelatedProducts } from "@/components/shop/RelatedProducts";
-import { ReviewSectionSkeleton, RelatedProductsSkeleton } from "@/components/shop/skeletons";
+import {
+  ReviewSectionSkeleton,
+  RelatedProductsSkeleton,
+} from "@/components/shop/skeletons";
 import { buildMetadata, JsonLd, breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 import { getProductBySlug } from "@/lib/data";
 import { availableQuantity } from "@/lib/cart";
@@ -19,15 +22,23 @@ import { isPurchasable, CONDITION_LABELS } from "@/lib/shop";
 
 type Props = { params: Promise<{ slug: string }> };
 
-const labelize = (k: string) => k.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const labelize = (k: string) =>
+  k.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 function absUrl(u: string) {
   return u.startsWith("http") ? u : `${SITE_URL}${u}`;
 }
 
 function getJsonList(value: unknown): string[] {
-  if (value && typeof value === "object" && "list" in value && Array.isArray((value as { list: unknown }).list)) {
-    return (value as { list: string[] }).list.filter((v): v is string => typeof v === "string");
+  if (
+    value &&
+    typeof value === "object" &&
+    "list" in value &&
+    Array.isArray((value as { list: unknown }).list)
+  ) {
+    return (value as { list: string[] }).list.filter(
+      (v): v is string => typeof v === "string",
+    );
   }
   return [];
 }
@@ -35,17 +46,25 @@ function getJsonList(value: unknown): string[] {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  if (!product) return {};
+  // notFound() here (pre-render) so miss-status is 404 even though the route
+  // has a loading.tsx that would otherwise commit a 200 shell first (G-003).
+  if (!product) notFound();
   const image = product.images[0];
   return buildMetadata({
     title: product.seoTitle ?? `${product.name} | KeebForge Shop`,
-    description: product.seoDescription ?? product.description ?? `${product.name} at KeebForge.`,
+    description:
+      product.seoDescription ??
+      product.description ??
+      `${product.name} at KeebForge.`,
     path: `/product/${product.slug}`,
     image: image?.url,
   });
 }
 
-export default async function ProductPage({ params, searchParams }: Props & { searchParams: Promise<{ rp?: string }> }) {
+export default async function ProductPage({
+  params,
+  searchParams,
+}: Props & { searchParams: Promise<{ rp?: string }> }) {
   const { slug } = await params;
   const sp = await searchParams;
   const reviewPage = Math.max(1, Number(sp.rp) || 1);
@@ -55,13 +74,15 @@ export default async function ProductPage({ params, searchParams }: Props & { se
   const custom = product.productType === "CUSTOM";
   const optionGroups = product.optionGroups;
   const configurable = optionGroups.length > 0;
-  const available = custom ? 99 : availableQuantity(product.stock, product.reservedQuantity);
+  const available = custom
+    ? 99
+    : availableQuantity(product.stock, product.reservedQuantity);
   const buyable = isPurchasable(product);
   const specs =
     product.specifications && typeof product.specifications === "object"
-      ? Object.entries(product.specifications as Record<string, unknown>).filter(
-          ([, v]) => v != null && String(v).trim() !== ""
-        )
+      ? Object.entries(
+          product.specifications as Record<string, unknown>,
+        ).filter(([, v]) => v != null && String(v).trim() !== "")
       : [];
   const features = getJsonList(product.features);
   const included = getJsonList(product.whatsIncluded);
@@ -73,12 +94,21 @@ export default async function ProductPage({ params, searchParams }: Props & { se
   const maxPrice = Math.max(product.price, ...variantPrices);
   const fromPrice = custom || product.variants.length > 0 || configurable;
   const showRange = !fromPrice && minPrice !== maxPrice;
-  const compareAt = !showRange && !fromPrice && product.compareAtPrice && product.compareAtPrice > product.price ? product.compareAtPrice : null;
-  const savePct = compareAt ? Math.round((1 - product.price / compareAt) * 100) : null;
+  const compareAt =
+    !showRange &&
+    !fromPrice &&
+    product.compareAtPrice &&
+    product.compareAtPrice > product.price
+      ? product.compareAtPrice
+      : null;
+  const savePct = compareAt
+    ? Math.round((1 - product.price / compareAt) * 100)
+    : null;
 
   const conditionLabel =
     product.productType === "CLEARANCE"
-      ? (product.condition && CONDITION_LABELS[product.condition]) || "Clearance"
+      ? (product.condition && CONDITION_LABELS[product.condition]) ||
+        "Clearance"
       : null;
 
   return (
@@ -88,7 +118,10 @@ export default async function ProductPage({ params, searchParams }: Props & { se
           className="breadcrumbs-lime"
           items={[
             { name: "Shop", href: "/shop" },
-            { name: product.category.name, href: `/shop/${product.category.slug}` },
+            {
+              name: product.category.name,
+              href: `/shop/${product.category.slug}`,
+            },
             { name: product.name },
           ]}
         />
@@ -99,34 +132,59 @@ export default async function ProductPage({ params, searchParams }: Props & { se
         <div className="wrap">
           <div className="product-layout">
             <div className="product-gallery-column">
-              <ProductGallery images={product.images} productName={product.name} />
+              <ProductGallery
+                images={product.images}
+                productName={product.name}
+              />
             </div>
 
             <div className="product-info-column">
               <div className="product-meta">
                 <p className="product-kicker-row">
                   {product.brand && (
-                    <Link href={`/shop?brand=${product.brand.slug}`} className="product-brand">
+                    <Link
+                      href={`/shop?brand=${product.brand.slug}`}
+                      className="product-brand"
+                    >
                       {product.brand.name}
                     </Link>
                   )}
-                  <Link href={`/shop/${product.category.slug}`} className="product-cat">
+                  <Link
+                    href={`/shop/${product.category.slug}`}
+                    className="product-cat"
+                  >
                     {product.category.name}
                   </Link>
-                  {custom && <span className="product-type-chip acc">Custom Order</span>}
-                  {conditionLabel && <span className="product-type-chip">{conditionLabel}</span>}
+                  {custom && (
+                    <span className="product-type-chip acc">Custom Order</span>
+                  )}
+                  {conditionLabel && (
+                    <span className="product-type-chip">{conditionLabel}</span>
+                  )}
                 </p>
-                <h1 id="product-heading" className="product-title">{product.name}</h1>
+                <h1 id="product-heading" className="product-title">
+                  {product.name}
+                </h1>
               </div>
 
               {!configurable && (
                 <div className="product-price-section">
                   <div className="product-price">
                     <span className="product-price-amount">
-                      {showRange ? formatINRRange(minPrice, maxPrice) : formatINR(minPrice)}
+                      {showRange
+                        ? formatINRRange(minPrice, maxPrice)
+                        : formatINR(minPrice)}
                     </span>
-                    {compareAt && <span className="product-price-compare">{formatINR(compareAt)}</span>}
-                    {savePct != null && <span className="product-discount-badge">Save {savePct}%</span>}
+                    {compareAt && (
+                      <span className="product-price-compare">
+                        {formatINR(compareAt)}
+                      </span>
+                    )}
+                    {savePct != null && (
+                      <span className="product-discount-badge">
+                        Save {savePct}%
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -148,9 +206,9 @@ export default async function ProductPage({ params, searchParams }: Props & { se
                     compareAtPrice: v.compareAtPrice,
                     stock: v.stock,
                     reservedQuantity: v.reservedQuantity,
-                    options: (v.options && typeof v.options === "object" ? (v.options as Record<string, unknown>) : null) as
-                      | Record<string, string>
-                      | null,
+                    options: (v.options && typeof v.options === "object"
+                      ? (v.options as Record<string, unknown>)
+                      : null) as Record<string, string> | null,
                   }))}
                   baseAvailable={available}
                 />
@@ -158,8 +216,12 @@ export default async function ProductPage({ params, searchParams }: Props & { se
 
               {(product.sku || product.type) && (
                 <div className="product-meta-tags">
-                  {product.sku && <span className="meta-tag">SKU: {product.sku}</span>}
-                  {product.type && <span className="meta-tag">{labelize(product.type)}</span>}
+                  {product.sku && (
+                    <span className="meta-tag">SKU: {product.sku}</span>
+                  )}
+                  {product.type && (
+                    <span className="meta-tag">{labelize(product.type)}</span>
+                  )}
                 </div>
               )}
 
@@ -175,13 +237,21 @@ export default async function ProductPage({ params, searchParams }: Props & { se
       </section>
 
       {/* ─── SPECS | DESCRIPTION / FEATURES / INCLUDED ───────────────────── */}
-      {(product.description || specs.length > 0 || features.length > 0 || included.length > 0) && (
+      {(product.description ||
+        specs.length > 0 ||
+        features.length > 0 ||
+        included.length > 0) && (
         <section className="svc-section" aria-label="Product details">
           <div className="wrap">
             <div className="product-details-grid">
               {specs.length > 0 && (
-                <section className="product-section" aria-labelledby="specs-heading">
-                  <h2 id="specs-heading" className="product-section-title">Specifications</h2>
+                <section
+                  className="product-section"
+                  aria-labelledby="specs-heading"
+                >
+                  <h2 id="specs-heading" className="product-section-title">
+                    Specifications
+                  </h2>
                   <dl className="product-specs">
                     {specs.map(([k, v]) => (
                       <div key={k} className="product-spec-row">
@@ -194,8 +264,16 @@ export default async function ProductPage({ params, searchParams }: Props & { se
               )}
               <div className="product-lists">
                 {product.description && (
-                  <section className="product-section" aria-labelledby="description-heading">
-                    <h2 id="description-heading" className="product-section-title">About this product</h2>
+                  <section
+                    className="product-section"
+                    aria-labelledby="description-heading"
+                  >
+                    <h2
+                      id="description-heading"
+                      className="product-section-title"
+                    >
+                      About this product
+                    </h2>
                     <div className="product-description">
                       {product.description.split(/\n\n+/).map((para, i) => (
                         <p key={i}>{para}</p>
@@ -204,12 +282,27 @@ export default async function ProductPage({ params, searchParams }: Props & { se
                   </section>
                 )}
                 {features.length > 0 && (
-                  <section className="product-section" aria-labelledby="features-heading">
-                    <h2 id="features-heading" className="product-section-title">Key Features</h2>
+                  <section
+                    className="product-section"
+                    aria-labelledby="features-heading"
+                  >
+                    <h2 id="features-heading" className="product-section-title">
+                      Key Features
+                    </h2>
                     <ul className="product-features">
                       {features.map((feature, i) => (
                         <li key={i}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
                             <path d="M20 6L9 17l-5-5" />
                           </svg>
                           {feature}
@@ -219,13 +312,34 @@ export default async function ProductPage({ params, searchParams }: Props & { se
                   </section>
                 )}
                 {included.length > 0 && (
-                  <section className="product-section" aria-labelledby="included-heading">
-                    <h2 id="included-heading" className="product-section-title">What&apos;s Included</h2>
+                  <section
+                    className="product-section"
+                    aria-labelledby="included-heading"
+                  >
+                    <h2 id="included-heading" className="product-section-title">
+                      What&apos;s Included
+                    </h2>
                     <ul className="product-included">
                       {included.map((item, i) => (
                         <li key={i}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="3"
+                              fill="currentColor"
+                              stroke="none"
+                            />
                           </svg>
                           {item}
                         </li>
@@ -247,12 +361,21 @@ export default async function ProductPage({ params, searchParams }: Props & { se
 
       {/* ─── CUSTOMER REVIEWS ────────────────────────────────────────────── */}
       <Suspense fallback={<ReviewSectionSkeleton />}>
-        <ReviewSection scope={{ type: "product", product: { id: product.id, name: product.name, slug: product.slug } }} page={reviewPage} />
+        <ReviewSection
+          scope={{
+            type: "product",
+            product: { id: product.id, name: product.name, slug: product.slug },
+          }}
+          page={reviewPage}
+        />
       </Suspense>
 
       {/* ─── RELATED ─────────────────────────────────────────────────────── */}
       <Suspense fallback={<RelatedProductsSkeleton />}>
-        <RelatedProducts productId={product.id} categoryId={product.categoryId} />
+        <RelatedProducts
+          productId={product.id}
+          categoryId={product.categoryId}
+        />
       </Suspense>
 
       <WhyForge num="// Why Forge" />
@@ -261,22 +384,32 @@ export default async function ProductPage({ params, searchParams }: Props & { se
         data={[
           breadcrumbJsonLd([
             { name: "Shop", path: "/shop" },
-            { name: product.category.name, path: `/shop/${product.category.slug}` },
+            {
+              name: product.category.name,
+              path: `/shop/${product.category.slug}`,
+            },
             { name: product.name, path: `/product/${product.slug}` },
           ]),
           {
             "@type": "Product",
             name: product.name,
-            description: product.seoDescription ?? product.description ?? undefined,
-            image: product.images.length ? product.images.map((i) => absUrl(i.url)) : undefined,
+            description:
+              product.seoDescription ?? product.description ?? undefined,
+            image: product.images.length
+              ? product.images.map((i) => absUrl(i.url))
+              : undefined,
             sku: product.sku ?? undefined,
-            ...(product.brand ? { brand: { "@type": "Brand", name: product.brand.name } } : {}),
+            ...(product.brand
+              ? { brand: { "@type": "Brand", name: product.brand.name } }
+              : {}),
             offers: {
               "@type": "Offer",
               url,
               price: minPrice / 100,
               priceCurrency: "INR",
-              availability: buyable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              availability: buyable
+                ? "https://schema.org/InStock"
+                : "https://schema.org/OutOfStock",
             },
             ...(product.ratingCount > 0 && product.ratingAverage
               ? {

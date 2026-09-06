@@ -7,12 +7,20 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import type { ActionState } from "@/components/admin/ActionForm";
 import { MAINTENANCE_KEY, type Environment } from "@/lib/environment";
-import { PICKUP_SETTING_KEY, createDelhiveryWarehouse, editDelhiveryWarehouse, type PickupLocation } from "@/lib/delhivery";
-import { invalidateSiteSettings } from "@/lib/cache";
+import {
+  PICKUP_SETTING_KEY,
+  createDelhiveryWarehouse,
+  editDelhiveryWarehouse,
+  type PickupLocation,
+} from "@/lib/delhivery";
+import { invalidateSiteSettings } from "@/lib/caching/cache";
 
 const ENVIRONMENTS: Environment[] = ["production", "development"];
 
-export async function toggleMaintenanceMode(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function toggleMaintenanceMode(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("setting", "update");
 
   const target = formData.get("environment");
@@ -33,14 +41,20 @@ export async function toggleMaintenanceMode(_prev: ActionState, formData: FormDa
   invalidateSiteSettings();
 
   const label = env === "production" ? "Production" : "Development";
-  return { ok: true, message: `${label} maintenance mode ${next ? "enabled" : "disabled"}.` };
+  return {
+    ok: true,
+    message: `${label} maintenance mode ${next ? "enabled" : "disabled"}.`,
+  };
 }
 
 const pickupSchema = z.object({
   name: z.string().trim().min(1).max(120),
   address: z.string().trim().min(1).max(300),
   city: z.string().trim().min(1).max(120),
-  pin: z.string().trim().regex(/^[1-9]\d{5}$/),
+  pin: z
+    .string()
+    .trim()
+    .regex(/^[1-9]\d{5}$/),
   state: z.string().trim().min(1).max(120),
   country: z.string().trim().min(1).max(80).optional(),
   phone: z.string().trim().min(10).max(15),
@@ -54,7 +68,10 @@ const pickupSchema = z.object({
  * pickup_location.name matches a warehouse in Delhivery's system. If the
  * warehouse already exists, it's updated via the ClientWarehouse Edit API.
  */
-export async function saveDelhiveryPickup(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function saveDelhiveryPickup(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("setting", "update");
 
   const parsed = pickupSchema.safeParse({
@@ -68,7 +85,12 @@ export async function saveDelhiveryPickup(_prev: ActionState, formData: FormData
     email: formData.get("email") || undefined,
     registeredName: formData.get("registeredName") || undefined,
   });
-  if (!parsed.success) return { ok: false, error: "Check the pickup location fields (pincode must be 6 digits, phone at least 10)." };
+  if (!parsed.success)
+    return {
+      ok: false,
+      error:
+        "Check the pickup location fields (pincode must be 6 digits, phone at least 10).",
+    };
   const d = parsed.data;
   const country = d.country ?? "India";
 
@@ -95,7 +117,12 @@ export async function saveDelhiveryPickup(_prev: ActionState, formData: FormData
   if (!res.ok) {
     const edited = await editDelhiveryWarehouse(full);
     if (!edited.ok) {
-      return { ok: false, error: edited.message || "Couldn't register or update the warehouse with Delhivery." };
+      return {
+        ok: false,
+        error:
+          edited.message ||
+          "Couldn't register or update the warehouse with Delhivery.",
+      };
     }
   }
 
@@ -107,5 +134,8 @@ export async function saveDelhiveryPickup(_prev: ActionState, formData: FormData
 
   revalidatePath("/admin/settings");
   invalidateSiteSettings();
-  return { ok: true, message: "Pickup location saved and registered with Delhivery." };
+  return {
+    ok: true,
+    message: "Pickup location saved and registered with Delhivery.",
+  };
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { TAG, TTL, defineCached } from "@/lib/cache";
+import { TAG, TTL, defineCached } from "@/lib/caching/cache";
 import { getPublicReviews, getSiteReviewSummary } from "@/lib/reviews";
 
 const PRODUCT_SELECT = {
@@ -19,7 +19,9 @@ const PRODUCT_SELECT = {
   },
 } satisfies Prisma.ProductSelect;
 
-export type HomeProduct = Prisma.ProductGetPayload<{ select: typeof PRODUCT_SELECT }>;
+export type HomeProduct = Prisma.ProductGetPayload<{
+  select: typeof PRODUCT_SELECT;
+}>;
 
 export type HomeWork = {
   id: string;
@@ -46,7 +48,12 @@ const HOME_FEATURE_TAKE = 4;
 export const getHomeData = defineCached(
   async (): Promise<HomeData> => {
     const featured = await prisma.product.findMany({
-      where: { featured: true, active: true, status: "ACTIVE", images: { some: { active: true } } },
+      where: {
+        featured: true,
+        active: true,
+        status: "ACTIVE",
+        images: { some: { active: true } },
+      },
       orderBy: { createdAt: "desc" },
       take: HOME_FEATURE_TAKE,
       select: PRODUCT_SELECT,
@@ -58,7 +65,11 @@ export const getHomeData = defineCached(
       featured.length > 0
         ? featured
         : await prisma.product.findMany({
-            where: { active: true, status: "ACTIVE", images: { some: { active: true } } },
+            where: {
+              active: true,
+              status: "ACTIVE",
+              images: { some: { active: true } },
+            },
             orderBy: { createdAt: "desc" },
             take: HOME_FEATURE_TAKE,
             select: PRODUCT_SELECT,
@@ -67,21 +78,41 @@ export const getHomeData = defineCached(
     const [work, [summary, feed]] = await Promise.all([
       prisma.workProject.findMany({
         where: { active: true },
-        orderBy: [{ featured: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
+        orderBy: [
+          { featured: "desc" },
+          { sortOrder: "asc" },
+          { createdAt: "desc" },
+        ],
         take: HOME_WORK_TAKE,
-        select: { id: true, title: true, slug: true, category: true, images: true },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          category: true,
+          images: true,
+        },
       }),
-      Promise.all([getSiteReviewSummary(), getPublicReviews({ page: 1, pageSize: 8 })]),
+      Promise.all([
+        getSiteReviewSummary(),
+        getPublicReviews({ page: 1, pageSize: 8 }),
+      ]),
     ]);
 
     return {
       products,
       work: work.map((w) => ({
         ...w,
-        images: (Array.isArray(w.images) ? w.images : []) as { url: string; alt?: string }[],
+        images: (Array.isArray(w.images) ? w.images : []) as {
+          url: string;
+          alt?: string;
+        }[],
       })),
       reviews: { summary, items: feed.items },
     };
   },
-  { tags: [TAG.products, TAG.categories, TAG.work, TAG.reviews], revalidate: TTL.catalog, keys: ["home"] }
+  {
+    tags: [TAG.products, TAG.categories, TAG.work, TAG.reviews],
+    revalidate: TTL.catalog,
+    keys: ["home"],
+  },
 );

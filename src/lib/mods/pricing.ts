@@ -9,6 +9,8 @@
  * they are never persisted or charged.
  */
 
+import { formatPaiseWhole } from "@/lib/money";
+
 export type ServiceUnit = "PER_SWITCH" | "PER_STABILIZER" | "FLAT" | "QUOTE";
 export type ServiceDevice = "KEYBOARD" | "MOUSE" | "OTHER";
 
@@ -68,10 +70,6 @@ export type ServiceOrderTotals = PricingSummary & {
   selectedCount: number;
 };
 
-function formatPaise(paise: number): string {
-  return (paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 });
-}
-
 /** Unit suffix for a per-unit service ("₹9/SW"). */
 export function getServiceUnitLabel(service: ServiceConfig): string {
   if (service.priceLabel) return service.priceLabel;
@@ -81,9 +79,13 @@ export function getServiceUnitLabel(service: ServiceConfig): string {
 }
 
 /** Quantity a service is multiplied by for the given device configuration. */
-export function quantityForService(service: ServiceConfig, cfg: Pick<ServiceOrderConfigInput, "switchQuantity" | "stabilizerQuantity">): number {
+export function quantityForService(
+  service: ServiceConfig,
+  cfg: Pick<ServiceOrderConfigInput, "switchQuantity" | "stabilizerQuantity">,
+): number {
   if (service.unit === "PER_SWITCH") return Math.max(1, cfg.switchQuantity);
-  if (service.unit === "PER_STABILIZER") return Math.max(1, cfg.stabilizerQuantity);
+  if (service.unit === "PER_STABILIZER")
+    return Math.max(1, cfg.stabilizerQuantity);
   return 1;
 }
 
@@ -93,7 +95,7 @@ export function quantityForService(service: ServiceConfig, cfg: Pick<ServiceOrde
  */
 export function calculateServicePrice(
   service: ServiceConfig,
-  quantity: number
+  quantity: number,
 ): ServicePricingResult {
   const isQuote =
     service.unit === "QUOTE" ||
@@ -106,19 +108,22 @@ export function calculateServicePrice(
 
   if (isQuote) {
     if (service.priceMin != null && service.priceMax != null) {
-      priceText = `₹${formatPaise(service.priceMin)}–${formatPaise(service.priceMax)}`;
+      priceText = `₹${formatPaiseWhole(service.priceMin)}–${formatPaiseWhole(service.priceMax)}`;
     } else {
       priceText = "Quote";
     }
-  } else if (service.unit === "PER_SWITCH" || service.unit === "PER_STABILIZER") {
+  } else if (
+    service.unit === "PER_SWITCH" ||
+    service.unit === "PER_STABILIZER"
+  ) {
     unitPrice = service.price ?? 0;
     lineTotal = unitPrice * quantity;
-    priceText = `₹${formatPaise(unitPrice)}${getServiceUnitLabel(service)}`;
+    priceText = `₹${formatPaiseWhole(unitPrice)}${getServiceUnitLabel(service)}`;
   } else {
     // FLAT
     unitPrice = service.price ?? 0;
     lineTotal = unitPrice;
-    priceText = `₹${formatPaise(unitPrice)}`;
+    priceText = `₹${formatPaiseWhole(unitPrice)}`;
   }
 
   return {
@@ -137,7 +142,7 @@ export function calculateServicePrice(
 /** Calculate pricing for a set of services with explicit per-service quantities. */
 export function calculateServicesPricing(
   services: ServiceConfig[],
-  quantities: Record<string, number>
+  quantities: Record<string, number>,
 ): PricingSummary {
   const lines: ServicePricingResult[] = [];
   let subtotal = 0;
@@ -166,7 +171,7 @@ export function calculateServicesPricing(
  */
 export function calculateServiceOrder(
   services: ServiceConfig[],
-  cfg: ServiceOrderConfigInput
+  cfg: ServiceOrderConfigInput,
 ): ServiceOrderTotals {
   const quantities: Record<string, number> = {};
   for (const s of services) {

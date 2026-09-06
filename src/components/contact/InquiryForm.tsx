@@ -10,7 +10,10 @@ const MAX_IMAGES = 5;
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
-  const [state, formAction, pending] = useActionState<InquiryState, FormData>(sendInquiry, {});
+  const [state, formAction, pending] = useActionState<InquiryState, FormData>(
+    sendInquiry,
+    {},
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<File[]>([]);
   const [imgError, setImgError] = useState<string | null>(null);
@@ -28,7 +31,9 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
   const handleFiles = async (incoming: File[]) => {
     setImgError(null);
     const existing = Array.from(inputRef.current?.files ?? []);
-    const seen = new Set(existing.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
+    const seen = new Set(
+      existing.map((f) => `${f.name}:${f.size}:${f.lastModified}`),
+    );
     const merged = [...existing];
     let err: string | null = null;
     for (const f of incoming) {
@@ -41,14 +46,18 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
       }
       // Gallery/camera picks may report an empty or generic MIME type — sniff the bytes.
       if (!(await sniffImageFile(f))) {
-        err = err ?? `"${f.name}" isn't a supported image. Use JPG, PNG, WebP or AVIF.`;
+        err =
+          err ??
+          `"${f.name}" isn't a supported image. Use JPG, PNG, WebP or AVIF.`;
         continue;
       }
       merged.push(f);
     }
     if (merged.length > MAX_IMAGES) {
       setFiles(merged.slice(0, MAX_IMAGES));
-      setImgError(`You can attach up to ${MAX_IMAGES} photos — extra files were skipped.`);
+      setImgError(
+        `You can attach up to ${MAX_IMAGES} photos — extra files were skipped.`,
+      );
     } else {
       setFiles(merged);
       setImgError(err);
@@ -63,10 +72,13 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
   if (state.ok) {
     return (
       <div className="card text-center">
-        <div className="text-[2rem]" aria-hidden="true">✅</div>
+        <div className="text-[2rem]" aria-hidden="true">
+          ✅
+        </div>
         <h3 className="ct">Inquiry Sent</h3>
         <p className="cd" style={{ marginBottom: 20 }}>
-          Thanks — your repair inquiry is on its way. KeebForge will get back to you with a quote.
+          Thanks — your repair inquiry is on its way. KeebForge will get back to
+          you with a quote.
           {images.length > 0 && " We've received your photos too."}
         </p>
         <Link href="/" className="btn-prime">
@@ -82,26 +94,56 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
         <>
           <h3 className="ct">Send a Repair Inquiry</h3>
           <p className="cd" style={{ marginBottom: 20 }}>
-            Describe your device and issue — we&apos;ll get back to you with a quote.
+            Describe your device and issue — we&apos;ll get back to you with a
+            quote.
           </p>
         </>
       )}
 
       <div className="form-row">
         <label htmlFor="iq-name">Name</label>
-        <input id="iq-name" name="name" type="text" placeholder="Your full name" required autoComplete="name" />
+        <input
+          id="iq-name"
+          name="name"
+          type="text"
+          placeholder="Your full name"
+          required
+          autoComplete="name"
+        />
       </div>
       <div className="form-row">
         <label htmlFor="iq-phone">WhatsApp / Phone Number</label>
-        <input id="iq-phone" name="phone" type="tel" placeholder="+91 9998888000" required autoComplete="tel" pattern="[0-9+\-\s()]{10,20}" />
+        <input
+          id="iq-phone"
+          name="phone"
+          type="tel"
+          placeholder="+91 9998888000"
+          required
+          autoComplete="tel"
+          pattern="[0-9+\-\s()]{10,20}"
+        />
       </div>
       <div className="form-row">
         <label htmlFor="iq-email">Email</label>
-        <input id="iq-email" name="email" type="email" placeholder="your@email.com" required autoComplete="email" />
+        <input
+          id="iq-email"
+          name="email"
+          type="email"
+          placeholder="your@email.com"
+          required
+          autoComplete="email"
+        />
       </div>
       <div className="form-row">
-        <label htmlFor="iq-device">Keyboard / Device Model <span className="optional">(optional)</span></label>
-        <input id="iq-device" name="deviceModel" type="text" placeholder="e.g. Keychron K2, Logitech G Pro…" />
+        <label htmlFor="iq-device">
+          Keyboard / Device Model <span className="optional">(optional)</span>
+        </label>
+        <input
+          id="iq-device"
+          name="deviceModel"
+          type="text"
+          placeholder="e.g. Keychron K2, Logitech G Pro…"
+        />
       </div>
       <div className="form-row">
         <label htmlFor="iq-issue">Issue Description</label>
@@ -115,10 +157,12 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
       </div>
 
       <div className="form-row">
-        <label htmlFor="iq-images">Photos of the Issue <span className="optional">(optional)</span></label>
+        <label htmlFor="iq-images">
+          Photos of the Issue <span className="optional">(optional)</span>
+        </label>
         <p className="upload-hint">
-          Upload clear photos of the device, damage, PCB, or affected area. Photos help us understand the issue
-          before we receive the device.
+          Upload clear photos of the device, damage, PCB, or affected area.
+          Photos help us understand the issue before we receive the device.
         </p>
         <label
           className={`upload-zone${dropping ? " dropping" : ""}${pending ? " disabled" : ""}`}
@@ -144,10 +188,14 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
             disabled={pending}
             onChange={(e) => handleFiles(Array.from(e.target.files ?? []))}
           />
-          <span className="upload-ico" aria-hidden="true">🖼️</span>
+          <span className="upload-ico" aria-hidden="true">
+            🖼️
+          </span>
           <span className="upload-title">Upload photos</span>
           <span className="upload-sub">Drag &amp; drop images here</span>
-          <span className="upload-sub">PNG, JPG, JPEG, WEBP · Up to {MAX_IMAGES} images</span>
+          <span className="upload-sub">
+            PNG, JPG, JPEG, WEBP · Up to {MAX_IMAGES} images
+          </span>
         </label>
         {imgError && (
           <p role="alert" className="upload-error">
@@ -155,11 +203,22 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
           </p>
         )}
         {images.length > 0 && (
-          <div className="upload-previews" role="list" aria-label="Selected photos">
+          <div
+            className="upload-previews"
+            role="list"
+            aria-label="Selected photos"
+          >
             {images.map((f, i) => (
-              <figure className="upload-thumb" role="listitem" key={`${f.name}:${f.size}:${i}`}>
+              <figure
+                className="upload-thumb"
+                role="listitem"
+                key={`${f.name}:${f.size}:${i}`}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element -- blob previews can't use next/image */}
-                <img src={URL.createObjectURL(f)} alt={`Photo ${i + 1}: ${f.name}`} />
+                <img
+                  src={URL.createObjectURL(f)}
+                  alt={`Photo ${i + 1}: ${f.name}`}
+                />
                 <button
                   type="button"
                   className="upload-remove"

@@ -72,7 +72,10 @@ export default function PrivacyPolicyPage() {
           </div>
 
           <div className="mt-10">
-            <SectionHead title="Questions About Your Data?" desc="Reach out any time — email replies are fast." />
+            <SectionHead
+              title="Questions About Your Data?"
+              desc="Reach out any time — email replies are fast."
+            />
             <a href="mailto:contact@keebforge.in" className="btn-prime">
               Email Us: contact@keebforge.in
             </a>

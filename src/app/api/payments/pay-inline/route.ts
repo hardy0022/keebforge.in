@@ -23,7 +23,10 @@ export async function POST(req: NextRequest) {
         ? body.orderNumber.replace(/[\s-]+/g, "").toUpperCase()
         : "";
     if (!/^[A-Z0-9]{4,20}$/.test(orderNumber)) {
-      return NextResponse.json({ error: "That doesn't look like a valid order number." }, { status: 400 });
+      return NextResponse.json(
+        { error: "That doesn't look like a valid order number." },
+        { status: 400 },
+      );
     }
 
     const order = await prisma.order.findUnique({
@@ -42,25 +45,43 @@ export async function POST(req: NextRequest) {
       },
     });
     if (!order) {
-      return NextResponse.json({ error: "No order was found for that number." }, { status: 404 });
+      return NextResponse.json(
+        { error: "No order was found for that number." },
+        { status: 404 },
+      );
     }
     if (order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") {
-      return NextResponse.json({ error: "This order is already paid." }, { status: 400 });
-    }
-
-    const paid = order.payments.filter((p) => p.status === "PAID").reduce((s, p) => s + p.amount, 0);
-    const outstanding = order.total - paid;
-    if (outstanding <= 0) {
       return NextResponse.json(
-        { error: "There's nothing to pay for this order yet — final pricing may still be pending." },
-        { status: 400 }
+        { error: "This order is already paid." },
+        { status: 400 },
       );
     }
 
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? process.env.RAZORPAY_KEY_ID;
+    const paid = order.payments
+      .filter((p) => p.status === "PAID")
+      .reduce((s, p) => s + p.amount, 0);
+    const outstanding = order.total - paid;
+    if (outstanding <= 0) {
+      return NextResponse.json(
+        {
+          error:
+            "There's nothing to pay for this order yet — final pricing may still be pending.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const keyId =
+      process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!order.customerEmail || !keyId || !keySecret) {
-      return NextResponse.json({ error: "Online payments are temporarily unavailable. Please contact support." }, { status: 503 });
+      return NextResponse.json(
+        {
+          error:
+            "Online payments are temporarily unavailable. Please contact support.",
+        },
+        { status: 503 },
+      );
     }
 
     const billing = (order.billingDetails ?? {}) as Record<string, unknown>;
@@ -74,7 +95,10 @@ export async function POST(req: NextRequest) {
       : null;
     const razorpayCustomerId = await ensureRazorpayCustomer(rzp, {
       profile,
-      existingId: typeof billing.razorpayCustomerId === "string" ? billing.razorpayCustomerId : null,
+      existingId:
+        typeof billing.razorpayCustomerId === "string"
+          ? billing.razorpayCustomerId
+          : null,
       name: order.customerName,
       email: order.customerEmail,
       contact: order.customerPhone,
@@ -84,7 +108,11 @@ export async function POST(req: NextRequest) {
       amount: outstanding,
       currency: "INR",
       receipt: order.orderNumber,
-      notes: { orderId: order.id, orderNumber: order.orderNumber, source: "track-order" },
+      notes: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        source: "track-order",
+      },
     });
 
     await prisma.order.update({
@@ -111,6 +139,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error("[pay-inline] failed:", e);
-    return NextResponse.json({ error: "Failed to start payment. Please try again." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to start payment. Please try again." },
+      { status: 500 },
+    );
   }
 }

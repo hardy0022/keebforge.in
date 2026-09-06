@@ -31,8 +31,12 @@ export default async function WriteGeneralReviewPage() {
       <div className="wrap page-start">
         <div className="write-review">
           <header className="write-review-head">
-            <h1 className="product-title">{existing ? "Edit your review" : "Write a Review"}</h1>
-            <p className="write-review-sub">Share your experience with KeebForge.</p>
+            <h1 className="product-title">
+              {existing ? "Edit your review" : "Write a Review"}
+            </h1>
+            <p className="write-review-sub">
+              Share your experience with KeebForge.
+            </p>
             {existing && (
               <p className="review-status-note">
                 {existing.status === "APPROVED"
@@ -53,11 +57,17 @@ export default async function WriteGeneralReviewPage() {
                     rating: existing.rating,
                     title: existing.title ?? "",
                     body: existing.body,
-                    images: reviewMedia.map((m) => ({ id: m.id, url: m.secureUrl })),
+                    images: reviewMedia.map((m) => ({
+                      id: m.id,
+                      url: m.secureUrl,
+                    })),
                   }
                 : null
             }
-            preview={{ name: profile.name ?? "Customer", avatarUrl: profile.avatarUrl ?? null }}
+            preview={{
+              name: profile.name ?? "Customer",
+              avatarUrl: profile.avatarUrl ?? null,
+            }}
           />
         </div>
       </div>

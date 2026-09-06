@@ -1,7 +1,15 @@
 import type { ReactNode } from "react";
 
 /** Shared editorial block for support/help pages — divider-separated, no cards. */
-export function SupportSection({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
+export function SupportSection({
+  title,
+  id,
+  children,
+}: {
+  title: string;
+  id?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="support-section" aria-labelledby={id ?? title}>
       <h2 className="support-h" id={id}>

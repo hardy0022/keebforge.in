@@ -4,16 +4,24 @@ import { useActionState } from "react";
 import type { ReactNode } from "react";
 import type { ActionState } from "@/app/admin/actions/orders";
 
-export const Spinner = ({ light = false }: { light?: boolean }) => (
-  <span className={`spinner ${light ? "light" : ""}`} aria-hidden />
-);
+export { Spinner } from "@/components/admin/ActionForm";
 
-export function Toast({ state, okLabel }: { state: ActionState; okLabel: string }) {
+export function Toast({
+  state,
+  okLabel,
+}: {
+  state: ActionState;
+  okLabel: string;
+}) {
   const ok = state.ok === true;
-  const err = state.error ?? (state.ok === false ? "Something went wrong." : "");
+  const err =
+    state.error ?? (state.ok === false ? "Something went wrong." : "");
   if (!ok && !err) return null;
   return (
-    <div className={`kf-toast ${ok ? "ok" : "err"}`} role={ok ? "status" : "alert"}>
+    <div
+      className={`kf-toast ${ok ? "ok" : "err"}`}
+      role={ok ? "status" : "alert"}
+    >
       {ok ? `✓ ${okLabel}` : `✕ ${err}`}
     </div>
   );

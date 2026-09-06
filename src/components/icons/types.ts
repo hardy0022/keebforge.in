@@ -24,23 +24,22 @@ export type IconEasing =
   | "backInOut"
   | "anticipate";
 
-export interface AnimatedIconProps
-  extends Omit<
-    SVGProps<SVGSVGElement>,
-    | "ref"
-    | "onAnimationStart"
-    | "onAnimationEnd"
-    | "onAnimationIteration"
-    | "onDrag"
-    | "onDragEnd"
-    | "onDragEnter"
-    | "onDragExit"
-    | "onDragLeave"
-    | "onDragOver"
-    | "onDragStart"
-    | "onDrop"
-    | "values"
-  > {
+export interface AnimatedIconProps extends Omit<
+  SVGProps<SVGSVGElement>,
+  | "ref"
+  | "onAnimationStart"
+  | "onAnimationEnd"
+  | "onAnimationIteration"
+  | "onDrag"
+  | "onDragEnd"
+  | "onDragEnter"
+  | "onDragExit"
+  | "onDragLeave"
+  | "onDragOver"
+  | "onDragStart"
+  | "onDrop"
+  | "values"
+> {
   /** Icon size in pixels or CSS string */
   size?: number | string;
   /** Icon color (defaults to currentColor) */

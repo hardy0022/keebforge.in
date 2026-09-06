@@ -34,7 +34,10 @@ export function AddressPicker({
     <div className="ri-address-list" style={{ marginTop: 0 }}>
       {[...addresses, null].map((a) =>
         a ? (
-          <label key={a.id} className={`ri-address${selectedId === a.id ? " selected" : ""}`}>
+          <label
+            key={a.id}
+            className={`ri-address${selectedId === a.id ? " selected" : ""}`}
+          >
             <input
               type="radio"
               name="address-picker"
@@ -42,21 +45,29 @@ export function AddressPicker({
               onChange={() => onSelect(a.id)}
             />
             <span>
-              <strong>{a.label}{a.isDefault ? " · Default" : ""}</strong>
+              <strong>
+                {a.label}
+                {a.isDefault ? " · Default" : ""}
+              </strong>
               {a.streetAddress}, {a.city}, {a.state} {a.postalCode}
             </span>
           </label>
         ) : (
-          <label key="new" className={`ri-address${selectedId === "" ? " selected" : ""}`}>
+          <label
+            key="new"
+            className={`ri-address${selectedId === "" ? " selected" : ""}`}
+          >
             <input
               type="radio"
               name="address-picker"
               checked={selectedId === ""}
               onChange={() => onSelect("")}
             />
-            <span><strong>Use a different address</strong></span>
+            <span>
+              <strong>Use a different address</strong>
+            </span>
           </label>
-        )
+        ),
       )}
     </div>
   );

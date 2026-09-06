@@ -18,9 +18,14 @@ const STAFF_PERMISSIONS: Record<string, string[]> = {
 };
 
 /** Permission check against the user's Profile.role. */
-export function canAction(role: Role, resource: string, action: string): boolean {
+export function canAction(
+  role: Role,
+  resource: string,
+  action: string,
+): boolean {
   if (role === "ADMIN") return true;
-  if (role === "STAFF" || role === "DEVELOPER") return STAFF_PERMISSIONS[resource]?.includes(action) ?? false;
+  if (role === "STAFF" || role === "DEVELOPER")
+    return STAFF_PERMISSIONS[resource]?.includes(action) ?? false;
   return false;
 }
 

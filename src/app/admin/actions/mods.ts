@@ -5,7 +5,7 @@ import { z } from "zod";
 import { ServiceUnit } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
-import { invalidateServices } from "@/lib/cache";
+import { invalidateServices } from "@/lib/caching/cache";
 
 export type ModActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -46,7 +46,8 @@ function readPriceOnly(formData: FormData) {
     priceMax: formData.get("priceMax") || undefined,
     priceLabel: formData.get("priceLabel") || undefined,
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid mod." };
+  if (!parsed.success)
+    return { error: parsed.error.issues[0]?.message ?? "Invalid mod." };
   const d = parsed.data;
   const price = toPaise(d.price);
   const priceMin = toPaise(d.priceMin);
@@ -57,7 +58,10 @@ function readPriceOnly(formData: FormData) {
   return { data: { ...d, price, priceMin, priceMax } };
 }
 
-export async function updateModPrice(_prev: ModActionState, formData: FormData): Promise<ModActionState> {
+export async function updateModPrice(
+  _prev: ModActionState,
+  formData: FormData,
+): Promise<ModActionState> {
   await requirePermission("mod", "update");
   const r = readPriceOnly(formData);
   if ("error" in r) return { error: r.error };
@@ -76,7 +80,10 @@ export async function updateModPrice(_prev: ModActionState, formData: FormData):
   return { ok: true, message: "Price updated" };
 }
 
-export async function saveMod(_prev: ModActionState, formData: FormData): Promise<ModActionState> {
+export async function saveMod(
+  _prev: ModActionState,
+  formData: FormData,
+): Promise<ModActionState> {
   await requirePermission("mod", "create");
   const parsed = modSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -91,7 +98,8 @@ export async function saveMod(_prev: ModActionState, formData: FormData): Promis
     active: formData.get("active") || undefined,
     sortOrder: formData.get("sortOrder") || undefined,
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid mod." };
+  if (!parsed.success)
+    return { error: parsed.error.issues[0]?.message ?? "Invalid mod." };
   const d = parsed.data;
 
   const price = toPaise(d.price);

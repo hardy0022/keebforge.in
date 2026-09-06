@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/shop/ProductCard";
-import { ShopEmptyState, DEFAULT_EMPTY_STATE, type EmptyStateConfig } from "@/components/shop/ShopEmptyState";
+import {
+  ShopEmptyState,
+  DEFAULT_EMPTY_STATE,
+  type EmptyStateConfig,
+} from "@/components/shop/ShopEmptyState";
 import type { ShopProduct } from "@/lib/data";
 
 /* 1 … around current … last, with ellipsis gaps; short ranges shown whole. */
@@ -36,7 +40,8 @@ export function ShopGrid({
     return <ShopEmptyState config={empty ?? DEFAULT_EMPTY_STATE} />;
   }
 
-  const pageHref = (p: number) => `?${baseQuery ? `${baseQuery}&` : ""}page=${p}`;
+  const pageHref = (p: number) =>
+    `?${baseQuery ? `${baseQuery}&` : ""}page=${p}`;
 
   return (
     <>
@@ -49,13 +54,21 @@ export function ShopGrid({
       {pages > 1 && (
         <nav className="shop-pager" aria-label="Pagination">
           {page > 1 && (
-            <Link href={pageHref(page - 1)} className="shop-pager-num" prefetch={false}>
+            <Link
+              href={pageHref(page - 1)}
+              className="shop-pager-num"
+              prefetch={false}
+            >
               ← Prev
             </Link>
           )}
           {pageItems(page, pages).map((it, i) =>
             it === "…" ? (
-              <span key={`dots-${i}`} className="shop-pager-dots" aria-hidden="true">
+              <span
+                key={`dots-${i}`}
+                className="shop-pager-dots"
+                aria-hidden="true"
+              >
                 …
               </span>
             ) : it === page ? (
@@ -63,13 +76,22 @@ export function ShopGrid({
                 {it}
               </span>
             ) : (
-              <Link key={it} href={pageHref(it)} className="shop-pager-num" prefetch={false}>
+              <Link
+                key={it}
+                href={pageHref(it)}
+                className="shop-pager-num"
+                prefetch={false}
+              >
                 {it}
               </Link>
-            )
+            ),
           )}
           {page < pages && (
-            <Link href={pageHref(page + 1)} className="shop-pager-num" prefetch={false}>
+            <Link
+              href={pageHref(page + 1)}
+              className="shop-pager-num"
+              prefetch={false}
+            >
               Next →
             </Link>
           )}

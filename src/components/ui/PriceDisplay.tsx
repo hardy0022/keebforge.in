@@ -11,7 +11,14 @@ type Props = {
 };
 
 /** Renders a service price line: fixed, range, or Quote badge. */
-export function PriceDisplay({ price, priceMin, priceMax, unit, priceLabel, large = false }: Props) {
+export function PriceDisplay({
+  price,
+  priceMin,
+  priceMax,
+  unit,
+  priceLabel,
+  large = false,
+}: Props) {
   if (unit === "QUOTE" || (price === null && !priceMin)) {
     return <span className="qbadge">Quote Based</span>;
   }
@@ -19,7 +26,11 @@ export function PriceDisplay({ price, priceMin, priceMax, unit, priceLabel, larg
     return <em className={`ca${large ? " ca-lg" : ""}`}>{priceLabel}</em>;
   }
   if (priceMin && priceMax) {
-    return <em className={`ca${large ? " ca-lg" : ""}`}>{formatINRRange(priceMin, priceMax)}</em>;
+    return (
+      <em className={`ca${large ? " ca-lg" : ""}`}>
+        {formatINRRange(priceMin, priceMax)}
+      </em>
+    );
   }
   if (price) {
     return <em className={`ca${large ? " ca-lg" : ""}`}>{formatINR(price)}</em>;

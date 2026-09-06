@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   calculateServiceOrder,
@@ -10,7 +17,11 @@ import {
 import { PACKAGE_LIMITS } from "@/lib/package-limits";
 import { deriveLegs } from "@/lib/shipping-estimate";
 import { INDIAN_STATES } from "@/lib/indian-states";
-import { AddressPicker, type SavedAddressOption } from "@/components/mods/AddressPicker";
+import { formatPaiseWhole } from "@/lib/money";
+import {
+  AddressPicker,
+  type SavedAddressOption,
+} from "@/components/mods/AddressPicker";
 
 export type ConfigService = {
   id: string;
@@ -59,11 +70,29 @@ export type ModsShipMode = "surface" | "express";
 export type ModsShippingInput = {
   method: ModsShippingMethod;
   mode: ModsShipMode;
-  address: { street: string; landmark: string; city: string; state: string; pincode: string };
-  package: { lengthCm: number; widthCm: number; heightCm: number; weightKg: number };
-  quote: { pickupPaise: number | null; returnPaise: number | null; totalPaise: number | null };
+  address: {
+    street: string;
+    landmark: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  package: {
+    lengthCm: number;
+    widthCm: number;
+    heightCm: number;
+    weightKg: number;
+  };
+  quote: {
+    pickupPaise: number | null;
+    returnPaise: number | null;
+    totalPaise: number | null;
+  };
   /** Display snapshot only — the server recalculates authoritative amounts on add-to-cart. */
-  totals?: { serviceSubtotalPaise: number | null; estimatedTotalPaise: number | null };
+  totals?: {
+    serviceSubtotalPaise: number | null;
+    estimatedTotalPaise: number | null;
+  };
 };
 
 type Props = {
@@ -94,7 +123,10 @@ const LAYOUT_MAP: Record<string, { sw: number; stab: number }> = {
 };
 
 const DEVICE_ICON: Record<DeviceKey, string> = { KEYBOARD: "⌨️", MOUSE: "🖱️" };
-const DEVICE_LABEL: Record<DeviceKey, string> = { KEYBOARD: "Keyboard", MOUSE: "Mouse" };
+const DEVICE_LABEL: Record<DeviceKey, string> = {
+  KEYBOARD: "Keyboard",
+  MOUSE: "Mouse",
+};
 
 /* Static-fidelity presentation data (mirrors TEMP/index.html) */
 const SERVICE_ICON: Record<string, string> = {
@@ -143,7 +175,8 @@ export const GROUP_DESC: Record<string, string> = {
     "End-to-end design, fabrication support, and firmware — from concept to working board.",
 };
 
-type GridKind = "switch" | "stab" | "wide" | "std";const GROUP_GRID: Record<string, GridKind> = {
+type GridKind = "switch" | "stab" | "wide" | "std";
+const GROUP_GRID: Record<string, GridKind> = {
   "switch-services": "switch",
   "stabilizer-services": "stab",
   "build-soldering": "wide",
@@ -152,20 +185,33 @@ type GridKind = "switch" | "stab" | "wide" | "std";const GROUP_GRID: Record<stri
   "mouse-mods-repairs": "wide",
 };
 
-function amt(paise: number) {
-  return (paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 });
-}
-
-type PriceParts = { quote: true } | { quote: false; amount: string; unit: string | null; range: boolean };
+type PriceParts =
+  | { quote: true }
+  | { quote: false; amount: string; unit: string | null; range: boolean };
 
 function priceParts(svc: ConfigService): PriceParts {
-  if (svc.unit === "QUOTE" || (!svc.price && svc.priceMin == null)) return { quote: true };
+  if (svc.unit === "QUOTE" || (!svc.price && svc.priceMin == null))
+    return { quote: true };
   if (svc.priceMin != null && svc.priceMax != null) {
-    return { quote: false, amount: `₹${amt(svc.priceMin)}–${amt(svc.priceMax)}`, unit: null, range: true };
+    return {
+      quote: false,
+      amount: `₹${formatPaiseWhole(svc.priceMin)}–${formatPaiseWhole(svc.priceMax)}`,
+      unit: null,
+      range: true,
+    };
   }
   const unit =
-    svc.unit === "PER_SWITCH" ? "per switch" : svc.unit === "PER_STABILIZER" ? "each" : null;
-  return { quote: false, amount: `₹${amt(svc.price ?? 0)}`, unit, range: false };
+    svc.unit === "PER_SWITCH"
+      ? "per switch"
+      : svc.unit === "PER_STABILIZER"
+        ? "each"
+        : null;
+  return {
+    quote: false,
+    amount: `₹${formatPaiseWhole(svc.price ?? 0)}`,
+    unit,
+    range: false,
+  };
 }
 
 function QtyControl({
@@ -185,9 +231,32 @@ function QtyControl({
     <div className="qty-row">
       <span className="qty-label">{label}</span>
       <div className="qty-ctrl">
-        <button className="qty-btn" type="button" onClick={() => onChange(id, -1)} aria-label={`Decrease ${label.toLowerCase()}`}>−</button>
-        <input className="qty-val" type="number" value={value} min={1} max={999} onChange={(e) => onSetValue(id, Math.max(1, parseInt(e.target.value || "1", 10)))} />
-        <button className="qty-btn" type="button" onClick={() => onChange(id, 1)} aria-label={`Increase ${label.toLowerCase()}`}>+</button>
+        <button
+          className="qty-btn"
+          type="button"
+          onClick={() => onChange(id, -1)}
+          aria-label={`Decrease ${label.toLowerCase()}`}
+        >
+          −
+        </button>
+        <input
+          className="qty-val"
+          type="number"
+          value={value}
+          min={1}
+          max={999}
+          onChange={(e) =>
+            onSetValue(id, Math.max(1, parseInt(e.target.value || "1", 10)))
+          }
+        />
+        <button
+          className="qty-btn"
+          type="button"
+          onClick={() => onChange(id, 1)}
+          aria-label={`Increase ${label.toLowerCase()}`}
+        >
+          +
+        </button>
       </div>
     </div>
   );
@@ -196,7 +265,7 @@ function QtyControl({
 function cardToggleProps(
   svc: ConfigService,
   checked: boolean,
-  onToggle: (svc: ConfigService) => void
+  onToggle: (svc: ConfigService) => void,
 ) {
   return {
     role: "checkbox" as const,
@@ -285,7 +354,9 @@ function ComboCard({
         <span className="ci">{SERVICE_ICON[svc.slug] ?? "🔥"}</span>
         {!p.quote && (
           <div className="cp">
-            <em className={`ca ca-lg${p.range ? " ca-range" : ""}`}>{p.amount}</em>
+            <em className={`ca ca-lg${p.range ? " ca-range" : ""}`}>
+              {p.amount}
+            </em>
             {p.unit && <span className="cu">{p.unit}</span>}
           </div>
         )}
@@ -293,7 +364,9 @@ function ComboCard({
       <h3 className="ct">{svc.name}</h3>
       <p className="cd">{svc.description}</p>
       <ul className="feat-list">
-        <li><span className="chk">✓</span> Krytox 205g0 Lubing</li>
+        <li>
+          <span className="chk">✓</span> Krytox 205g0 Lubing
+        </li>
       </ul>
       <button
         type="button"
@@ -339,7 +412,11 @@ function ServiceGroup({
     const rest = group.services.filter((s) => !s.combo && s !== lead);
     const slots = ["sw-slot-a", "sw-slot-b", "sw-slot-c", "sw-slot-d"];
     const solo = !!lead && rest.length === 1;
-    const comboExtra = solo ? " sw-combo-2" : rest.length === 0 ? " sw-combo-1" : "";
+    const comboExtra = solo
+      ? " sw-combo-2"
+      : rest.length === 0
+        ? " sw-combo-1"
+        : "";
 
     return (
       <>
@@ -388,9 +465,27 @@ function ServiceGroup({
         <>
           <GroupHead name={group.name} slug={group.slug} />
           <div className="stb-grid">
-            <ServiceCard key={restore.id} svc={restore} checked={selected.has(restore.id)} onToggle={onToggle} className="stb-restore" />
-            <ServiceCard key={wire.id} svc={wire} checked={selected.has(wire.id)} onToggle={onToggle} className="stb-wire" />
-            <ServiceCard key={full.id} svc={full} checked={selected.has(full.id)} onToggle={onToggle} className="stb-full" />
+            <ServiceCard
+              key={restore.id}
+              svc={restore}
+              checked={selected.has(restore.id)}
+              onToggle={onToggle}
+              className="stb-restore"
+            />
+            <ServiceCard
+              key={wire.id}
+              svc={wire}
+              checked={selected.has(wire.id)}
+              onToggle={onToggle}
+              className="stb-wire"
+            />
+            <ServiceCard
+              key={full.id}
+              svc={full}
+              checked={selected.has(full.id)}
+              onToggle={onToggle}
+              className="stb-full"
+            />
           </div>
         </>
       );
@@ -398,13 +493,19 @@ function ServiceGroup({
     // Otherwise fall through to the generic grid below.
   }
 
-  const gridCls = kind === "stab" ? "cards-stab" : kind === "std" ? "cards" : "cards-wide";
+  const gridCls =
+    kind === "stab" ? "cards-stab" : kind === "std" ? "cards" : "cards-wide";
   return (
     <>
       <GroupHead name={group.name} slug={group.slug} />
       <div className={gridCls}>
         {group.services.map((svc) => (
-          <ServiceCard key={svc.id} svc={svc} checked={selected.has(svc.id)} onToggle={onToggle} />
+          <ServiceCard
+            key={svc.id}
+            svc={svc}
+            checked={selected.has(svc.id)}
+            onToggle={onToggle}
+          />
         ))}
       </div>
     </>
@@ -426,10 +527,19 @@ function DevicePanel({
 }) {
   const devGroups = groups.filter((g) => g.services[0]?.device === dev);
   return (
-    <div className="device-panel" data-device={dev.toLowerCase()} style={active ? { display: "block" } : undefined}>
+    <div
+      className="device-panel"
+      data-device={dev.toLowerCase()}
+      style={active ? { display: "block" } : undefined}
+    >
       <div className="config-groups">
         {devGroups.map((g) => (
-          <ServiceGroup key={g.slug} group={g} selected={selected} onToggle={onToggle} />
+          <ServiceGroup
+            key={g.slug}
+            group={g}
+            selected={selected}
+            onToggle={onToggle}
+          />
         ))}
       </div>
     </div>
@@ -444,7 +554,8 @@ function loadStoredCheckout(): StoredServiceCheckout | null {
     const raw = sessionStorage.getItem(SERVICE_CHECKOUT_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as StoredServiceCheckout;
-      if (parsed && parsed.deviceType && Array.isArray(parsed.serviceIds)) return parsed;
+      if (parsed && parsed.deviceType && Array.isArray(parsed.serviceIds))
+        return parsed;
     }
   } catch {
     /* malformed — ignore */
@@ -454,7 +565,8 @@ function loadStoredCheckout(): StoredServiceCheckout | null {
     const raw = sessionStorage.getItem(MODS_DRAFT_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as StoredServiceCheckout;
-      if (parsed && parsed.deviceType && Array.isArray(parsed.serviceIds)) return parsed;
+      if (parsed && parsed.deviceType && Array.isArray(parsed.serviceIds))
+        return parsed;
     }
   } catch {
     /* malformed — ignore */
@@ -477,25 +589,47 @@ function toServiceConfig(s: ConfigService): ServiceConfig {
   };
 }
 
-export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Props) {
-  const modes = shippingModes?.length ? shippingModes : (["express" as ModsShipMode]);
+export function ModConfigurator({
+  groups,
+  shippingModes,
+  defaultShipMode,
+}: Props) {
+  const modes = shippingModes?.length
+    ? shippingModes
+    : ["express" as ModsShipMode];
   const router = useRouter();
   const [device, setDevice] = useState<DeviceKey>("KEYBOARD");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [qty, setQty] = useState<Record<QtyKey, number>>({ sw: 65, stab: 4, msw: 2 });
+  const [qty, setQty] = useState<Record<QtyKey, number>>({
+    sw: 65,
+    stab: 4,
+    msw: 2,
+  });
   const [layout, setLayout] = useState<string | null>(null);
   const [keycaps, setKeycaps] = useState<string | null>(null);
-  const [details, setDetails] = useState<Record<DeviceKey, { brand: string; model: string; switchModel: string }>>({
+  const [details, setDetails] = useState<
+    Record<DeviceKey, { brand: string; model: string; switchModel: string }>
+  >({
     KEYBOARD: { brand: "", model: "", switchModel: "" },
     MOUSE: { brand: "", model: "", switchModel: "" },
   });
   const restored = useRef(false);
 
   // ── Shipping / Pickup (Step 03) + Package Details (Step 04) ────────────────
-  const [shipMethod, setShipMethod] = useState<ModsShippingMethod>("customer_shipping");
-  const [shipMode, setShipMode] = useState<ModsShipMode>(defaultShipMode ?? "express");
-  const [contact, setContact] = useState<ModsContactInput>({ firstName: "", lastName: "", phone: "", email: "", alt: "" });
-  const nameOk = contact.firstName.trim().length >= 1 && contact.lastName.trim().length >= 1;
+  const [shipMethod, setShipMethod] =
+    useState<ModsShippingMethod>("customer_shipping");
+  const [shipMode, setShipMode] = useState<ModsShipMode>(
+    defaultShipMode ?? "express",
+  );
+  const [contact, setContact] = useState<ModsContactInput>({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    alt: "",
+  });
+  const nameOk =
+    contact.firstName.trim().length >= 1 && contact.lastName.trim().length >= 1;
   const phoneOk = /^\d{10}$/.test(contact.phone);
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim());
   const contactValidation = [
@@ -503,15 +637,29 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
     ...(!phoneOk ? ["Enter a valid WhatsApp / phone number."] : []),
     ...(!emailOk ? ["Enter a valid email address."] : []),
   ];
-  const [addr, setAddr] = useState({ street: "", landmark: "", city: "", state: "", pincode: "" });
+  const [addr, setAddr] = useState({
+    street: "",
+    landmark: "",
+    city: "",
+    state: "",
+    pincode: "",
+  });
   // Saved addresses (logged-in customers only; empty for guests).
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddressOption[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddressOption[]>(
+    [],
+  );
   /** Selected saved address; "" = manual entry, null = untouched (no prefill yet). */
   const [useAddressId, setUseAddressId] = useState<string | null>(null);
 
   const applySavedAddress = (a: SavedAddressOption) => {
     setUseAddressId(a.id);
-    setAddr({ street: a.streetAddress, landmark: a.apartment || "", city: a.city, state: a.state, pincode: a.postalCode });
+    setAddr({
+      street: a.streetAddress,
+      landmark: a.apartment || "",
+      city: a.city,
+      state: a.state,
+      pincode: a.postalCode,
+    });
     const parts = (a.name || "").trim().split(/\s+/);
     setContact((c) => ({
       ...c,
@@ -541,16 +689,37 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
    * are hidden until the customer recalculates.
    */
   const shipInputKeyOf = () =>
-    JSON.stringify([shipMode, addr.pincode.trim(), pkg.L, pkg.W, pkg.H, pkg.g, activeServices.length]);
+    JSON.stringify([
+      shipMode,
+      addr.pincode.trim(),
+      pkg.L,
+      pkg.W,
+      pkg.H,
+      pkg.g,
+      activeServices.length,
+    ]);
   const pinOk = /^[1-9]\d{5}$/.test(addr.pincode.trim());
-  const pkgNums = { L: Number(pkg.L), W: Number(pkg.W), H: Number(pkg.H), g: Number(pkg.g) };
+  const pkgNums = {
+    L: Number(pkg.L),
+    W: Number(pkg.W),
+    H: Number(pkg.H),
+    g: Number(pkg.g),
+  };
   const dimsOk =
-    pkgNums.L > 0 && pkgNums.L <= PACKAGE_LIMITS.MAX_DIM_CM &&
-    pkgNums.W > 0 && pkgNums.W <= PACKAGE_LIMITS.MAX_DIM_CM &&
-    pkgNums.H > 0 && pkgNums.H <= PACKAGE_LIMITS.MAX_DIM_CM;
-  const weightOk = pkgNums.g > 0 && pkgNums.g <= PACKAGE_LIMITS.MAX_WEIGHT_KG * 1000;
+    pkgNums.L > 0 &&
+    pkgNums.L <= PACKAGE_LIMITS.MAX_DIM_CM &&
+    pkgNums.W > 0 &&
+    pkgNums.W <= PACKAGE_LIMITS.MAX_DIM_CM &&
+    pkgNums.H > 0 &&
+    pkgNums.H <= PACKAGE_LIMITS.MAX_DIM_CM;
+  const weightOk =
+    pkgNums.g > 0 && pkgNums.g <= PACKAGE_LIMITS.MAX_WEIGHT_KG * 1000;
   const pkgOk = dimsOk && weightOk;
-  const addrOk = addr.street.trim() !== "" && addr.city.trim() !== "" && addr.state.trim() !== "" && pinOk;
+  const addrOk =
+    addr.street.trim() !== "" &&
+    addr.city.trim() !== "" &&
+    addr.state.trim() !== "" &&
+    pinOk;
   const needsQuote = shipMethod !== "undecided";
 
   /**
@@ -576,20 +745,27 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
           mode: shipMode,
         }),
       });
-      const data = (await res.json().catch(() => null)) as
-        | { success: boolean; forwardPaise?: number; errorCode?: string; message?: string }
-        | null;
+      const data = (await res.json().catch(() => null)) as {
+        success: boolean;
+        forwardPaise?: number;
+        errorCode?: string;
+        message?: string;
+      } | null;
       if (!res.ok || !data?.success || data.forwardPaise == null) {
         const msg =
           data?.errorCode === "PINCODE_UNAVAILABLE"
             ? "Shipping is currently unavailable for this PIN code."
-            : data?.message ?? "Unable to calculate shipping right now. Please check your PIN code and package details.";
+            : (data?.message ??
+              "Unable to calculate shipping right now. Please check your PIN code and package details.");
         setQuote({ s: "fail", msg });
         return;
       }
       setQuote({ s: "ok", forwardPaise: data.forwardPaise });
     } catch {
-      setQuote({ s: "fail", msg: "Unable to calculate shipping right now. Please check your PIN code and package details." });
+      setQuote({
+        s: "fail",
+        msg: "Unable to calculate shipping right now. Please check your PIN code and package details.",
+      });
     } finally {
       setQuoting(false);
     }
@@ -607,9 +783,15 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
     setDevice(dev);
     setSelected(new Set(stored.serviceIds));
     if (stored.switchQuantity > 0) {
-      setQty((q) => (dev === "KEYBOARD"
-        ? { ...q, sw: stored.switchQuantity, stab: stored.stabilizerQuantity || q.stab }
-        : { ...q, msw: stored.switchQuantity }));
+      setQty((q) =>
+        dev === "KEYBOARD"
+          ? {
+              ...q,
+              sw: stored.switchQuantity,
+              stab: stored.stabilizerQuantity || q.stab,
+            }
+          : { ...q, msw: stored.switchQuantity },
+      );
     }
     if (dev === "KEYBOARD") {
       if (typeof stored.layout === "string") setLayout(stored.layout);
@@ -629,7 +811,13 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
       // Legacy stashes stored a single joined `name` — split on restore.
       if (c.firstName === undefined && typeof c.name === "string") {
         const parts = c.name.trim().split(/\s+/);
-        setContact({ firstName: parts[0] ?? "", lastName: parts.slice(1).join(" "), phone: c.phone, email: c.email, alt: c.alt });
+        setContact({
+          firstName: parts[0] ?? "",
+          lastName: parts.slice(1).join(" "),
+          phone: c.phone,
+          email: c.email,
+          alt: c.alt,
+        });
       } else {
         setContact(c);
       }
@@ -637,7 +825,8 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
     if (sh) {
       setShipMethod(sh.method);
       if (sh.mode === "surface") setShipMode("surface");
-      if (sh.address) setAddr({ ...sh.address, landmark: sh.address.landmark ?? "" });
+      if (sh.address)
+        setAddr({ ...sh.address, landmark: sh.address.landmark ?? "" });
       if (sh.package)
         setPkg({
           L: String(sh.package.lengthCm || ""),
@@ -665,7 +854,9 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
         stabilizerQuantity: qty.stab,
         keycapsIncluded: keycaps === "Keycaps Included",
         serviceIds: [...selected],
-        services: groups.flatMap((g) => g.services).filter((s) => selected.has(s.id)),
+        services: groups
+          .flatMap((g) => g.services)
+          .filter((s) => selected.has(s.id)),
       };
       sessionStorage.setItem(MODS_DRAFT_KEY, JSON.stringify(draft));
     } catch {
@@ -687,13 +878,17 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
         const sa = loadStoredCheckout()?.shipping?.address;
         if (sa?.street) {
           const match = sa.pincode
-            ? list.find((a: SavedAddressOption) => a.postalCode === sa.pincode && a.streetAddress === sa.street)
+            ? list.find(
+                (a: SavedAddressOption) =>
+                  a.postalCode === sa.pincode && a.streetAddress === sa.street,
+              )
             : undefined;
           if (match) applySavedAddress(match);
           else setUseAddressId("");
           return;
         }
-        const def = list.find((a: SavedAddressOption) => a.isDefault) ?? list[0];
+        const def =
+          list.find((a: SavedAddressOption) => a.isDefault) ?? list[0];
         if (def) applySavedAddress(def);
       })
       .catch(() => {});
@@ -712,7 +907,8 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
   {
     for (const id of selected) {
       const s = byId.get(id);
-      if (s && (s.device === "KEYBOARD" || s.device === "MOUSE")) counts[s.device]++;
+      if (s && (s.device === "KEYBOARD" || s.device === "MOUSE"))
+        counts[s.device]++;
     }
   }
 
@@ -734,13 +930,17 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
   };
 
   /** Live preview — same function the server uses to create the order. */
-  const preview = calculateServiceOrder(activeServices.map(toServiceConfig), config);
+  const preview = calculateServiceOrder(
+    activeServices.map(toServiceConfig),
+    config,
+  );
 
   const validation: string[] = [];
   {
     if (!config.brand) validation.push("Please enter your device brand.");
     if (!config.model) validation.push("Please enter your device/model.");
-    if (preview.selectedCount === 0) validation.push("Select at least one service to continue.");
+    if (preview.selectedCount === 0)
+      validation.push("Select at least one service to continue.");
   }
 
   /**
@@ -761,16 +961,25 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
 
   let shipValidation: string | null = null;
   if (needsQuote) {
-    if (addr.pincode.trim() !== "" && !pinOk) shipValidation = "Please enter a valid 6-digit PIN code.";
-    else if (!pinOk || !pkgOk) shipValidation = "Enter a valid PIN code and package details to calculate shipping.";
+    if (addr.pincode.trim() !== "" && !pinOk)
+      shipValidation = "Please enter a valid 6-digit PIN code.";
+    else if (!pinOk || !pkgOk)
+      shipValidation =
+        "Enter a valid PIN code and package details to calculate shipping.";
     else if (!addrOk) shipValidation = "Enter your full address to continue.";
     else if (quote.s === "calc") shipValidation = "Calculating shipping…";
-    else if (quoteStale) shipValidation = "Shipping details changed — recalculate shipping to continue.";
+    else if (quoteStale)
+      shipValidation =
+        "Shipping details changed — recalculate shipping to continue.";
     else if (quote.s === "fail") shipValidation = quote.msg;
-    else if (quote.s === "idle") shipValidation = "Calculate shipping to continue.";
+    else if (quote.s === "idle")
+      shipValidation = "Calculate shipping to continue.";
   }
 
-  const canCheckout = validation.length === 0 && shipValidation === null && contactValidation.length === 0;
+  const canCheckout =
+    validation.length === 0 &&
+    shipValidation === null &&
+    contactValidation.length === 0;
 
   const toggle = (svc: ConfigService) => {
     setSelected((prev) => {
@@ -806,8 +1015,10 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
     });
   };
 
-  const adjustQty = (key: QtyKey, delta: number) => setQty((q) => ({ ...q, [key]: Math.max(1, q[key] + delta) }));
-  const setQtyVal = (key: QtyKey, value: number) => setQty((q) => ({ ...q, [key]: value }));
+  const adjustQty = (key: QtyKey, delta: number) =>
+    setQty((q) => ({ ...q, [key]: Math.max(1, q[key] + delta) }));
+  const setQtyVal = (key: QtyKey, value: number) =>
+    setQty((q) => ({ ...q, [key]: value }));
 
   const selectLayout = (v: string) => {
     setLayout(v === layout ? null : v);
@@ -835,9 +1046,18 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                 state: addr.state.trim(),
                 pincode: addr.pincode.trim(),
               },
-              package: { lengthCm: pkgNums.L, widthCm: pkgNums.W, heightCm: pkgNums.H, weightKg: pkgNums.g / 1000 },
+              package: {
+                lengthCm: pkgNums.L,
+                widthCm: pkgNums.W,
+                heightCm: pkgNums.H,
+                weightKg: pkgNums.g / 1000,
+              },
               quote: legs
-                ? { pickupPaise: legs.pickupPaise, returnPaise: legs.returnPaise, totalPaise: legs.totalPaise }
+                ? {
+                    pickupPaise: legs.pickupPaise,
+                    returnPaise: legs.returnPaise,
+                    totalPaise: legs.totalPaise,
+                  }
                 : { pickupPaise: null, returnPaise: null, totalPaise: null },
               totals: {
                 serviceSubtotalPaise: preview.subtotal,
@@ -848,26 +1068,46 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
         : {
             method: "undecided",
             mode: shipMode,
-            address: { street: addr.street.trim(), landmark: addr.landmark.trim(), city: addr.city.trim(), state: addr.state.trim(), pincode: addr.pincode.trim() },
+            address: {
+              street: addr.street.trim(),
+              landmark: addr.landmark.trim(),
+              city: addr.city.trim(),
+              state: addr.state.trim(),
+              pincode: addr.pincode.trim(),
+            },
             package: pkgOk
-              ? { lengthCm: pkgNums.L, widthCm: pkgNums.W, heightCm: pkgNums.H, weightKg: pkgNums.g / 1000 }
+              ? {
+                  lengthCm: pkgNums.L,
+                  widthCm: pkgNums.W,
+                  heightCm: pkgNums.H,
+                  weightKg: pkgNums.g / 1000,
+                }
               : { lengthCm: 0, widthCm: 0, heightCm: 0, weightKg: 0 },
             quote: { pickupPaise: null, returnPaise: null, totalPaise: null },
           };
       if (!shipping) {
-        setAddError("Shipping is not calculated yet. Please check your address and package details.");
+        setAddError(
+          "Shipping is not calculated yet. Please check your address and package details.",
+        );
         return;
       }
       // Straight to payment: stash the full configuration and let /mods/checkout
       // confirm the booking. No cart detour. Drop any legacy cart service
       // item so checkout's cart path can't resurrect stale shipping data.
-      const payload = { ...config, services: activeServices, shipping, contact } satisfies StoredServiceCheckout;
+      const payload = {
+        ...config,
+        services: activeServices,
+        shipping,
+        contact,
+      } satisfies StoredServiceCheckout;
       sessionStorage.setItem(SERVICE_CHECKOUT_KEY, JSON.stringify(payload));
       sessionStorage.setItem(MODS_DRAFT_KEY, JSON.stringify(payload));
       fetch("/api/cart/service", { method: "DELETE" }).catch(() => {});
       router.push("/mods/checkout");
     } catch {
-      setAddError("Something went wrong. Please check your connection and try again.");
+      setAddError(
+        "Something went wrong. Please check your connection and try again.",
+      );
     } finally {
       setAdding(false);
     }
@@ -892,13 +1132,19 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                 aria-selected={device === dev}
               >
                 {DEVICE_ICON[dev]} {DEVICE_LABEL[dev]}
-                {counts[dev] > 0 && <span className="tab-count">{counts[dev]}</span>}
+                {counts[dev] > 0 && (
+                  <span className="tab-count">{counts[dev]}</span>
+                )}
               </button>
             ))}
           </div>
 
           {device === "KEYBOARD" ? (
-            <div className="device-panel" data-device="keyboard" style={{ display: "block" }}>
+            <div
+              className="device-panel"
+              data-device="keyboard"
+              style={{ display: "block" }}
+            >
               <div className="field-stack">
                 <div className="field-inline">
                   <label htmlFor="kb-brand">Brand</label>
@@ -906,7 +1152,12 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     id="kb-brand"
                     type="text"
                     value={d.brand}
-                    onChange={(e) => setDetails((s) => ({ ...s, KEYBOARD: { ...s.KEYBOARD, brand: e.target.value } }))}
+                    onChange={(e) =>
+                      setDetails((s) => ({
+                        ...s,
+                        KEYBOARD: { ...s.KEYBOARD, brand: e.target.value },
+                      }))
+                    }
                     placeholder="e.g. Keychron, Mode, Akko…"
                   />
                 </div>
@@ -916,16 +1167,38 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     id="kb-model"
                     type="text"
                     value={d.model}
-                    onChange={(e) => setDetails((s) => ({ ...s, KEYBOARD: { ...s.KEYBOARD, model: e.target.value } }))}
+                    onChange={(e) =>
+                      setDetails((s) => ({
+                        ...s,
+                        KEYBOARD: { ...s.KEYBOARD, model: e.target.value },
+                      }))
+                    }
                     placeholder="e.g. Neo65, Keychron Q1, Mode Envoy…"
                   />
                 </div>
                 <div className="field-inline">
                   <label>Keyboard Layout</label>
-                <div className="pill-radio-group pill-radio-lg">
-                    {["60%", "65%", "75%", "TKL", "96%", "100%", "Full Size", "Custom"].map((l) => (
-                      <label key={l} className={`pill-radio${layout === l ? " selected" : ""}`}>
-                        <input type="radio" name="layout" checked={layout === l} onChange={() => selectLayout(l)} />
+                  <div className="pill-radio-group pill-radio-lg">
+                    {[
+                      "60%",
+                      "65%",
+                      "75%",
+                      "TKL",
+                      "96%",
+                      "100%",
+                      "Full Size",
+                      "Custom",
+                    ].map((l) => (
+                      <label
+                        key={l}
+                        className={`pill-radio${layout === l ? " selected" : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          name="layout"
+                          checked={layout === l}
+                          onChange={() => selectLayout(l)}
+                        />
                         <span>{l}</span>
                       </label>
                     ))}
@@ -934,8 +1207,20 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                 <div className="field-inline">
                   <label>Component Quantities</label>
                   <div className="qty-stack-row">
-                    <QtyControl label="Switches" id="sw" value={qty.sw} onChange={adjustQty} onSetValue={setQtyVal} />
-                    <QtyControl label="Stabilizers" id="stab" value={qty.stab} onChange={adjustQty} onSetValue={setQtyVal} />
+                    <QtyControl
+                      label="Switches"
+                      id="sw"
+                      value={qty.sw}
+                      onChange={adjustQty}
+                      onSetValue={setQtyVal}
+                    />
+                    <QtyControl
+                      label="Stabilizers"
+                      id="stab"
+                      value={qty.stab}
+                      onChange={adjustQty}
+                      onSetValue={setQtyVal}
+                    />
                   </div>
                 </div>
                 <div className="field-inline">
@@ -944,7 +1229,15 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     id="kb-switch-model"
                     type="text"
                     value={d.switchModel}
-                    onChange={(e) => setDetails((s) => ({ ...s, KEYBOARD: { ...s.KEYBOARD, switchModel: e.target.value } }))}
+                    onChange={(e) =>
+                      setDetails((s) => ({
+                        ...s,
+                        KEYBOARD: {
+                          ...s.KEYBOARD,
+                          switchModel: e.target.value,
+                        },
+                      }))
+                    }
                     placeholder="e.g. Gateron Cream Soda, HMX Xinhai…"
                   />
                 </div>
@@ -952,9 +1245,21 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                   <label>Are Keycaps Included?</label>
                   <div className="pill-radio-group pill-radio-lg">
                     {["Keycaps Included", "No Keycaps"].map((k) => (
-                      <label key={k} className={`pill-radio${keycaps === k ? " selected" : ""}`}>
-                        <input type="radio" name="keycaps" checked={keycaps === k} onChange={() => setKeycaps(k)} />
-                        <span>{k === "Keycaps Included" ? "Included" : "Not Included"}</span>
+                      <label
+                        key={k}
+                        className={`pill-radio${keycaps === k ? " selected" : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          name="keycaps"
+                          checked={keycaps === k}
+                          onChange={() => setKeycaps(k)}
+                        />
+                        <span>
+                          {k === "Keycaps Included"
+                            ? "Included"
+                            : "Not Included"}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -962,7 +1267,11 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
               </div>
             </div>
           ) : (
-            <div className="device-panel" data-device="mouse" style={{ display: "block" }}>
+            <div
+              className="device-panel"
+              data-device="mouse"
+              style={{ display: "block" }}
+            >
               <div className="field-stack">
                 <div className="field-inline">
                   <label htmlFor="ms-brand">Brand</label>
@@ -970,7 +1279,12 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     id="ms-brand"
                     type="text"
                     value={d.brand}
-                    onChange={(e) => setDetails((s) => ({ ...s, MOUSE: { ...s.MOUSE, brand: e.target.value } }))}
+                    onChange={(e) =>
+                      setDetails((s) => ({
+                        ...s,
+                        MOUSE: { ...s.MOUSE, brand: e.target.value },
+                      }))
+                    }
                     placeholder="e.g. Logitech, Razer, VAXEE…"
                   />
                 </div>
@@ -980,14 +1294,25 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     id="ms-model"
                     type="text"
                     value={d.model}
-                    onChange={(e) => setDetails((s) => ({ ...s, MOUSE: { ...s.MOUSE, model: e.target.value } }))}
+                    onChange={(e) =>
+                      setDetails((s) => ({
+                        ...s,
+                        MOUSE: { ...s.MOUSE, model: e.target.value },
+                      }))
+                    }
                     placeholder="e.g. G Pro X Superlight 2, Razer Viper V3 Pro…"
                   />
                 </div>
                 <div className="field-inline">
                   <label>Component Quantities</label>
                   <div className="qty-stack-row">
-                    <QtyControl label="Number of Switches" id="msw" value={qty.msw} onChange={adjustQty} onSetValue={setQtyVal} />
+                    <QtyControl
+                      label="Number of Switches"
+                      id="msw"
+                      value={qty.msw}
+                      onChange={adjustQty}
+                      onSetValue={setQtyVal}
+                    />
                   </div>
                 </div>
               </div>
@@ -998,8 +1323,20 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
         <div className="panel">
           <p className="panel-tag">Step 02</p>
           <h2 className="panel-title">Available {DEVICE_LABEL[device]} Mods</h2>
-          <DevicePanel dev="KEYBOARD" active={device === "KEYBOARD"} groups={groups} selected={selected} onToggle={toggle} />
-          <DevicePanel dev="MOUSE" active={device === "MOUSE"} groups={groups} selected={selected} onToggle={toggle} />
+          <DevicePanel
+            dev="KEYBOARD"
+            active={device === "KEYBOARD"}
+            groups={groups}
+            selected={selected}
+            onToggle={toggle}
+          />
+          <DevicePanel
+            dev="MOUSE"
+            active={device === "MOUSE"}
+            groups={groups}
+            selected={selected}
+            onToggle={toggle}
+          />
         </div>
 
         <div className="panel">
@@ -1014,7 +1351,9 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                   type="text"
                   autoComplete="given-name"
                   value={contact.firstName}
-                  onChange={(e) => setContact((c) => ({ ...c, firstName: e.target.value }))}
+                  onChange={(e) =>
+                    setContact((c) => ({ ...c, firstName: e.target.value }))
+                  }
                   placeholder="Your first name"
                 />
               </div>
@@ -1025,7 +1364,9 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                   type="text"
                   autoComplete="family-name"
                   value={contact.lastName}
-                  onChange={(e) => setContact((c) => ({ ...c, lastName: e.target.value }))}
+                  onChange={(e) =>
+                    setContact((c) => ({ ...c, lastName: e.target.value }))
+                  }
                   placeholder="Your last name"
                 />
               </div>
@@ -1040,12 +1381,22 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                   inputMode="numeric"
                   maxLength={10}
                   value={contact.phone}
-                  onChange={(e) => setContact((c) => ({ ...c, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
+                  onChange={(e) =>
+                    setContact((c) => ({
+                      ...c,
+                      phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+                    }))
+                  }
                   placeholder="9998888000"
                   aria-invalid={contact.phone !== "" && !phoneOk}
                 />
                 {contact.phone !== "" && !phoneOk && (
-                  <span className="inline-note" style={{ color: "var(--warn)" }}>Enter a valid WhatsApp / phone number.</span>
+                  <span
+                    className="inline-note"
+                    style={{ color: "var(--warn)" }}
+                  >
+                    Enter a valid WhatsApp / phone number.
+                  </span>
                 )}
               </div>
               <div className="form-row">
@@ -1055,12 +1406,19 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                   type="email"
                   autoComplete="email"
                   value={contact.email}
-                  onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))}
+                  onChange={(e) =>
+                    setContact((c) => ({ ...c, email: e.target.value }))
+                  }
                   placeholder="your@email.com"
                   aria-invalid={contact.email !== "" && !emailOk}
                 />
                 {contact.email !== "" && !emailOk && (
-                  <span className="inline-note" style={{ color: "var(--warn)" }}>Enter a valid email address.</span>
+                  <span
+                    className="inline-note"
+                    style={{ color: "var(--warn)" }}
+                  >
+                    Enter a valid email address.
+                  </span>
                 )}
               </div>
             </div>
@@ -1091,62 +1449,92 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
             )}
             {(savedAddresses.length === 0 || useAddressId === "") && (
               <>
-            <div className="field-inline">
-              <label htmlFor="ship-street">Street Address</label>
-              <input
-                id="ship-street"
-                type="text"
-                value={addr.street}
-                onChange={(e) => setAddr((a) => ({ ...a, street: e.target.value }))}
-                placeholder={shipMethod === "pickup" ? "Pickup address — house, street…" : "Return destination — house, street…"}
-              />
-            </div>
-            <div className="field-inline">
-              <label htmlFor="ship-landmark">Landmark (Optional)</label>
-              <input
-                id="ship-landmark"
-                type="text"
-                value={addr.landmark}
-                onChange={(e) => setAddr((a) => ({ ...a, landmark: e.target.value }))}
-                placeholder="Near metro station, opposite park…"
-              />
-            </div>
-            <div className="addr-city-row">
-              <div className="field-inline">
-                <label htmlFor="ship-city">City</label>
-                <input id="ship-city" type="text" value={addr.city} onChange={(e) => setAddr((a) => ({ ...a, city: e.target.value }))} placeholder="City" />
-              </div>
-              <div className="field-inline">
-                <label htmlFor="ship-state">State</label>
-                <select
-                  id="ship-state"
-                  value={addr.state}
-                  onChange={(e) => setAddr((a) => ({ ...a, state: e.target.value }))}
-                  autoComplete="address-level1"
-                >
-                  <option value="">Select state…</option>
-                  {INDIAN_STATES.map((st) => (
-                    <option key={st} value={st}>{st}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field-inline">
-                <label htmlFor="ship-pincode">PIN Code</label>
-                <input
-                  id="ship-pincode"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={addr.pincode}
-                  onChange={(e) => setAddr((a) => ({ ...a, pincode: e.target.value.replace(/\D/g, "") }))}
-                  placeholder="6-digit PIN"
-                  aria-invalid={addr.pincode !== "" && !pinOk}
-                />
-                {addr.pincode !== "" && !pinOk && (
-                  <span className="inline-note" style={{ color: "var(--warn)" }}>Please enter a valid 6-digit PIN code.</span>
-                )}
-              </div>
-            </div>
+                <div className="field-inline">
+                  <label htmlFor="ship-street">Street Address</label>
+                  <input
+                    id="ship-street"
+                    type="text"
+                    value={addr.street}
+                    onChange={(e) =>
+                      setAddr((a) => ({ ...a, street: e.target.value }))
+                    }
+                    placeholder={
+                      shipMethod === "pickup"
+                        ? "Pickup address — house, street…"
+                        : "Return destination — house, street…"
+                    }
+                  />
+                </div>
+                <div className="field-inline">
+                  <label htmlFor="ship-landmark">Landmark (Optional)</label>
+                  <input
+                    id="ship-landmark"
+                    type="text"
+                    value={addr.landmark}
+                    onChange={(e) =>
+                      setAddr((a) => ({ ...a, landmark: e.target.value }))
+                    }
+                    placeholder="Near metro station, opposite park…"
+                  />
+                </div>
+                <div className="addr-city-row">
+                  <div className="field-inline">
+                    <label htmlFor="ship-city">City</label>
+                    <input
+                      id="ship-city"
+                      type="text"
+                      value={addr.city}
+                      onChange={(e) =>
+                        setAddr((a) => ({ ...a, city: e.target.value }))
+                      }
+                      placeholder="City"
+                    />
+                  </div>
+                  <div className="field-inline">
+                    <label htmlFor="ship-state">State</label>
+                    <select
+                      id="ship-state"
+                      value={addr.state}
+                      onChange={(e) =>
+                        setAddr((a) => ({ ...a, state: e.target.value }))
+                      }
+                      autoComplete="address-level1"
+                    >
+                      <option value="">Select state…</option>
+                      {INDIAN_STATES.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field-inline">
+                    <label htmlFor="ship-pincode">PIN Code</label>
+                    <input
+                      id="ship-pincode"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={addr.pincode}
+                      onChange={(e) =>
+                        setAddr((a) => ({
+                          ...a,
+                          pincode: e.target.value.replace(/\D/g, ""),
+                        }))
+                      }
+                      placeholder="6-digit PIN"
+                      aria-invalid={addr.pincode !== "" && !pinOk}
+                    />
+                    {addr.pincode !== "" && !pinOk && (
+                      <span
+                        className="inline-note"
+                        style={{ color: "var(--warn)" }}
+                      >
+                        Please enter a valid 6-digit PIN code.
+                      </span>
+                    )}
+                  </div>
+                </div>
               </>
             )}
           </div>
@@ -1160,25 +1548,44 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                   ["pickup", "Need pickup"],
                 ] as [Exclude<ModsShippingMethod, "undecided">, string][]
               ).map(([m, label]) => (
-                <label key={m} className={`pill-radio${shipMethod === m ? " selected" : ""}`}>
-                  <input type="radio" name="ship-method" checked={shipMethod === m} onChange={() => setShipMethod(m)} />
+                <label
+                  key={m}
+                  className={`pill-radio${shipMethod === m ? " selected" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="ship-method"
+                    checked={shipMethod === m}
+                    onChange={() => setShipMethod(m)}
+                  />
                   <span>{label}</span>
                 </label>
               ))}
             </div>
-            <div className="total-note" style={{ textAlign: "left", marginTop: 8 }}>
+            <div
+              className="total-note"
+              style={{ textAlign: "left", marginTop: 8 }}
+            >
               {shipMethod === "customer_shipping" &&
-                "You'll ship your device to us. We'll ship it back after the work is completed."
-              }
-              {shipMethod === "pickup" && "We'll arrange pickup from your address and ship the device back after the work is completed."}
+                "You'll ship your device to us. We'll ship it back after the work is completed."}
+              {shipMethod === "pickup" &&
+                "We'll arrange pickup from your address and ship the device back after the work is completed."}
             </div>
             {needsQuote && modes.length > 1 && (
               <div className="field-inline" style={{ marginTop: 12 }}>
                 <label>Delivery Speed</label>
                 <div className="pill-radio-group pill-radio-lg">
                   {modes.map((mode) => (
-                    <label key={mode} className={`pill-radio${shipMode === mode ? " selected" : ""}`}>
-                      <input type="radio" name="ship-mode" checked={shipMode === mode} onChange={() => setShipMode(mode)} />
+                    <label
+                      key={mode}
+                      className={`pill-radio${shipMode === mode ? " selected" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        name="ship-mode"
+                        checked={shipMode === mode}
+                        onChange={() => setShipMode(mode)}
+                      />
                       <span>{mode === "surface" ? "Surface" : "Express"}</span>
                     </label>
                   ))}
@@ -1187,9 +1594,15 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
             )}
           </div>
 
-          <h3 className="panel-title" style={{ marginTop: 22 }}>Package Details</h3>
-          <div className="total-note" style={{ textAlign: "left", marginBottom: 12 }}>
-            Enter the final packed dimensions and weight, including the box and protective packaging.
+          <h3 className="panel-title" style={{ marginTop: 22 }}>
+            Package Details
+          </h3>
+          <div
+            className="total-note"
+            style={{ textAlign: "left", marginBottom: 12 }}
+          >
+            Enter the final packed dimensions and weight, including the box and
+            protective packaging.
           </div>
           <div className="field-stack">
             <div className="field-inline">
@@ -1203,7 +1616,12 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     min={1}
                     max={PACKAGE_LIMITS.MAX_DIM_CM}
                     value={pkg.L}
-                    onChange={(e) => setPkg((p) => ({ ...p, L: e.target.value.replace(/[^\d.]/g, "") }))}
+                    onChange={(e) =>
+                      setPkg((p) => ({
+                        ...p,
+                        L: e.target.value.replace(/[^\d.]/g, ""),
+                      }))
+                    }
                     placeholder="30"
                   />
                 </div>
@@ -1215,7 +1633,12 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     min={1}
                     max={PACKAGE_LIMITS.MAX_DIM_CM}
                     value={pkg.W}
-                    onChange={(e) => setPkg((p) => ({ ...p, W: e.target.value.replace(/[^\d.]/g, "") }))}
+                    onChange={(e) =>
+                      setPkg((p) => ({
+                        ...p,
+                        W: e.target.value.replace(/[^\d.]/g, ""),
+                      }))
+                    }
                     placeholder="20"
                   />
                 </div>
@@ -1227,16 +1650,30 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     min={1}
                     max={PACKAGE_LIMITS.MAX_DIM_CM}
                     value={pkg.H}
-                    onChange={(e) => setPkg((p) => ({ ...p, H: e.target.value.replace(/[^\d.]/g, "") }))}
+                    onChange={(e) =>
+                      setPkg((p) => ({
+                        ...p,
+                        H: e.target.value.replace(/[^\d.]/g, ""),
+                      }))
+                    }
                     placeholder="10"
                   />
                 </div>
               </div>
-              {needsQuote && !dimsOk && (pkg.L !== "" || pkg.W !== "" || pkg.H !== "") && (
-                <span className="inline-note" style={{ color: "var(--warn)", display: "block", marginTop: 6 }}>
-                  Enter valid package dimensions.
-                </span>
-              )}
+              {needsQuote &&
+                !dimsOk &&
+                (pkg.L !== "" || pkg.W !== "" || pkg.H !== "") && (
+                  <span
+                    className="inline-note"
+                    style={{
+                      color: "var(--warn)",
+                      display: "block",
+                      marginTop: 6,
+                    }}
+                  >
+                    Enter valid package dimensions.
+                  </span>
+                )}
             </div>
             <div className="field-inline pkg-weight">
               <label htmlFor="pkg-g">Weight (g)</label>
@@ -1247,7 +1684,12 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                 max={PACKAGE_LIMITS.MAX_WEIGHT_KG * 1000}
                 step={100}
                 value={pkg.g}
-                onChange={(e) => setPkg((p) => ({ ...p, g: e.target.value.replace(/[^\d.]/g, "") }))}
+                onChange={(e) =>
+                  setPkg((p) => ({
+                    ...p,
+                    g: e.target.value.replace(/[^\d.]/g, ""),
+                  }))
+                }
                 placeholder="e.g. 2500"
                 aria-invalid={pkg.g !== "" && !weightOk}
               />
@@ -1264,12 +1706,20 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                   className="btn-prime kf-checkout-btn"
                   onClick={calculateShippingNow}
                   disabled={!pinOk || !pkgOk || quoting}
-                  style={!pinOk || !pkgOk || quoting ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+                  style={
+                    !pinOk || !pkgOk || quoting
+                      ? { opacity: 0.45, cursor: "not-allowed" }
+                      : undefined
+                  }
                 >
                   {quoting ? "Calculating shipping…" : "Calculate Shipping"}
                 </button>
                 {quoteStale && (
-                  <span className="inline-note" role="status" style={{ color: "var(--warn)", marginLeft: 10 }}>
+                  <span
+                    className="inline-note"
+                    role="status"
+                    style={{ color: "var(--warn)", marginLeft: 10 }}
+                  >
                     Shipping details changed — recalculate shipping to continue.
                   </span>
                 )}
@@ -1288,7 +1738,8 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
             {preview.selectedCount > 0 ? (
               <>
                 <span className="summary-count-chip">
-                  {preview.selectedCount} {preview.selectedCount === 1 ? "service" : "services"}
+                  {preview.selectedCount}{" "}
+                  {preview.selectedCount === 1 ? "service" : "services"}
                 </span>
                 <span className="summary-devs">
                   {DEVICE_ICON[device]} {DEVICE_LABEL[device]}
@@ -1299,20 +1750,34 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
             )}
           </div>
 
-          <div className={`summary-box${preview.selectedCount === 0 ? " empty" : ""}`}>
+          <div
+            className={`summary-box${preview.selectedCount === 0 ? " empty" : ""}`}
+          >
             {preview.selectedCount === 0 ? (
               <div className="summary-empty">
                 <span className="summary-empty-ico">◇</span>
-                  <span>Pick services below and fill in your device details to build your order.</span>
+                <span>
+                  Pick services below and fill in your device details to build
+                  your order.
+                </span>
               </div>
             ) : (
               <div className="summary-list">
                 <div className="summary-line">
                   <div className="summary-line-info">
-                    <div className="summary-line-name">{DEVICE_LABEL[device]}</div>
-                    {config.layout && <div className="summary-line-meta">Layout · {config.layout}</div>}
+                    <div className="summary-line-name">
+                      {DEVICE_LABEL[device]}
+                    </div>
+                    {config.layout && (
+                      <div className="summary-line-meta">
+                        Layout · {config.layout}
+                      </div>
+                    )}
                   </div>
-                  <div className="summary-line-amt summary-line-meta" style={{ textAlign: "right" }}>
+                  <div
+                    className="summary-line-amt summary-line-meta"
+                    style={{ textAlign: "right" }}
+                  >
                     {[config.brand, config.model].filter(Boolean).join(" ")}
                     {config.keycapsIncluded ? "" : " · no keycaps"}
                   </div>
@@ -1322,7 +1787,9 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                     <div className="summary-line-meta">Components</div>
                     <div className="summary-line-meta">
                       {config.switchQuantity} switches
-                      {device === "KEYBOARD" ? ` · ${config.stabilizerQuantity} stabilizers` : ""}
+                      {device === "KEYBOARD"
+                        ? ` · ${config.stabilizerQuantity} stabilizers`
+                        : ""}
                     </div>
                   </div>
                 </div>
@@ -1333,11 +1800,15 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                       <div className="summary-line-meta">
                         {l.isQuote
                           ? "QUOTE REQUIRED — confirmed after inspection"
-                          : `${l.quantity} × ${amt(l.unitPrice ?? 0)}${l.unit === "PER_SWITCH" ? "/SW" : l.unit === "PER_STABILIZER" ? "/EA" : ""}`}
+                          : `${l.quantity} × ${formatPaiseWhole(l.unitPrice ?? 0)}${l.unit === "PER_SWITCH" ? "/SW" : l.unit === "PER_STABILIZER" ? "/EA" : ""}`}
                       </div>
                     </div>
                     <div className="summary-line-amt">
-                      {l.isQuote ? <span className="quote-chip">{l.priceText}</span> : `₹${amt(l.lineTotal ?? 0)}`}
+                      {l.isQuote ? (
+                        <span className="quote-chip">{l.priceText}</span>
+                      ) : (
+                        `₹${formatPaiseWhole(l.lineTotal ?? 0)}`
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1350,87 +1821,183 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
               <>
                 <div className="total-row">
                   <span className="total-label">Estimated Total</span>
-                  <span className="total-amount" style={{ fontSize: "1.2rem", color: "var(--t3)" }}>—</span>
+                  <span
+                    className="total-amount"
+                    style={{ fontSize: "1.2rem", color: "var(--t3)" }}
+                  >
+                    —
+                  </span>
                 </div>
                 {shipValidation && (
-                  <div className="inline-note" role="status" style={{ color: quote.s === "fail" && !quoteStale ? "var(--err)" : "var(--warn)", marginTop: 10 }}>
+                  <div
+                    className="inline-note"
+                    role="status"
+                    style={{
+                      color:
+                        quote.s === "fail" && !quoteStale
+                          ? "var(--err)"
+                          : "var(--warn)",
+                      marginTop: 10,
+                    }}
+                  >
                     {shipValidation}
                   </div>
                 )}
                 {!needsQuote && (
-                  <div className="total-note" style={{ textAlign: "left" }}>* Shipping will be confirmed once you choose how to send your device.</div>
+                  <div className="total-note" style={{ textAlign: "left" }}>
+                    * Shipping will be confirmed once you choose how to send
+                    your device.
+                  </div>
                 )}
               </>
             ) : (
               <>
                 <div className="total-row">
                   <span className="total-label">Mods Subtotal</span>
-                  <span className="total-amount" style={{ fontSize: "1.35rem", color: "var(--t1)" }}>₹{amt(preview.subtotal)}</span>
+                  <span
+                    className="total-amount"
+                    style={{ fontSize: "1.35rem", color: "var(--t1)" }}
+                  >
+                    ₹{formatPaiseWhole(preview.subtotal)}
+                  </span>
                 </div>
 
                 {needsQuote && (
-                  <div className="total-row lined" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+                  <div
+                    className="total-row lined"
+                    style={{
+                      flexDirection: "column",
+                      alignItems: "stretch",
+                      gap: 4,
+                    }}
+                  >
                     {shipMethod === "pickup" && (
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <span className="total-label">Pickup shipping</span>
                         <span className="summary-line-amt">
-                          {legs ? `₹${amt(legs.pickupPaise)}` : quote.s === "calc" ? "…" : "—"}
+                          {legs
+                            ? `₹${formatPaiseWhole(legs.pickupPaise)}`
+                            : quote.s === "calc"
+                              ? "…"
+                              : "—"}
                         </span>
                       </div>
                     )}
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <span className="total-label">Return shipping</span>
                       <span className="summary-line-amt">
-                        {legs ? `₹${amt(legs.returnPaise)}` : quote.s === "calc" ? "…" : "—"}
+                        {legs
+                          ? `₹${formatPaiseWhole(legs.returnPaise)}`
+                          : quote.s === "calc"
+                            ? "…"
+                            : "—"}
                       </span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed var(--bdr)", paddingTop: 4 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        borderTop: "1px dashed var(--bdr)",
+                        paddingTop: 4,
+                      }}
+                    >
                       <span className="total-label">Total shipping</span>
                       <span className="summary-line-amt">
                         {legs
-                          ? `₹${amt(legs.totalPaise)}`
+                          ? `₹${formatPaiseWhole(legs.totalPaise)}`
                           : quote.s === "calc"
                             ? "Calculating shipping…"
                             : "—"}
                       </span>
                     </div>
                     {quote.s === "fail" && !quoteStale && (
-                      <span className="inline-note" role="alert" style={{ color: "var(--err)" }}>{quote.msg}</span>
+                      <span
+                        className="inline-note"
+                        role="alert"
+                        style={{ color: "var(--err)" }}
+                      >
+                        {quote.msg}
+                      </span>
                     )}
                   </div>
                 )}
 
                 {!needsQuote && (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <span className="total-label">Shipping</span>
                       <span className="summary-line-amt">—</span>
                     </div>
-                    <div className="total-note" style={{ textAlign: "left" }}>Shipping calculated after confirmation.</div>
+                    <div className="total-note" style={{ textAlign: "left" }}>
+                      Shipping calculated after confirmation.
+                    </div>
                   </>
                 )}
 
-                <div className="total-row" style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed var(--bdr)" }}>
+                <div
+                  className="total-row"
+                  style={{
+                    marginTop: 10,
+                    paddingTop: 10,
+                    borderTop: "1px dashed var(--bdr)",
+                  }}
+                >
                   <span className="total-label">Estimated Total</span>
-                  <span className="total-amount">₹{amt(preview.subtotal + (shipTotalPaise ?? 0))}</span>
+                  <span className="total-amount">
+                    ₹
+                    {formatPaiseWhole(preview.subtotal + (shipTotalPaise ?? 0))}
+                  </span>
                 </div>
               </>
             )}
 
             {validation.length > 0 && preview.selectedCount > 0 && (
-              <div className="inline-note" role="status" style={{ color: "var(--warn)", marginTop: 10 }}>
+              <div
+                className="inline-note"
+                role="status"
+                style={{ color: "var(--warn)", marginTop: 10 }}
+              >
                 {validation.join(" ")}
               </div>
             )}
 
             {shipValidation && (
-              <div className="inline-note" role="status" style={{ color: quote.s === "fail" && !quoteStale ? "var(--err)" : "var(--warn)", marginTop: 10 }}>
+              <div
+                className="inline-note"
+                role="status"
+                style={{
+                  color:
+                    quote.s === "fail" && !quoteStale
+                      ? "var(--err)"
+                      : "var(--warn)",
+                  marginTop: 10,
+                }}
+              >
                 {shipValidation}
               </div>
             )}
 
             {addError && (
-              <div className="inline-note" role="alert" style={{ color: "var(--err)", marginTop: 10 }}>
+              <div
+                className="inline-note"
+                role="alert"
+                style={{ color: "var(--err)", marginTop: 10 }}
+              >
                 {addError}
               </div>
             )}
@@ -1441,11 +2008,25 @@ export function ModConfigurator({ groups, shippingModes, defaultShipMode }: Prop
                 className="btn-prime kf-checkout-btn"
                 onClick={payAndConfirm}
                 disabled={adding}
-                style={adding ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+                style={
+                  adding ? { opacity: 0.45, cursor: "not-allowed" } : undefined
+                }
               >
                 {adding ? "Preparing…" : "Pay & Confirm"}
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M3 13L13 3M13 3H6M13 3V10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 13L13 3M13 3H6M13 3V10"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </button>
             )}

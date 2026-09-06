@@ -38,7 +38,10 @@ export async function PATCH(req: NextRequest) {
     if (email && email !== profile.email) {
       const existing = await prisma.profile.findUnique({ where: { email } });
       if (existing && existing.id !== profile.id) {
-        return NextResponse.json({ error: "Email already in use" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Email already in use" },
+          { status: 400 },
+        );
       }
     }
 
@@ -50,11 +53,19 @@ export async function PATCH(req: NextRequest) {
         usernameValue = null;
       } else {
         if (!USERNAME_PATTERN.test(u)) {
-          return NextResponse.json({ error: "Invalid username" }, { status: 400 });
+          return NextResponse.json(
+            { error: "Invalid username" },
+            { status: 400 },
+          );
         }
-        const existing = await prisma.profile.findUnique({ where: { username: u } });
+        const existing = await prisma.profile.findUnique({
+          where: { username: u },
+        });
         if (existing && existing.id !== profile.id) {
-          return NextResponse.json({ error: "Username already taken" }, { status: 409 });
+          return NextResponse.json(
+            { error: "Username already taken" },
+            { status: 409 },
+          );
         }
         usernameValue = u;
       }
@@ -79,6 +90,9 @@ export async function PATCH(req: NextRequest) {
       username: updated.username,
     });
   } catch {
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update profile" },
+      { status: 500 },
+    );
   }
 }

@@ -6,7 +6,8 @@ import { SECTION_LABELS } from "@/lib/shop";
 
 export const metadata: Metadata = buildMetadata({
   title: "New Products — Shop | KeebForge",
-  description: "Brand-new keyboards, switches, keycaps and accessories currently in stock.",
+  description:
+    "Brand-new keyboards, switches, keycaps and accessories currently in stock.",
   path: "/shop/products",
 });
 

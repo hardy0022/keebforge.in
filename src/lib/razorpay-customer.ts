@@ -33,7 +33,9 @@ export async function ensureRazorpayCustomer(
     return existingId;
   }
   if (profile?.razorpayCustomerId) {
-    console.log(`[razorpay-customer] reuse from profile ${profile.id}: ${profile.razorpayCustomerId}`);
+    console.log(
+      `[razorpay-customer] reuse from profile ${profile.id}: ${profile.razorpayCustomerId}`,
+    );
     return profile.razorpayCustomerId;
   }
 
@@ -47,8 +49,13 @@ export async function ensureRazorpayCustomer(
     });
     if (byEmail?.razorpayCustomerId) {
       if (persistProfileId && persistProfileId !== byEmail.id) {
-        await prisma.profile.update({ where: { id: persistProfileId }, data: { razorpayCustomerId: byEmail.razorpayCustomerId } });
-        console.log(`[razorpay-customer] copied ${byEmail.razorpayCustomerId} from ${byEmail.id} to ${persistProfileId}`);
+        await prisma.profile.update({
+          where: { id: persistProfileId },
+          data: { razorpayCustomerId: byEmail.razorpayCustomerId },
+        });
+        console.log(
+          `[razorpay-customer] copied ${byEmail.razorpayCustomerId} from ${byEmail.id} to ${persistProfileId}`,
+        );
       }
       return byEmail.razorpayCustomerId;
     }
@@ -57,7 +64,9 @@ export async function ensureRazorpayCustomer(
 
   const contactName = name?.trim() || null;
   if (!contactName || (!email && !contact)) {
-    console.warn(`[razorpay-customer] skipped: name=${Boolean(contactName)} email=${Boolean(email)} contact=${Boolean(contact)}`);
+    console.warn(
+      `[razorpay-customer] skipped: name=${Boolean(contactName)} email=${Boolean(email)} contact=${Boolean(contact)}`,
+    );
     return null;
   }
 
@@ -70,9 +79,14 @@ export async function ensureRazorpayCustomer(
       notes: { source: "keebforge" },
     });
     if (persistProfileId) {
-      await prisma.profile.update({ where: { id: persistProfileId }, data: { razorpayCustomerId: created.id } });
+      await prisma.profile.update({
+        where: { id: persistProfileId },
+        data: { razorpayCustomerId: created.id },
+      });
     }
-    console.log(`[razorpay-customer] created ${created.id} for ${email ?? contact ?? contactName}`);
+    console.log(
+      `[razorpay-customer] created ${created.id} for ${email ?? contact ?? contactName}`,
+    );
     return created.id;
   } catch (e) {
     console.error("[razorpay-customer] creation failed:", e);

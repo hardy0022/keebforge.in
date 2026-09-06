@@ -27,7 +27,9 @@ async function hasOrgAdminRole(userId: string): Promise<boolean> {
   return !!member;
 }
 
-function profileHasAdminRole(profile: { role: Role } | null): profile is { role: Role } & { role: "ADMIN" | "STAFF" | "DEVELOPER" } {
+function profileHasAdminRole(
+  profile: { role: Role } | null,
+): profile is { role: Role } & { role: "ADMIN" | "STAFF" | "DEVELOPER" } {
   return !!profile && PROFILE_ADMIN_ROLES.includes(profile.role);
 }
 
@@ -44,14 +46,21 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
   if (profileHasAdminRole(profile)) return { user: session.user, profile };
 
   if (await hasOrgAdminRole(session.user.id)) {
-    return { user: session.user, profile: { ...profile!, role: "ADMIN" as Role } };
+    return {
+      user: session.user,
+      profile: { ...profile!, role: "ADMIN" as Role },
+    };
   }
 
   return null;
 });
 
 /** Permission test against the user's Profile.role. */
-export function checkAction(role: Role, resource: string, action: string): boolean {
+export function checkAction(
+  role: Role,
+  resource: string,
+  action: string,
+): boolean {
   return canAction(role, resource, action);
 }
 
@@ -68,14 +77,20 @@ export async function requireAdminContext(): Promise<AdminContext> {
   if (profileHasAdminRole(profile)) return { user: session.user, profile };
 
   if (await hasOrgAdminRole(session.user.id)) {
-    return { user: session.user, profile: { ...profile!, role: "ADMIN" as Role } };
+    return {
+      user: session.user,
+      profile: { ...profile!, role: "ADMIN" as Role },
+    };
   }
 
   redirect("/unauthorized");
 }
 
 /** Guard requiring a specific permission; insufficient role lands on /unauthorized. */
-export async function requirePermission(resource: string, action: string): Promise<AdminContext> {
+export async function requirePermission(
+  resource: string,
+  action: string,
+): Promise<AdminContext> {
   const ctx = await requireAdminContext();
   if (!canAction(ctx.profile.role, resource, action)) redirect("/unauthorized");
   return ctx;

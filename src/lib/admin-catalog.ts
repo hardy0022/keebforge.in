@@ -2,14 +2,15 @@ import "server-only";
 import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { defineCached, TAG, TTL } from "@/lib/cache";
+import { defineCached, TAG, TTL } from "@/lib/caching/cache";
+import { availableQuantity } from "@/lib/cart";
 import type { ProductStatus, ProductType } from "@/lib/product-labels";
 export type { ProductStatus, ProductType };
-export { PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/product-labels";
-
-export function availableStock(stock: number, reserved: number) {
-  return Math.max(0, stock - reserved);
-}
+export {
+  PRODUCT_STATUS_LABELS,
+  PRODUCT_TYPE_LABELS,
+} from "@/lib/product-labels";
+export { availableQuantity as availableStock } from "@/lib/cart";
 
 // ─── Categories & brands (admin catalog reads) ──────────────────────────────
 // Admin-only content that feeds the admin category/brand pickers on 5+ pages.
@@ -19,25 +20,40 @@ export function availableStock(stock: number, reserved: number) {
 // until a category/product action purges the tag — cosmetic, TTL covers it.
 
 export const getAdminCategories = defineCached(
-  () => prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }], include: { _count: { select: { products: true } } } }),
-  { tags: [TAG.categories], revalidate: TTL.catalog, keys: ["admin-categories"] }
+  () =>
+    prisma.category.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: { _count: { select: { products: true } } },
+    }),
+  {
+    tags: [TAG.categories],
+    revalidate: TTL.catalog,
+    keys: ["admin-categories"],
+  },
 );
 
 export const getAdminBrands = defineCached(
-  () => prisma.brand.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { products: true } } } }),
-  { tags: [TAG.brands], revalidate: TTL.catalog, keys: ["admin-brands"] }
+  () =>
+    prisma.brand.findMany({
+      orderBy: { name: "asc" },
+      include: { _count: { select: { products: true } } },
+    }),
+  { tags: [TAG.brands], revalidate: TTL.catalog, keys: ["admin-brands"] },
 );
 
 // ─── Work / portfolio (admin content, same tag as the public /work feed) ────
 
 export const getAdminWorkProjects = defineCached(
-  () => prisma.workProject.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
-  { tags: [TAG.work], revalidate: TTL.stable, keys: ["admin-work-projects"] }
+  () =>
+    prisma.workProject.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
+  { tags: [TAG.work], revalidate: TTL.stable, keys: ["admin-work-projects"] },
 );
 
 export const getAdminWorkProject = defineCached(
   (id: string) => prisma.workProject.findUnique({ where: { id } }),
-  { tags: [TAG.work], revalidate: TTL.stable, keys: ["admin-work-project"] }
+  { tags: [TAG.work], revalidate: TTL.stable, keys: ["admin-work-project"] },
 );
 
 // ─── Product list ────────────────────────────────────────────────────────────
@@ -54,16 +70,49 @@ export type AdminProductQuery = {
 };
 
 export const getAdminProducts = cache((params: AdminProductQuery) => {
-  const { q, category, brand, stock, status = "any", sort = "newest", page = 1, pageSize = 20 } = params;
+  const {
+    q,
+    category,
+    brand,
+    stock,
+    status = "any",
+    sort = "newest",
+    page = 1,
+    pageSize = 20,
+  } = params;
 
   const where: Prisma.ProductWhereInput = {
     ...(status === "any" ? {} : { status }),
     ...(category ? { category: { slug: category } } : {}),
     ...(brand ? { brand: { slug: brand } } : {}),
-    ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { sku: { contains: q, mode: "insensitive" } }, { slug: { contains: q, mode: "insensitive" } }] } : {}),
-    ...(stock === "in" ? { OR: [{ stock: { gt: 0 } }, { variants: { some: { active: true, stock: { gt: 0 } } } }] } : {}),
-    ...(stock === "low" ? { stock: { lte: prisma.product.fields.lowStockThreshold } } : {}),
-    ...(stock === "out" ? { AND: [{ stock: { lte: 0 } }, { variants: { none: { active: true, stock: { gt: 0 } } } }] } : {}),
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { sku: { contains: q, mode: "insensitive" } },
+            { slug: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+    ...(stock === "in"
+      ? {
+          OR: [
+            { stock: { gt: 0 } },
+            { variants: { some: { active: true, stock: { gt: 0 } } } },
+          ],
+        }
+      : {}),
+    ...(stock === "low"
+      ? { stock: { lte: prisma.product.fields.lowStockThreshold } }
+      : {}),
+    ...(stock === "out"
+      ? {
+          AND: [
+            { stock: { lte: 0 } },
+            { variants: { none: { active: true, stock: { gt: 0 } } } },
+          ],
+        }
+      : {}),
   };
 
   const orderBy: Prisma.ProductOrderByWithRelationInput[] =
@@ -95,25 +144,44 @@ export const getAdminProducts = cache((params: AdminProductQuery) => {
     updatedAt: true,
     category: { select: { name: true, slug: true } },
     brand: { select: { name: true, slug: true } },
-    images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }], take: 1, select: { url: true } },
-    variants: { where: { active: true }, select: { stock: true, reservedQuantity: true } },
+    images: {
+      where: { active: true },
+      orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
+      take: 1,
+      select: { url: true },
+    },
+    variants: {
+      where: { active: true },
+      select: { stock: true, reservedQuantity: true },
+    },
   } satisfies Prisma.ProductSelect;
 
   return Promise.all([
     prisma.product.count({ where }),
-    prisma.product.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize, select }),
+    prisma.product.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select,
+    }),
   ]).then(async ([total, items]) => {
     const sales = await prisma.orderItem.groupBy({
       by: ["productId"],
       where: { productId: { in: items.map((i) => i.id) } },
       _sum: { quantity: true, lineTotal: true },
     });
-    const salesByProduct = new Map(sales.map((s) => [s.productId, { units: s._sum.quantity ?? 0, revenue: s._sum.lineTotal ?? 0 }]));
+    const salesByProduct = new Map(
+      sales.map((s) => [
+        s.productId,
+        { units: s._sum.quantity ?? 0, revenue: s._sum.lineTotal ?? 0 },
+      ]),
+    );
     return {
       items: items.map((p) => ({
         ...p,
         sales: salesByProduct.get(p.id) ?? { units: 0, revenue: 0 },
-        available: availableStock(p.stock, p.reservedQuantity),
+        available: availableQuantity(p.stock, p.reservedQuantity),
       })),
       total,
       page,
@@ -130,57 +198,118 @@ export const getAdminProduct = cache((id: string) =>
     include: {
       category: true,
       brand: true,
-      variants: { orderBy: { createdAt: "asc" }, include: { images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }] } } },
+      variants: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          images: {
+            where: { active: true },
+            orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
+          },
+        },
+      },
       optionGroups: {
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        include: { options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
+        include: {
+          options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+        },
       },
-      images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }] },
-      inventoryMovements: { orderBy: { createdAt: "desc" }, take: 30, include: { profile: { select: { name: true, email: true } } } },
+      images: {
+        where: { active: true },
+        orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
+      },
+      inventoryMovements: {
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        include: { profile: { select: { name: true, email: true } } },
+      },
       reviews: { orderBy: { createdAt: "desc" } },
       orderItems: {
-        select: { id: true, order: { select: { orderNumber: true, createdAt: true, status: true } }, quantity: true, unitPrice: true, lineTotal: true, variantInfo: true },
+        select: {
+          id: true,
+          order: {
+            select: { orderNumber: true, createdAt: true, status: true },
+          },
+          quantity: true,
+          unitPrice: true,
+          lineTotal: true,
+          variantInfo: true,
+        },
         orderBy: { createdAt: "desc" },
         take: 20,
       },
     },
-  })
+  }),
 );
 
 export const getInventoryRows = cache(() =>
   prisma.product.findMany({
     where: { status: { not: "ARCHIVED" } },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, sku: true, stock: true, reservedQuantity: true, lowStockThreshold: true, variants: { select: { id: true, name: true, sku: true, stock: true, reservedQuantity: true } } },
-  })
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      stock: true,
+      reservedQuantity: true,
+      lowStockThreshold: true,
+      variants: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          stock: true,
+          reservedQuantity: true,
+        },
+      },
+    },
+  }),
 );
 
 export const getInventoryMovements = cache((take = 50) =>
   prisma.inventoryMovement.findMany({
     orderBy: { createdAt: "desc" },
     take,
-    include: { product: { select: { id: true, name: true, slug: true } }, variant: { select: { name: true } }, profile: { select: { name: true, email: true } } },
-  })
+    include: {
+      product: { select: { id: true, name: true, slug: true } },
+      variant: { select: { name: true } },
+      profile: { select: { name: true, email: true } },
+    },
+  }),
 );
 
 // ─── Dashboard metrics ───────────────────────────────────────────────────────
 
 export const getTopProducts = cache(async (take = 5) => {
-  const sales = (await prisma.orderItem.groupBy({
-    by: ["productId"],
-    _sum: { quantity: true, lineTotal: true },
-    orderBy: { _sum: { quantity: "desc" } },
-    take,
-  })).filter((s): s is typeof s & { productId: string } => s.productId !== null);
+  const sales = (
+    await prisma.orderItem.groupBy({
+      by: ["productId"],
+      _sum: { quantity: true, lineTotal: true },
+      orderBy: { _sum: { quantity: "desc" } },
+      take,
+    })
+  ).filter((s): s is typeof s & { productId: string } => s.productId !== null);
   const products = await prisma.product.findMany({
     where: { id: { in: sales.map((s) => s.productId) } },
-    select: { id: true, name: true, slug: true, price: true, images: { where: { active: true }, orderBy: { primary: "desc" }, take: 1, select: { url: true } } },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      price: true,
+      images: {
+        where: { active: true },
+        orderBy: { primary: "desc" },
+        take: 1,
+        select: { url: true },
+      },
+    },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
   return sales
     .map((s) => {
       const p = byId.get(s.productId);
-      return p ? { ...p, units: s._sum.quantity ?? 0, revenue: s._sum.lineTotal ?? 0 } : null;
+      return p
+        ? { ...p, units: s._sum.quantity ?? 0, revenue: s._sum.lineTotal ?? 0 }
+        : null;
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 });

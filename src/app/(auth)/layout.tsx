@@ -3,7 +3,11 @@ import { ShowOnSite } from "@/components/layout/ShowOnSite";
 
 /** Dedicated auth chrome: navbar only, no site footer — auth screens end
  *  after the card (the .auth-page container already fills the viewport). */
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <>
       <ShowOnSite>

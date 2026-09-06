@@ -10,26 +10,33 @@ export const metadata: Metadata = {
 const MESSAGES: Record<string, { title: string; detail: string }> = {
   access_denied: {
     title: "Sign-in was cancelled",
-    detail: "You cancelled the sign-in, or the provider denied access. You can try again.",
+    detail:
+      "You cancelled the sign-in, or the provider denied access. You can try again.",
   },
   state_mismatch: {
     title: "Sign-in could not be verified",
-    detail: "The sign-in request expired or is no longer valid. Please start again.",
+    detail:
+      "The sign-in request expired or is no longer valid. Please start again.",
   },
   state_invalid: {
     title: "Sign-in could not be verified",
-    detail: "The sign-in request expired or is no longer valid. Please start again.",
+    detail:
+      "The sign-in request expired or is no longer valid. Please start again.",
   },
 };
 
-export default async function AuthErrorPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function AuthErrorPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const { error } = await searchParams;
   // Whitelist only — unknown/missing codes fall through to the generic message.
-  const msg =
-    (error && error in MESSAGES ? MESSAGES[error] : null) ?? {
-      title: "Something went wrong",
-      detail: "We couldn't complete your sign-in. Please try again or return to KeebForge.",
-    };
+  const msg = (error && error in MESSAGES ? MESSAGES[error] : null) ?? {
+    title: "Something went wrong",
+    detail:
+      "We couldn't complete your sign-in. Please try again or return to KeebForge.",
+  };
 
   return (
     <main className="auth-page">

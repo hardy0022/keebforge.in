@@ -19,7 +19,8 @@
 
 import { useEffect, useState } from "react";
 
-const SCRIPT_SRC = "https://cdn.razorpay.com/widgets/affordability/affordability.js";
+const SCRIPT_SRC =
+  "https://cdn.razorpay.com/widgets/affordability/affordability.js";
 // Exact id required by Razorpay's Native Web integration.
 const WIDGET_ID = "razorpay-affordability-widget";
 // KeebForge lime — same accent passed to the Razorpay Checkout modal theme.
@@ -47,7 +48,13 @@ function loadWidgetScript(): Promise<boolean> {
   return scriptPromise;
 }
 
-export function AffordabilityWidget({ amountPaise, keyId }: { amountPaise: number | null; keyId: string | null }) {
+export function AffordabilityWidget({
+  amountPaise,
+  keyId,
+}: {
+  amountPaise: number | null;
+  keyId: string | null;
+}) {
   // loading = skeleton; ready = Razorpay markup live; failed = hide entirely.
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
   const active = amountPaise != null && amountPaise > 0 && Boolean(keyId);
@@ -59,7 +66,9 @@ export function AffordabilityWidget({ amountPaise, keyId }: { amountPaise: numbe
       if (!alive) return;
       if (!loaded) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn("[razorpay] Affordability widget unavailable: CDN script failed to load.");
+          console.warn(
+            "[razorpay] Affordability widget unavailable: CDN script failed to load.",
+          );
         }
         setState("failed");
         return;
@@ -81,7 +90,11 @@ export function AffordabilityWidget({ amountPaise, keyId }: { amountPaise: numbe
               main: {
                 isDarkMode: true,
                 heading: { color: "#f5f5fa", fontSize: "13px" },
-                content: { color: "#aeaebc", fontSize: "12px", backgroundColor: "#15131f" },
+                content: {
+                  color: "#aeaebc",
+                  fontSize: "12px",
+                  backgroundColor: "#15131f",
+                },
                 discount: { color: "#c9f31d" },
                 link: { button: false, color: "#c9f31d", fontSize: "12px" },
                 footer: { color: "#71717a", fontSize: "11px", darkLogo: true },
@@ -92,7 +105,10 @@ export function AffordabilityWidget({ amountPaise, keyId }: { amountPaise: numbe
         setState("ready");
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn("[razorpay] Affordability widget failed to render:", err);
+          console.warn(
+            "[razorpay] Affordability widget failed to render:",
+            err,
+          );
         }
         setState("failed");
       }
@@ -115,7 +131,9 @@ export function AffordabilityWidget({ amountPaise, keyId }: { amountPaise: numbe
       )}
       <div id={WIDGET_ID} />
       {state === "loading" && (
-        <p className="text-xs text-[var(--t3)] text-center mt-2">Checking EMI &amp; Pay Later options…</p>
+        <p className="text-xs text-[var(--t3)] text-center mt-2">
+          Checking EMI &amp; Pay Later options…
+        </p>
       )}
     </div>
   );

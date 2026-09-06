@@ -7,7 +7,9 @@ import { getCurrentAuth } from "@/lib/auth";
 export const CART_COOKIE = "kf_cart";
 export const CART_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-export type CartOwner = { kind: "profile"; profileId: string } | { kind: "guest"; guestToken: string };
+export type CartOwner =
+  | { kind: "profile"; profileId: string }
+  | { kind: "guest"; guestToken: string };
 
 /**
  * Resolves who owns the cart: the signed-in profile, or the guest token
@@ -21,7 +23,9 @@ export async function resolveCartOwner(): Promise<CartOwner | null> {
 }
 
 export function cartOwnerWhere(owner: CartOwner) {
-  return owner.kind === "profile" ? { profileId: owner.profileId } : { guestToken: owner.guestToken };
+  return owner.kind === "profile"
+    ? { profileId: owner.profileId }
+    : { guestToken: owner.guestToken };
 }
 
 /** Available quantity (stock minus reservations) for a product or variant. */
@@ -39,7 +43,11 @@ export async function cartForCurrentUser() {
   const cookieStore = await cookies();
 
   if (user && profile) {
-    return prisma.cart.upsert({ where: { profileId: profile.id }, update: {}, create: { profileId: profile.id } });
+    return prisma.cart.upsert({
+      where: { profileId: profile.id },
+      update: {},
+      create: { profileId: profile.id },
+    });
   }
 
   let token = cookieStore.get(CART_COOKIE)?.value;
@@ -53,7 +61,11 @@ export async function cartForCurrentUser() {
       maxAge: CART_MAX_AGE,
     });
   }
-  return prisma.cart.upsert({ where: { guestToken: token }, update: {}, create: { guestToken: token } });
+  return prisma.cart.upsert({
+    where: { guestToken: token },
+    update: {},
+    create: { guestToken: token },
+  });
 }
 
 const cartInclude = {
@@ -62,11 +74,17 @@ const cartInclude = {
       product: {
         include: {
           brand: true,
-          images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }], take: 1 },
+          images: {
+            where: { active: true },
+            orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
+            take: 1,
+          },
           optionGroups: {
             where: { enabled: true },
             orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-            include: { options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
+            include: {
+              options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+            },
           },
         },
       },

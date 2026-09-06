@@ -2,14 +2,21 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/auth/admin";
 import { getAdminWorkProject } from "@/lib/admin-catalog";
-import { WorkForm, type WorkProjectProp } from "@/components/admin/work/WorkForm";
+import {
+  WorkForm,
+  type WorkProjectProp,
+} from "@/components/admin/work/WorkForm";
 
 export const metadata: Metadata = {
   title: "Edit Project | KeebForge Admin",
   robots: { index: false, follow: false },
 };
 
-export default async function AdminWorkEditPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminWorkEditPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   await requirePermission("setting", "update");
   const { id } = await params;
   const project = await getAdminWorkProject(id);
@@ -26,12 +33,21 @@ export default async function AdminWorkEditPage({ params }: { params: Promise<{ 
     featured: project.featured,
     active: project.active,
     sortOrder: project.sortOrder,
-    images: (project.images as { url: string; publicId?: string | null }[] | null) ?? [],
+    images:
+      (project.images as { url: string; publicId?: string | null }[] | null) ??
+      [],
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <h1 style={{ fontFamily: "var(--ff-display)", fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
+      <h1
+        style={{
+          fontFamily: "var(--ff-display)",
+          fontSize: "1.35rem",
+          fontWeight: 700,
+          letterSpacing: "-0.02em",
+        }}
+      >
         Edit project
       </h1>
       <WorkForm project={prop} />

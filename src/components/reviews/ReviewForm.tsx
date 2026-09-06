@@ -1,9 +1,19 @@
 "use client";
 
-import { useActionState, useEffect, useState, startTransition, type ReactElement } from "react";
+import {
+  useActionState,
+  useEffect,
+  useState,
+  startTransition,
+  type ReactElement,
+} from "react";
 import Link from "next/link";
 import { submitReview, type ReviewSubmitState } from "@/app/actions/review";
-import { sniffImageFile, IMAGE_ACCEPT, IMAGE_TYPES_MESSAGE } from "@/lib/image-validation";
+import {
+  sniffImageFile,
+  IMAGE_ACCEPT,
+  IMAGE_TYPES_MESSAGE,
+} from "@/lib/image-validation";
 import { cldUrl } from "@/lib/cloudinary-url";
 import { ReviewStars } from "./ReviewStars";
 import { useRouter } from "next/navigation";
@@ -19,11 +29,27 @@ export function ReviewForm({
   existing,
   preview,
 }: {
-  product: { id: string; name: string; slug: string; image: string | null; category: string; brand: string | null } | null;
-  existing: { id: string; rating: number; title: string; body: string; images: { id: string; url: string }[] } | null;
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    image: string | null;
+    category: string;
+    brand: string | null;
+  } | null;
+  existing: {
+    id: string;
+    rating: number;
+    title: string;
+    body: string;
+    images: { id: string; url: string }[];
+  } | null;
   preview: { name: string; avatarUrl: string | null };
 }) {
-  const [state, formAction, pending] = useActionState<ReviewSubmitState, FormData>(submitReview, {});
+  const [state, formAction, pending] = useActionState<
+    ReviewSubmitState,
+    FormData
+  >(submitReview, {});
   const [rating, setRating] = useState(existing?.rating ?? 0);
   const [title, setTitle] = useState(existing?.title ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
@@ -38,7 +64,9 @@ export function ReviewForm({
     }
   }, [state.ok, state.redirectTo, router]);
 
-  const keptExisting = (existing?.images ?? []).filter((m) => !removed.has(m.id));
+  const keptExisting = (existing?.images ?? []).filter(
+    (m) => !removed.has(m.id),
+  );
   const previewPhotos: { key: string; url: string }[] = [
     ...keptExisting.map((m) => ({ key: m.id, url: m.url })),
     ...newPhotos.map((p) => ({ key: p.uid, url: p.url })),
@@ -46,7 +74,10 @@ export function ReviewForm({
 
   async function onFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
-    const room = Math.max(0, MAX_IMAGES - keptExisting.length - newPhotos.length);
+    const room = Math.max(
+      0,
+      MAX_IMAGES - keptExisting.length - newPhotos.length,
+    );
     const accepted: NewPhoto[] = [];
     for (const f of files.slice(0, room)) {
       if (f.size > MAX_IMAGE_BYTES) {
@@ -57,9 +88,14 @@ export function ReviewForm({
         alert(`${IMAGE_TYPES_MESSAGE} ("${f.name}" isn't one.)`);
         continue;
       }
-      accepted.push({ uid: `${f.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`, url: URL.createObjectURL(f), file: f });
+      accepted.push({
+        uid: `${f.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        url: URL.createObjectURL(f),
+        file: f,
+      });
     }
-    if (accepted.length < files.length) alert(`You can attach at most ${MAX_IMAGES} photos.`);
+    if (accepted.length < files.length)
+      alert(`You can attach at most ${MAX_IMAGES} photos.`);
     setNewPhotos((prev) => [...prev, ...accepted]);
     e.target.value = "";
   }
@@ -91,7 +127,11 @@ export function ReviewForm({
   return (
     <div className="write-review-grid">
       <div className="write-review-main">
-        <form action={formAction} onSubmit={onSubmit} className="review-form write-review-form">
+        <form
+          action={formAction}
+          onSubmit={onSubmit}
+          className="review-form write-review-form"
+        >
           {product && <input type="hidden" name="slug" value={product.slug} />}
           <section className="write-review-field">
             <span className="write-review-label">Your rating</span>
@@ -110,7 +150,9 @@ export function ReviewForm({
               className="write-review-input"
               maxLength={TITLE_MAX_CHARS}
               value={title}
-              onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX_CHARS))}
+              onChange={(e) =>
+                setTitle(e.target.value.slice(0, TITLE_MAX_CHARS))
+              }
               placeholder="What did you think?"
             />
           </section>
@@ -131,17 +173,32 @@ export function ReviewForm({
               onChange={(e) => setBody(e.target.value)}
               placeholder="Tell us about your experience…"
             />
-            <p className="field-hint">Minimum 10 characters · be honest, help fellow builders.</p>
+            <p className="field-hint">
+              Minimum 10 characters · be honest, help fellow builders.
+            </p>
           </section>
 
           <section className="write-review-field">
             <span className="write-review-label">Photos</span>
-            <p className="write-review-photo-hint">Add photos of your product or setup</p>
+            <p className="write-review-photo-hint">
+              Add photos of your product or setup
+            </p>
             <div className="wr-photo-grid">
               {keptExisting.map((m) => (
                 <div key={m.id} className="wr-photo">
-                  <img src={cldUrl(m.url, 480)} alt="" loading="lazy" width={120} height={90} />
-                  <button type="button" className="wr-photo-x" onClick={() => toggleRemove(m.id)} aria-label="Remove photo">
+                  <img
+                    src={cldUrl(m.url, 480)}
+                    alt=""
+                    loading="lazy"
+                    width={120}
+                    height={90}
+                  />
+                  <button
+                    type="button"
+                    className="wr-photo-x"
+                    onClick={() => toggleRemove(m.id)}
+                    aria-label="Remove photo"
+                  >
                     ×
                   </button>
                   <input
@@ -157,7 +214,12 @@ export function ReviewForm({
               {newPhotos.map((p) => (
                 <div key={p.uid} className="wr-photo">
                   <img src={p.url} alt="" width={120} height={90} />
-                  <button type="button" className="wr-photo-x" onClick={() => dropNewPhoto(p.uid)} aria-label="Remove photo">
+                  <button
+                    type="button"
+                    className="wr-photo-x"
+                    onClick={() => dropNewPhoto(p.uid)}
+                    aria-label="Remove photo"
+                  >
                     ×
                   </button>
                 </div>
@@ -177,7 +239,8 @@ export function ReviewForm({
               )}
             </div>
             <p className="field-hint">
-              PNG / JPG / WebP / AVIF · Up to {MAX_IMAGES} photos · Max 5 MB each
+              PNG / JPG / WebP / AVIF · Up to {MAX_IMAGES} photos · Max 5 MB
+              each
             </p>
           </section>
 
@@ -188,10 +251,17 @@ export function ReviewForm({
           )}
 
           <div className="write-review-actions">
-            <Link href={product ? `/product/${product.slug}` : "/"} className="btn-ghost write-review-cancel">
+            <Link
+              href={product ? `/product/${product.slug}` : "/"}
+              className="btn-ghost write-review-cancel"
+            >
               Cancel
             </Link>
-            <button type="submit" className="btn-prime write-review-submit" disabled={pending}>
+            <button
+              type="submit"
+              className="btn-prime write-review-submit"
+              disabled={pending}
+            >
               {pending ? (
                 <>
                   <span className="spinner" aria-hidden="true" />
@@ -215,9 +285,18 @@ export function ReviewForm({
         <div className="review-preview-card">
           <div className="review-preview-product">
             {product?.image ? (
-              <img src={cldUrl(product.image, 112)} alt="" width={56} height={36} className="review-preview-thumb" />
+              <img
+                src={cldUrl(product.image, 112)}
+                alt=""
+                width={56}
+                height={36}
+                className="review-preview-thumb"
+              />
             ) : (
-              <span className="review-preview-thumb review-preview-thumb-empty" aria-hidden="true" />
+              <span
+                className="review-preview-thumb review-preview-thumb-empty"
+                aria-hidden="true"
+              />
             )}
             <div className="review-preview-product-meta">
               <span className="review-preview-cat">
@@ -236,10 +315,14 @@ export function ReviewForm({
           <p className="review-preview-label">Review Preview</p>
           <article className="review-card product-review-card preview-review-card">
             <div className="review-card-head">
-              <h3 className="review-card-title">{title || "Your review title"}</h3>
+              <h3 className="review-card-title">
+                {title || "Your review title"}
+              </h3>
               <ReviewStars rating={rating} />
             </div>
-            <p className="review-text">{body || "Your review text will appear here…"}</p>
+            <p className="review-text">
+              {body || "Your review text will appear here…"}
+            </p>
             {previewPhotos.length > 0 && (
               <div className="review-photos">
                 {previewPhotos.slice(0, 4).map((p) => (
@@ -248,7 +331,10 @@ export function ReviewForm({
                   </span>
                 ))}
                 {previewPhotos.length > 4 && (
-                  <span className="review-photo review-photo-more" aria-hidden="true">
+                  <span
+                    className="review-photo review-photo-more"
+                    aria-hidden="true"
+                  >
                     +{previewPhotos.length - 4}
                   </span>
                 )}
@@ -266,10 +352,25 @@ export function ReviewForm({
                   </span>
                 )}
                 <div className="review-author-meta">
-                  <div className="review-name">{preview.name || "Your name"}</div>
+                  <div className="review-name">
+                    {preview.name || "Your name"}
+                  </div>
                   {rating > 0 && (
-                    <span className="review-verified" title="Preview — verified purchase">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <span
+                      className="review-verified"
+                      title="Preview — verified purchase"
+                    >
+                      <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
                         <path d="M20 6L9 17l-5-5" />
                       </svg>
                       Verified Purchase
@@ -289,7 +390,13 @@ export function ReviewForm({
 }
 
 /** Large interactive 1–5 star selector with hover feedback + "N out of 5" indicator. */
-function RatingPicker({ value, onChange }: { value: number; onChange: (n: number) => void }): ReactElement {
+function RatingPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+}): ReactElement {
   const [hover, setHover] = useState(0);
   const active = hover || value;
   return (

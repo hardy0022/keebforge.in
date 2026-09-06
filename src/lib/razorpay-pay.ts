@@ -22,8 +22,21 @@ type LaunchRazorpayOpts = {
 };
 
 /** Opens the Razorpay modal and verifies the result server-side. Shared by checkout + track-order pay. */
-export function launchRazorpayPayment({ order, description, prefill, onVerified, onDismissed, onError }: LaunchRazorpayOpts) {
-  if (!window.Razorpay || !order.keyId || !order.razorpayOrderId || !order.amount || !order.currency) {
+export function launchRazorpayPayment({
+  order,
+  description,
+  prefill,
+  onVerified,
+  onDismissed,
+  onError,
+}: LaunchRazorpayOpts) {
+  if (
+    !window.Razorpay ||
+    !order.keyId ||
+    !order.razorpayOrderId ||
+    !order.amount ||
+    !order.currency
+  ) {
     onError("Payment gateway failed to load. Refresh the page and try again.");
     return;
   }
@@ -47,7 +60,10 @@ export function launchRazorpayPayment({ order, description, prefill, onVerified,
           });
           const data = await res.json().catch(() => null);
           if (!res.ok) {
-            onError((data as { error?: string } | null)?.error ?? "Payment verification failed. Contact support with your payment ID.");
+            onError(
+              (data as { error?: string } | null)?.error ??
+                "Payment verification failed. Contact support with your payment ID.",
+            );
             return;
           }
           onVerified();

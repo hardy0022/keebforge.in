@@ -15,7 +15,12 @@ export function CustomerReviews({ reviews }: { reviews: HomeData["reviews"] }) {
             <span className="hp-kicker-mark">{"//"}</span> Customer Reviews
           </p>
         </Reveal>
-        <Reveal delay={80} as="h2" id="reviews-heading" className="hp-section-title">
+        <Reveal
+          delay={80}
+          as="h2"
+          id="reviews-heading"
+          className="hp-section-title"
+        >
           What customers say.
         </Reveal>
       </header>
@@ -30,7 +35,11 @@ export function CustomerReviews({ reviews }: { reviews: HomeData["reviews"] }) {
       ) : (
         <>
           <Reveal delay={60}>
-            <ReviewSummary count={summary.count} average={summary.average} distribution={summary.distribution} />
+            <ReviewSummary
+              count={summary.count}
+              average={summary.average}
+              distribution={summary.distribution}
+            />
           </Reveal>
 
           <div className="reviews-grid hp-reviews-grid">

@@ -6,7 +6,13 @@ import type { OrderStatus } from "@prisma/client";
  * in node:crypto. Every status below is a real OrderStatus enum value; the
  * mapping only groups existing statuses into display phases.
  */
-export const ORDER_PHASE_LABELS = ["Placed", "In Workshop", "Quality Check", "Shipped", "Delivered"] as const;
+export const ORDER_PHASE_LABELS = [
+  "Placed",
+  "In Workshop",
+  "Quality Check",
+  "Shipped",
+  "Delivered",
+] as const;
 
 export const ORDER_PHASE_INDEX: Record<OrderStatus, number> = {
   ORDER_RECEIVED: 0,
@@ -29,7 +35,15 @@ export const ORDER_PHASE_INDEX: Record<OrderStatus, number> = {
   ORDER_COMPLETED: 4,
 };
 
-export function orderPhaseFor(status: OrderStatus): { index: number; label: string; total: number } {
+export function orderPhaseFor(status: OrderStatus): {
+  index: number;
+  label: string;
+  total: number;
+} {
   const index = ORDER_PHASE_INDEX[status] ?? 0;
-  return { index, label: ORDER_PHASE_LABELS[index], total: ORDER_PHASE_LABELS.length };
+  return {
+    index,
+    label: ORDER_PHASE_LABELS[index],
+    total: ORDER_PHASE_LABELS.length,
+  };
 }

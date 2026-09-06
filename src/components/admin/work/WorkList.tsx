@@ -54,12 +54,20 @@ export function WorkList({ rows }: { rows: Row[] }) {
             {rows.map((r) => (
               <tr key={r.id}>
                 <td style={{ width: 64 }}>
-                  <span className={`badge ${r.active ? "badge-ok" : "badge-warn"}`}>{r.active ? "Live" : "Draft"}</span>
+                  <span
+                    className={`badge ${r.active ? "badge-ok" : "badge-warn"}`}
+                  >
+                    {r.active ? "Live" : "Draft"}
+                  </span>
                 </td>
                 <td style={{ minWidth: 200 }}>
                   <div style={{ fontWeight: 600, fontSize: "0.82rem" }}>
                     {r.title}
-                    {r.featured && <span className="badge" style={{ marginLeft: 6 }}>★</span>}
+                    {r.featured && (
+                      <span className="badge" style={{ marginLeft: 6 }}>
+                        ★
+                      </span>
+                    )}
                   </div>
                   <div className="muted" style={{ fontSize: "0.75rem" }}>
                     /work/{r.slug} · order {r.sortOrder}
@@ -80,7 +88,13 @@ export function WorkList({ rows }: { rows: Row[] }) {
                   </button>
                 </td>
                 <td>
-                  <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 4,
+                      justifyContent: "center",
+                    }}
+                  >
                     <button
                       type="button"
                       className="btn-admin"
@@ -112,7 +126,8 @@ export function WorkList({ rows }: { rows: Row[] }) {
                       style={{ color: "var(--err)" }}
                       disabled={busy === r.id}
                       onClick={() => {
-                        if (window.confirm(`Delete "${r.title}" permanently?`)) run(r.id, () => deleteWork(r.id));
+                        if (window.confirm(`Delete "${r.title}" permanently?`))
+                          run(r.id, () => deleteWork(r.id));
                       }}
                     >
                       Delete

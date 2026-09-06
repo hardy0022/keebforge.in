@@ -9,7 +9,15 @@
  */
 
 export function formatINR(paise: number): string {
-  return "₹" + (paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  return (
+    "₹" + (paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })
+  );
+}
+
+/** Whole-rupee display without the ₹ symbol (labels like "₹500/hr").
+ *  Use when the currency symbol is prepended separately. */
+export function formatPaiseWhole(paise: number): string {
+  return (paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 }
 
 export function formatINRRange(minPaise: number, maxPaise: number): string {

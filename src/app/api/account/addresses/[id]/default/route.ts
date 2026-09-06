@@ -8,13 +8,15 @@ async function getCurrentProfile() {
   const user = session?.user ?? null;
   if (!user) return null;
 
-  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
+  const profile = await prisma.profile.findUnique({
+    where: { userId: user.id },
+  });
   return profile;
 }
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const profile = await getCurrentProfile();
   if (!profile) {
@@ -45,6 +47,9 @@ export async function POST(
 
     return NextResponse.json({ success: true });
   } catch {
-    return NextResponse.json({ error: "Failed to set default address" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to set default address" },
+      { status: 500 },
+    );
   }
 }

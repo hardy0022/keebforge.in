@@ -27,7 +27,13 @@ const SOCIAL_ICONS: Record<(typeof SOCIALS)[number]["label"], ReactNode> = {
     </svg>
   ),
   Instagram: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      aria-hidden="true"
+    >
       <rect x="2.4" y="2.4" width="19.2" height="19.2" rx="5.2" />
       <circle cx="12" cy="12" r="4.35" />
       <circle cx="17.35" cy="6.65" r="1.25" fill="currentColor" stroke="none" />
@@ -89,7 +95,8 @@ function SocialButton({ label }: { label: (typeof SOCIALS)[number]["label"] }) {
 }
 
 export async function SiteFooter() {
-  const accepting = (await getSiteSetting("acceptingOrders").catch(() => null)) !== false;
+  const accepting =
+    (await getSiteSetting("acceptingOrders").catch(() => null)) !== false;
 
   return (
     <footer className="site-footer">
@@ -108,11 +115,15 @@ export async function SiteFooter() {
             </span>
           </div>
           <p className="footer-blurb">
-            Independent electronics workshop for custom keyboards, mechanical keyboard builds, tuning, modifications,
-            repairs, and keyboard accessories.
+            Independent electronics workshop for custom keyboards, mechanical
+            keyboard builds, tuning, modifications, repairs, and keyboard
+            accessories.
           </p>
           <span className="footer-status">
-            <span className="footer-status-dot" data-off={!accepting || undefined} />
+            <span
+              className="footer-status-dot"
+              data-off={!accepting || undefined}
+            />
             {accepting ? "Accepting Orders" : "Not Accepting Orders"}
           </span>
           <div className="footer-follow">
@@ -161,9 +172,15 @@ export async function SiteFooter() {
 
       <div className="footer-bottom">
         <p className="footer-sys-line">
-          © {new Date().getFullYear()} KeebForge.in · Electronics Engineer · Jammu &amp; Kashmir · India
+          © {new Date().getFullYear()} KeebForge.in · Electronics Engineer ·
+          Jammu &amp; Kashmir · India
         </p>
-        <a href="https://portfolio.shadow269.in/" target="_blank" rel="noopener noreferrer" className="footer-dev-credit">
+        <a
+          href="https://portfolio.shadow269.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="footer-dev-credit"
+        >
           Designed by <span className="dev-name">shadow269</span>
         </a>
       </div>

@@ -58,7 +58,7 @@ export function defaultOptionId(group: OptionGroupLike): string | null {
 export function resolveConfiguredPrice(
   groups: OptionGroupLike[],
   basePrice: number,
-  optionIds: string[]
+  optionIds: string[],
 ): ConfigResolution {
   const wanted = new Set(optionIds);
   if (wanted.size !== optionIds.length) {
@@ -106,7 +106,9 @@ export type ProductConfigSnapshot = {
   selections: ResolvedOption[];
 };
 
-export function configSnapshot(resolution: Extract<ConfigResolution, { ok: true }>): ProductConfigSnapshot {
+export function configSnapshot(
+  resolution: Extract<ConfigResolution, { ok: true }>,
+): ProductConfigSnapshot {
   return {
     kind: "options",
     optionIds: resolution.selections.map((s) => s.optionId),
@@ -136,12 +138,21 @@ if (process.argv[1]?.endsWith("product-options.ts")) {
       enabled: true,
       options: [{ id: "o4", name: "Poron", priceAddon: 15000, enabled: true }],
     },
-    { id: "g3", name: "Disabled group", required: true, enabled: false, options: [] },
+    {
+      id: "g3",
+      name: "Disabled group",
+      required: true,
+      enabled: false,
+      options: [],
+    },
   ];
   const base = 1000000;
 
   const good = resolveConfiguredPrice(groups, base, ["o2", "o4"]);
-  console.assert(good.ok && good.unitPrice === 1365000 && good.selections.length === 2, "good path");
+  console.assert(
+    good.ok && good.unitPrice === 1365000 && good.selections.length === 2,
+    "good path",
+  );
 
   const missing = resolveConfiguredPrice(groups, base, ["o4"]);
   console.assert(!missing.ok, "missing required");
@@ -153,10 +164,19 @@ if (process.argv[1]?.endsWith("product-options.ts")) {
   console.assert(!dupe.ok, "duplicate rejected");
 
   const optionalSkipped = resolveConfiguredPrice(groups, base, ["o1"]);
-  console.assert(optionalSkipped.ok && optionalSkipped.unitPrice === base, "optional skipped");
+  console.assert(
+    optionalSkipped.ok && optionalSkipped.unitPrice === base,
+    "optional skipped",
+  );
 
-  console.assert(defaultOptionId(groups[0]) === "o1", "default = first zero-addon option");
-  console.assert(defaultOptionId(groups[1]) === "o4", "default falls back to only option");
+  console.assert(
+    defaultOptionId(groups[0]) === "o1",
+    "default = first zero-addon option",
+  );
+  console.assert(
+    defaultOptionId(groups[1]) === "o4",
+    "default falls back to only option",
+  );
 
   console.log("product-options self-check passed");
 }

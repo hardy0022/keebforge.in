@@ -12,8 +12,20 @@ export const metadata: Metadata = buildMetadata({
 });
 
 const CHANNELS = [
-  { icon: "💬", title: "Discord", desc: "Questions, quotes and order confirmations. Reach Hardy on Discord.", href: "https://discord.com/users/843113968734437376", label: "Chat on Discord" },
-  { icon: "✉️", title: "Email", desc: "Repair inquiries can be sent to contact@keebforge.in via the form below.", href: "mailto:contact@keebforge.in", label: "contact@keebforge.in" },
+  {
+    icon: "💬",
+    title: "Discord",
+    desc: "Questions, quotes and order confirmations. Reach Hardy on Discord.",
+    href: "https://discord.com/users/843113968734437376",
+    label: "Chat on Discord",
+  },
+  {
+    icon: "✉️",
+    title: "Email",
+    desc: "Repair inquiries can be sent to contact@keebforge.in via the form below.",
+    href: "mailto:contact@keebforge.in",
+    label: "contact@keebforge.in",
+  },
 ];
 
 const GUARANTEES = [
@@ -41,13 +53,21 @@ export default function ContactPage() {
           <div className="contact-inquiry-info">
             <SectionHead
               title="Send a Repair Inquiry"
-              desc="Describe your device and issue — we&apos;ll get back to you with a quote."
+              desc="Describe your device and issue — we'll get back to you with a quote."
             />
             <div className="contact-channels">
               {CHANNELS.map((c) => (
-                <a key={c.title} href={c.href} target={c.href.startsWith("http") ? "_blank" : undefined} rel="noopener" className="contact-channel">
+                <a
+                  key={c.title}
+                  href={c.href}
+                  target={c.href.startsWith("http") ? "_blank" : undefined}
+                  rel="noopener"
+                  className="contact-channel"
+                >
                   <div className="contact-channel-top">
-                    <span className="ci" aria-hidden="true">{c.icon}</span>
+                    <span className="ci" aria-hidden="true">
+                      {c.icon}
+                    </span>
                     <h3 className="ct">{c.title}</h3>
                   </div>
                   <p className="cd">{c.desc}</p>

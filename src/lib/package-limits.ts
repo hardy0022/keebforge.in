@@ -10,12 +10,25 @@ export const PACKAGE_LIMITS = {
   MAX_WEIGHT_KG: 30,
 } as const;
 
-export function isValidPackage(p: { lengthCm: number; widthCm: number; heightCm: number; weightKg: number }): boolean {
+export function isValidPackage(p: {
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+  weightKg: number;
+}): boolean {
   const { MAX_DIM_CM, MAX_WEIGHT_KG } = PACKAGE_LIMITS;
   return (
-    Number.isFinite(p.lengthCm) && p.lengthCm > 0 && p.lengthCm <= MAX_DIM_CM &&
-    Number.isFinite(p.widthCm) && p.widthCm > 0 && p.widthCm <= MAX_DIM_CM &&
-    Number.isFinite(p.heightCm) && p.heightCm > 0 && p.heightCm <= MAX_DIM_CM &&
-    Number.isFinite(p.weightKg) && p.weightKg > 0 && p.weightKg <= MAX_WEIGHT_KG
+    Number.isFinite(p.lengthCm) &&
+    p.lengthCm > 0 &&
+    p.lengthCm <= MAX_DIM_CM &&
+    Number.isFinite(p.widthCm) &&
+    p.widthCm > 0 &&
+    p.widthCm <= MAX_DIM_CM &&
+    Number.isFinite(p.heightCm) &&
+    p.heightCm > 0 &&
+    p.heightCm <= MAX_DIM_CM &&
+    Number.isFinite(p.weightKg) &&
+    p.weightKg > 0 &&
+    p.weightKg <= MAX_WEIGHT_KG
   );
 }

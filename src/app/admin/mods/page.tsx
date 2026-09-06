@@ -5,7 +5,10 @@ import { getModsCatalog } from "@/lib/data";
 import { GROUP_DESC } from "@/components/mods/ModConfigurator";
 import { ModsManager, type ModsDevice } from "./ModsManager";
 
-export const metadata: Metadata = { title: "Mods | KeebForge Admin", robots: { index: false, follow: false } };
+export const metadata: Metadata = {
+  title: "Mods | KeebForge Admin",
+  robots: { index: false, follow: false },
+};
 
 const HIDDEN_GROUP_SLUGS = new Set(["custom-pcb-design"]);
 const HIDDEN_MOD_SLUGS = new Set([
@@ -23,8 +26,14 @@ const HIDDEN_MOD_SLUGS = new Set([
 ]);
 
 const DEVICE_META: Record<string, { title: string; subtitle: string }> = {
-  KEYBOARD: { title: "Keyboard Mods", subtitle: "Manage mods available for keyboard builds." },
-  MOUSE: { title: "Mouse Mods", subtitle: "Manage mods available for mouse repairs and modifications." },
+  KEYBOARD: {
+    title: "Keyboard Mods",
+    subtitle: "Manage mods available for keyboard builds.",
+  },
+  MOUSE: {
+    title: "Mouse Mods",
+    subtitle: "Manage mods available for mouse repairs and modifications.",
+  },
 };
 
 export default async function AdminModsPage() {
@@ -62,16 +71,33 @@ export default async function AdminModsPage() {
     })
     .filter((d) => d.groups.length > 0);
 
-  const modCount = (d: ModsDevice) => d.groups.reduce((n, g) => n + g.items.length, 0);
+  const modCount = (d: ModsDevice) =>
+    d.groups.reduce((n, g) => n + g.items.length, 0);
   const totals = {
-    keyboard: modCount(devices.find((d) => d.device === "KEYBOARD") ?? { device: "KEYBOARD", title: "", subtitle: "", groups: [] }),
-    mouse: modCount(devices.find((d) => d.device === "MOUSE") ?? { device: "MOUSE", title: "", subtitle: "", groups: [] }),
+    keyboard: modCount(
+      devices.find((d) => d.device === "KEYBOARD") ?? {
+        device: "KEYBOARD",
+        title: "",
+        subtitle: "",
+        groups: [],
+      },
+    ),
+    mouse: modCount(
+      devices.find((d) => d.device === "MOUSE") ?? {
+        device: "MOUSE",
+        title: "",
+        subtitle: "",
+        groups: [],
+      },
+    ),
     mods: devices.reduce((n, d) => n + modCount(d), 0),
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <Link href="/admin" className="muted" style={{ fontSize: "0.75rem" }}>← Dashboard</Link>
+      <Link href="/admin" className="muted" style={{ fontSize: "0.75rem" }}>
+        ← Dashboard
+      </Link>
       <ModsManager devices={devices} totals={totals} />
     </div>
   );

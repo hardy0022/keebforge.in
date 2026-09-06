@@ -24,7 +24,10 @@ export const dynamic = "force-dynamic";
  * amounts are integer paise.
  */
 function fail(status: number, errorCode: ShippingErrorCode) {
-  return NextResponse.json({ success: false, errorCode, message: SHIPPING_ERROR_MESSAGES[errorCode] }, { status });
+  return NextResponse.json(
+    { success: false, errorCode, message: SHIPPING_ERROR_MESSAGES[errorCode] },
+    { status },
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -36,11 +39,20 @@ export async function POST(req: NextRequest) {
   }
 
   const { pincode } = body;
-  const dims = [body.lengthCm, body.widthCm, body.heightCm].map((v) => Number(v));
+  const dims = [body.lengthCm, body.widthCm, body.heightCm].map((v) =>
+    Number(v),
+  );
   const weightKg = Number(body.weightKg);
 
   if (!isValidPincode(pincode)) return fail(400, "INVALID_PINCODE");
-  if (!isValidPackage({ lengthCm: dims[0], widthCm: dims[1], heightCm: dims[2], weightKg })) {
+  if (
+    !isValidPackage({
+      lengthCm: dims[0],
+      widthCm: dims[1],
+      heightCm: dims[2],
+      weightKg,
+    })
+  ) {
     return NextResponse.json(
       {
         success: false,
@@ -53,7 +65,9 @@ export async function POST(req: NextRequest) {
 
   // Chargeable weight follows the same Delhivery rule as product carts:
   // max(actual, volumetric L·W·H/5000). Single package, quantity 1.
-  const actualGrams = cartWeightGrams([{ quantity: 1, weight: Math.round(weightKg * 1000) }]);
+  const actualGrams = cartWeightGrams([
+    { quantity: 1, weight: Math.round(weightKg * 1000) },
+  ]);
   const volumetricGrams = calculateVolumetricWeight([
     { quantity: 1, lengthCm: dims[0], widthCm: dims[1], heightCm: dims[2] },
   ]);
@@ -62,8 +76,18 @@ export async function POST(req: NextRequest) {
 
   // Optional delivery-speed preference; must be one the storefront offers.
   const requestedMode = toShippingMode(body.mode);
-  if (body.mode != null && (!requestedMode || !enabledShippingModes().includes(requestedMode))) {
-    return NextResponse.json({ success: false, errorCode: "INVALID_PACKAGE", message: "Unsupported shipping mode." }, { status: 400 });
+  if (
+    body.mode != null &&
+    (!requestedMode || !enabledShippingModes().includes(requestedMode))
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        errorCode: "INVALID_PACKAGE",
+        message: "Unsupported shipping mode.",
+      },
+      { status: 400 },
+    );
   }
 
   const fwd = await calculateShipping({
@@ -72,7 +96,11 @@ export async function POST(req: NextRequest) {
     weightGrams,
     ...(requestedMode ? { mode: requestedMode } : {}),
   });
-  if (!fwd.ok) return NextResponse.json({ success: false, errorCode: fwd.errorCode, message: fwd.message }, { status: 502 });
+  if (!fwd.ok)
+    return NextResponse.json(
+      { success: false, errorCode: fwd.errorCode, message: fwd.message },
+      { status: 502 },
+    );
 
   return NextResponse.json({
     success: true,

@@ -27,9 +27,25 @@ export default async function AdminWorkPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ fontFamily: "var(--ff-display)", fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
-          Work / Portfolio <span className="muted num">({projects.length})</span>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <h1
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.35rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Work / Portfolio{" "}
+          <span className="muted num">({projects.length})</span>
         </h1>
         <div className="admin-actions" style={{ margin: 0 }}>
           <Link href="/admin/work/new" className="btn-admin primary">

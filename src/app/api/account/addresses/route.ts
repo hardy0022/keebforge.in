@@ -31,17 +31,46 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { label, firstName, lastName, email, streetAddress, apartment, city, state, postalCode, country, phone, isDefault } = body;
+    const {
+      label,
+      firstName,
+      lastName,
+      email,
+      streetAddress,
+      apartment,
+      city,
+      state,
+      postalCode,
+      country,
+      phone,
+      isDefault,
+    } = body;
     const name = [firstName, lastName].filter(Boolean).join(" ").trim();
 
-    if (!firstName || !lastName || !streetAddress || !city || !state || !postalCode) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (
+      !firstName ||
+      !lastName ||
+      !streetAddress ||
+      !city ||
+      !state ||
+      !postalCode
+    ) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
     if (phone && !/^\d{10}$/.test(phone)) {
-      return NextResponse.json({ error: "Phone number must be exactly 10 digits." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Phone number must be exactly 10 digits." },
+        { status: 400 },
+      );
     }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Enter a valid email address." },
+        { status: 400 },
+      );
     }
 
     if (isDefault) {
@@ -70,6 +99,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(address, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Failed to create address" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create address" },
+      { status: 500 },
+    );
   }
 }

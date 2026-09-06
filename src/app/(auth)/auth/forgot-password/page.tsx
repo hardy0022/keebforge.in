@@ -5,10 +5,11 @@ import { authClient } from "@/lib/auth/auth-client";
 import { useState } from "react";
 import Link from "next/link";
 
-
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   const [message, setMessage] = useState("");
 
   async function onSubmit(e: React.FormEvent) {
@@ -26,7 +27,9 @@ export default function ForgotPasswordPage() {
         setMessage("Could not send reset email. Please try again.");
       } else {
         setStatus("success");
-        setMessage("If an account exists, a password reset link has been sent.");
+        setMessage(
+          "If an account exists, a password reset link has been sent.",
+        );
       }
     } catch {
       setStatus("error");
@@ -46,7 +49,9 @@ export default function ForgotPasswordPage() {
             </span>
           </Link>
           <h1 className="auth-title">Reset password</h1>
-          <p className="auth-subtitle">Enter your email and we&apos;ll send you a reset link</p>
+          <p className="auth-subtitle">
+            Enter your email and we&apos;ll send you a reset link
+          </p>
         </header>
 
         <form onSubmit={onSubmit} className="auth-form">
@@ -75,7 +80,11 @@ export default function ForgotPasswordPage() {
             </p>
           )}
 
-          <button type="submit" className="btn-form-submit" disabled={status === "loading"}>
+          <button
+            type="submit"
+            className="btn-form-submit"
+            disabled={status === "loading"}
+          >
             {status === "loading" ? (
               <>
                 <span className="spinner" aria-hidden="true" />
@@ -98,7 +107,9 @@ export default function ForgotPasswordPage() {
 
         <p className="auth-terms">
           By continuing, you agree to our{" "}
-          <Link href="/terms" className="auth-terms-link">Terms & Conditions</Link>
+          <Link href="/terms" className="auth-terms-link">
+            Terms & Conditions
+          </Link>
         </p>
       </div>
     </main>

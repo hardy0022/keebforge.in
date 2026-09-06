@@ -12,7 +12,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const EXCLUDED_STATUSES: OrderStatus[] = ["ORDER_COMPLETED", "DELIVERED", "TESTING_WARRANTY_ACTIVE"];
+const EXCLUDED_STATUSES: OrderStatus[] = [
+  "ORDER_COMPLETED",
+  "DELIVERED",
+  "TESTING_WARRANTY_ACTIVE",
+];
 const COMPLETED_STATUSES: OrderStatus[] = ["ORDER_COMPLETED", "DELIVERED"];
 
 async function getOrderStats(profileId: string) {
@@ -91,7 +95,17 @@ export default async function AccountPage() {
           {recentOrders.length > 0 && (
             <Link href="/account/orders" className="account-section-link">
               View all orders
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </Link>
@@ -100,7 +114,17 @@ export default async function AccountPage() {
 
         {recentOrders.length === 0 ? (
           <div className="account-empty">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
             <h3>No orders yet</h3>
@@ -112,20 +136,39 @@ export default async function AccountPage() {
         ) : (
           <div className="account-order-list">
             {recentOrders.map((order) => (
-              <Link key={order.id} href={`/order/success/${order.orderNumber}`} className="account-order-item is-link">
+              <Link
+                key={order.id}
+                href={`/order/success/${order.orderNumber}`}
+                className="account-order-item is-link"
+              >
                 <div className="account-order-info">
                   <div className="account-order-header">
-                    <span className="account-order-number">{order.orderNumber}</span>
-                    <span className={`account-order-status ${ORDER_STATUS_CHIP[order.status]}`}>
+                    <span className="account-order-number">
+                      {order.orderNumber}
+                    </span>
+                    <span
+                      className={`account-order-status ${ORDER_STATUS_CHIP[order.status]}`}
+                    >
                       {ORDER_STATUS_LABELS[order.status]}
                     </span>
                   </div>
                   <div className="account-order-meta">
-                    <span className="account-order-date">{new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
-                    <span>{order.items.length} item{order.items.length !== 1 ? "s" : ""}</span>
+                    <span className="account-order-date">
+                      {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <span>
+                      {order.items.length} item
+                      {order.items.length !== 1 ? "s" : ""}
+                    </span>
                   </div>
                 </div>
-                <div className="account-order-total">{formatINR(order.total)}</div>
+                <div className="account-order-total">
+                  {formatINR(order.total)}
+                </div>
               </Link>
             ))}
           </div>

@@ -24,9 +24,10 @@ export default async function ShopPage({ searchParams }: Props) {
           <span className="sec-num">{"// Shop"}</span>
           <h1 className="sec-title">Keyboard, Parts &amp; Accessories</h1>
           <p className="sec-desc shop-desc">
-            Three ways to buy — <strong>Made to Order</strong> (custom products built specifically for you),{" "}
-            <strong>Brand New</strong> (new products from KeebForge) and <strong>Clearance</strong>{" "}
-            (discounted, open-box, used or older-stock items).
+            Three ways to buy — <strong>Made to Order</strong> (custom products
+            built specifically for you), <strong>Brand New</strong> (new
+            products from KeebForge) and <strong>Clearance</strong> (discounted,
+            open-box, used or older-stock items).
           </p>
         </div>
       </section>

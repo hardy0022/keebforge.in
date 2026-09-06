@@ -6,7 +6,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { syncTrackingCache } from "@/lib/tracking";
-import { createShipment, PICKUP_SETTING_KEY, type CreateShipmentInput, type PickupLocation } from "@/lib/delhivery";
+import {
+  createShipment,
+  PICKUP_SETTING_KEY,
+  type CreateShipmentInput,
+  type PickupLocation,
+} from "@/lib/delhivery";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -15,16 +20,32 @@ const rupees = (paise: number) => (paise / 100).toFixed(2).replace(/\.00$/, "");
 const statusSchema = z.object({
   orderId: z.string().min(1),
   status: z.enum([
-    "ORDER_RECEIVED", "ORDER_CONFIRMED", "PAYMENT_PENDING", "PAYMENT_RECEIVED",
-    "PARTS_BOOKED", "PARTS_SHIPPED", "PARTS_RECEIVED", "IN_QUEUE",
-    "WORK_STARTED", "TESTING", "COMPLETED", "PACKING", "SHIPMENT_BOOKED",
-    "SHIPMENT_PICKED_UP", "IN_TRANSIT", "DELIVERED",
-    "TESTING_WARRANTY_ACTIVE", "ORDER_COMPLETED",
+    "ORDER_RECEIVED",
+    "ORDER_CONFIRMED",
+    "PAYMENT_PENDING",
+    "PAYMENT_RECEIVED",
+    "PARTS_BOOKED",
+    "PARTS_SHIPPED",
+    "PARTS_RECEIVED",
+    "IN_QUEUE",
+    "WORK_STARTED",
+    "TESTING",
+    "COMPLETED",
+    "PACKING",
+    "SHIPMENT_BOOKED",
+    "SHIPMENT_PICKED_UP",
+    "IN_TRANSIT",
+    "DELIVERED",
+    "TESTING_WARRANTY_ACTIVE",
+    "ORDER_COMPLETED",
   ]),
   note: z.string().max(2000).optional(),
 });
 
-export async function updateOrderStatus(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateOrderStatus(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const parsed = statusSchema.safeParse({
     orderId: formData.get("orderId"),
@@ -34,13 +55,18 @@ export async function updateOrderStatus(_prev: ActionState, formData: FormData):
   if (!parsed.success) return { error: "Invalid status." };
   const { orderId, status, note } = parsed.data;
 
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true, orderNumber: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { status: true, orderNumber: true },
+  });
   if (!order) return { error: "Order not found." };
 
   try {
     await prisma.$transaction([
       prisma.order.update({ where: { id: orderId }, data: { status } }),
-      prisma.orderTimeline.create({ data: { orderId, status, note: note ?? null } }),
+      prisma.orderTimeline.create({
+        data: { orderId, status, note: note ?? null },
+      }),
     ]);
     await syncTrackingCache(orderId);
   } catch (e) {
@@ -58,7 +84,10 @@ const timelineSchema = z.object({
   note: z.string().max(2000),
 });
 
-export async function addTimelineEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function addTimelineEntry(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const parsed = timelineSchema.safeParse({
     orderId: formData.get("orderId"),
@@ -69,11 +98,16 @@ export async function addTimelineEntry(_prev: ActionState, formData: FormData): 
   const { orderId, status, note } = parsed.data;
 
   const enumVal = status as z.infer<typeof statusSchema>["status"];
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { orderNumber: true },
+  });
   if (!order) return { error: "Order not found." };
 
   try {
-    await prisma.orderTimeline.create({ data: { orderId, status: enumVal, note: note || null } });
+    await prisma.orderTimeline.create({
+      data: { orderId, status: enumVal, note: note || null },
+    });
     await syncTrackingCache(orderId);
   } catch (e) {
     console.error("addTimelineEntry failed:", e);
@@ -88,10 +122,22 @@ const shippingSchema = z.object({
   courier: z.string().max(120).optional(),
   trackingNumber: z.string().max(120).optional(),
   trackingUrl: z.string().url().max(500).optional().or(z.literal("")),
-  status: z.enum(["NOT_DISPATCHED", "DISPATCHED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "RETURNED"]).optional(),
+  status: z
+    .enum([
+      "NOT_DISPATCHED",
+      "DISPATCHED",
+      "IN_TRANSIT",
+      "OUT_FOR_DELIVERY",
+      "DELIVERED",
+      "RETURNED",
+    ])
+    .optional(),
 });
 
-export async function updateShipping(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateShipping(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const parsed = shippingSchema.safeParse({
     orderId: formData.get("orderId"),
@@ -103,7 +149,10 @@ export async function updateShipping(_prev: ActionState, formData: FormData): Pr
   if (!parsed.success) return { error: "Invalid shipping details." };
   const { orderId, ...data } = parsed.data;
 
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { orderNumber: true },
+  });
   if (!order) return { error: "Order not found." };
 
   try {
@@ -127,17 +176,24 @@ const notesSchema = z.object({
   visibleToCustomer: z.string().optional(), // "1" when customer-visible
 });
 
-export async function addOrderNote(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function addOrderNote(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const parsed = notesSchema.safeParse({
     orderId: formData.get("orderId"),
     message: formData.get("message") || "",
     visibleToCustomer: formData.get("visibleToCustomer") || undefined,
   });
-  if (!parsed.success || !parsed.data.message.trim()) return { error: "Note cannot be empty." };
+  if (!parsed.success || !parsed.data.message.trim())
+    return { error: "Note cannot be empty." };
   const { orderId, message, visibleToCustomer } = parsed.data;
 
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { orderNumber: true },
+  });
   if (!order) return { error: "Order not found." };
 
   try {
@@ -167,13 +223,19 @@ const amountsSchema = z.object({
 });
 
 /** Derive paymentStatus from the sum of captured (PAID) payments vs total. */
-function paymentStatusFor(paid: number, total: number): "PAID" | "PARTIALLY_PAID" | "PENDING" {
+function paymentStatusFor(
+  paid: number,
+  total: number,
+): "PAID" | "PARTIALLY_PAID" | "PENDING" {
   if (total > 0 && paid >= total) return "PAID";
   if (paid > 0) return "PARTIALLY_PAID";
   return "PENDING";
 }
 
-export async function updateOrderAmounts(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateOrderAmounts(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const parsed = amountsSchema.safeParse({
     orderId: formData.get("orderId"),
@@ -187,7 +249,10 @@ export async function updateOrderAmounts(_prev: ActionState, formData: FormData)
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { orderNumber: true, payments: { where: { status: "PAID" }, select: { amount: true } } },
+    select: {
+      orderNumber: true,
+      payments: { where: { status: "PAID" }, select: { amount: true } },
+    },
   });
   if (!order) return { error: "Order not found." };
 
@@ -201,7 +266,11 @@ export async function updateOrderAmounts(_prev: ActionState, formData: FormData)
         data: { subtotal, shipping, discount, total, paymentStatus },
       }),
       prisma.orderTimeline.create({
-        data: { orderId, status: "PAYMENT_PENDING",         note: `Amounts updated by admin (subtotal ₹${rupees(subtotal)}, shipping ₹${rupees(shipping)}, discount ₹${rupees(discount)}, total ₹${rupees(total)}).` },
+        data: {
+          orderId,
+          status: "PAYMENT_PENDING",
+          note: `Amounts updated by admin (subtotal ₹${rupees(subtotal)}, shipping ₹${rupees(shipping)}, discount ₹${rupees(discount)}, total ₹${rupees(total)}).`,
+        },
       }),
     ]);
     await syncTrackingCache(orderId);
@@ -225,7 +294,10 @@ const addressSchema = z.object({
   phone: z.string().max(30).optional().or(z.literal("")),
 });
 
-export async function updateOrderAddress(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateOrderAddress(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const parsed = addressSchema.safeParse({
     orderId: formData.get("orderId"),
@@ -239,9 +311,22 @@ export async function updateOrderAddress(_prev: ActionState, formData: FormData)
     phone: formData.get("phone") || undefined,
   });
   if (!parsed.success) return { error: "Invalid address details." };
-  const { orderId, label, streetAddress, apartment, city, state, postalCode, country, phone } = parsed.data;
+  const {
+    orderId,
+    label,
+    streetAddress,
+    apartment,
+    city,
+    state,
+    postalCode,
+    country,
+    phone,
+  } = parsed.data;
 
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { orderNumber: true },
+  });
   if (!order) return { error: "Order not found." };
 
   try {
@@ -291,7 +376,10 @@ const createShipmentSchema = z.object({
  * saved address + totals, calls Delhivery, then stores the returned waybill
  * as the shipment tracking number and marks it dispatched.
  */
-export async function createShipmentDelivery(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function createShipmentDelivery(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const parsed = createShipmentSchema.safeParse({
     orderId: formData.get("orderId"),
@@ -301,8 +389,16 @@ export async function createShipmentDelivery(_prev: ActionState, formData: FormD
     lengthCm: formData.get("lengthCm") || undefined,
     declaredValue: formData.get("declaredValue") || undefined,
   });
-  if (!parsed.success) return { error: "Check the shipment fields (dimensions must be ≥ 1 cm)." };
-  const { orderId, weightGrams: enteredWeight, widthCm, heightCm, lengthCm, declaredValue } = parsed.data;
+  if (!parsed.success)
+    return { error: "Check the shipment fields (dimensions must be ≥ 1 cm)." };
+  const {
+    orderId,
+    weightGrams: enteredWeight,
+    widthCm,
+    heightCm,
+    lengthCm,
+    declaredValue,
+  } = parsed.data;
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -310,33 +406,52 @@ export async function createShipmentDelivery(_prev: ActionState, formData: FormD
       shippingAddress: true,
       items: { select: { name: true, quantity: true } },
       services: { select: { name: true, quantity: true } },
-      repairs: { select: { deviceType: true, deviceModel: true, issue: true, quotePrice: true } },
+      repairs: {
+        select: {
+          deviceType: true,
+          deviceModel: true,
+          issue: true,
+          quotePrice: true,
+        },
+      },
       shipment: { select: { trackingNumber: true } },
     },
   });
   if (!order) return { error: "Order not found." };
   if (order.shipment?.trackingNumber) {
-    return { error: `This order is already dispatched (waybill ${order.shipment.trackingNumber}).` };
+    return {
+      error: `This order is already dispatched (waybill ${order.shipment.trackingNumber}).`,
+    };
   }
   const addr = order.shippingAddress;
   if (!addr) return { error: "Add a shipping address to this order first." };
 
   const weightGrams = enteredWeight ?? order.shippingWeightGrams;
-  if (!weightGrams || weightGrams < 1) return { error: "A shipment weight (grams) is required." };
+  if (!weightGrams || weightGrams < 1)
+    return { error: "A shipment weight (grams) is required." };
 
   // Pickup location from the admin Settings card (PICKUP_SETTING_KEY), falling
   // back to DELHIVERY_PICKUP_* env vars, then DELHIVERY_ORIGIN_PINCODE. The
   // return fields default to the same warehouse so RTO packages have an address.
-  const pickupSetting = await prisma.siteSetting.findUnique({ where: { key: PICKUP_SETTING_KEY } });
+  const pickupSetting = await prisma.siteSetting.findUnique({
+    where: { key: PICKUP_SETTING_KEY },
+  });
   const ps =
-    pickupSetting && pickupSetting.value && typeof pickupSetting.value === "object" && !Array.isArray(pickupSetting.value)
+    pickupSetting &&
+    pickupSetting.value &&
+    typeof pickupSetting.value === "object" &&
+    !Array.isArray(pickupSetting.value)
       ? (pickupSetting.value as PickupLocation)
       : null;
   const pickup = {
     name: ps?.name ?? process.env.DELHIVERY_PICKUP_NAME ?? "",
     add: ps?.address ?? process.env.DELHIVERY_PICKUP_ADDRESS ?? "",
     city: ps?.city ?? process.env.DELHIVERY_PICKUP_CITY ?? "",
-    pin_code: ps?.pin ?? process.env.DELHIVERY_PICKUP_PIN ?? process.env.DELHIVERY_ORIGIN_PINCODE ?? "",
+    pin_code:
+      ps?.pin ??
+      process.env.DELHIVERY_PICKUP_PIN ??
+      process.env.DELHIVERY_ORIGIN_PINCODE ??
+      "",
     country: ps?.country ?? process.env.DELHIVERY_PICKUP_COUNTRY ?? "India",
     phone: ps?.phone ?? process.env.DELHIVERY_PICKUP_PHONE ?? "",
     returnAdd: ps?.returnAddress ?? ps?.address ?? "",
@@ -348,27 +463,55 @@ export async function createShipmentDelivery(_prev: ActionState, formData: FormD
 
   // Content description: real item/service names first, then repair rows and
   // work types, so repair orders don't manifest as the generic fallback.
-  const summary = order.summary && typeof order.summary === "object" ? (order.summary as Record<string, unknown>) : {};
+  const summary =
+    order.summary && typeof order.summary === "object"
+      ? (order.summary as Record<string, unknown>)
+      : {};
   const workTypes = Array.isArray(summary.workTypes)
-    ? (summary.workTypes as unknown[]).filter((w): w is string => typeof w === "string")
+    ? (summary.workTypes as unknown[]).filter(
+        (w): w is string => typeof w === "string",
+      )
     : [];
   const productsDesc =
     [
-      order.items.map((i) => i.name).concat(order.services.map((s) => s.name)).join(", "),
-      order.repairs.map((r) => `${r.deviceType} ${r.deviceModel}${r.issue ? ` — ${r.issue}` : ""}`).join(", "),
+      order.items
+        .map((i) => i.name)
+        .concat(order.services.map((s) => s.name))
+        .join(", "),
+      order.repairs
+        .map(
+          (r) =>
+            `${r.deviceType} ${r.deviceModel}${r.issue ? ` — ${r.issue}` : ""}`,
+        )
+        .join(", "),
       workTypes.join(", "),
     ]
       .filter(Boolean)
       .join(" | ") || "KeebForge package";
 
-  // Declared value for the manifest: admin override wins, otherwise the 
+  // Declared value for the manifest: admin override wins, otherwise the
   // largest of the order total / repair quote / customer budget — never ₹0.
-  const budgetPaise = Number.isFinite(Number(summary.budget)) && Number(summary.budget) > 0 ? Math.round(Number(summary.budget) * 100) : 0;
-  const repairQuotePaise = order.repairs.reduce((s, r) => s + (r.quotePrice ?? 0), 0);
-  const declaredPaise = declaredValue ? declaredValue * 100 : Math.max(order.total, repairQuotePaise, budgetPaise);
+  const budgetPaise =
+    Number.isFinite(Number(summary.budget)) && Number(summary.budget) > 0
+      ? Math.round(Number(summary.budget) * 100)
+      : 0;
+  const repairQuotePaise = order.repairs.reduce(
+    (s, r) => s + (r.quotePrice ?? 0),
+    0,
+  );
+  const declaredPaise = declaredValue
+    ? declaredValue * 100
+    : Math.max(order.total, repairQuotePaise, budgetPaise);
 
-  const quantity = Math.max(1, order.items.reduce((s, i) => s + i.quantity, 0) || order.services.reduce((s, i) => s + i.quantity, 0));
-  const shippingMode = order.shippingMode && /express/i.test(order.shippingMode) ? "Express" : "Surface";
+  const quantity = Math.max(
+    1,
+    order.items.reduce((s, i) => s + i.quantity, 0) ||
+      order.services.reduce((s, i) => s + i.quantity, 0),
+  );
+  const shippingMode =
+    order.shippingMode && /express/i.test(order.shippingMode)
+      ? "Express"
+      : "Surface";
 
   const input: CreateShipmentInput = {
     consignee: {
@@ -402,17 +545,36 @@ export async function createShipmentDelivery(_prev: ActionState, formData: FormD
     await prisma.$transaction([
       prisma.shipment.upsert({
         where: { orderId },
-        update: { courier: "Delhivery", trackingNumber: result.waybill, status: "DISPATCHED", shippedAt: new Date() },
-        create: { orderId, courier: "Delhivery", trackingNumber: result.waybill, status: "DISPATCHED", shippedAt: new Date() },
+        update: {
+          courier: "Delhivery",
+          trackingNumber: result.waybill,
+          status: "DISPATCHED",
+          shippedAt: new Date(),
+        },
+        create: {
+          orderId,
+          courier: "Delhivery",
+          trackingNumber: result.waybill,
+          status: "DISPATCHED",
+          shippedAt: new Date(),
+        },
       }),
       prisma.orderTimeline.create({
-        data: { orderId, status: "SHIPMENT_BOOKED", note: `Shipment manifested with Delhivery (waybill ${result.waybill}).` },
+        data: {
+          orderId,
+          status: "SHIPMENT_BOOKED",
+          note: `Shipment manifested with Delhivery (waybill ${result.waybill}).`,
+        },
       }),
     ]);
     await syncTrackingCache(orderId);
   } catch (e) {
     console.error("createShipmentDelivery (save) failed:", e);
-    return { error: "Shipment created in Delhivery but couldn't be saved locally. Waybill: " + result.waybill };
+    return {
+      error:
+        "Shipment created in Delhivery but couldn't be saved locally. Waybill: " +
+        result.waybill,
+    };
   }
   revalidatePath(`/admin/orders/${order.orderNumber}`);
   return { ok: true, message: result.waybill };
@@ -425,7 +587,10 @@ const manualPaymentSchema = z.object({
   markPaid: z.string().optional(),
 });
 
-export async function recordManualPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function recordManualPayment(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const parsed = manualPaymentSchema.safeParse({
     orderId: formData.get("orderId"),
@@ -449,8 +614,11 @@ export async function recordManualPayment(_prev: ActionState, formData: FormData
   const existingPaid = order.payments.reduce((s, p) => s + p.amount, 0);
   const forcePaid = markPaid === "1";
   const total = forcePaid ? amount : order.total;
-  const payAmount = forcePaid ? amount : Math.min(amount, Math.max(0, order.total - existingPaid));
-  if (payAmount <= 0) return { error: "Nothing left to pay — amount already covered." };
+  const payAmount = forcePaid
+    ? amount
+    : Math.min(amount, Math.max(0, order.total - existingPaid));
+  if (payAmount <= 0)
+    return { error: "Nothing left to pay — amount already covered." };
 
   const paidAfter = forcePaid ? amount : existingPaid + payAmount;
   const paymentStatus = paymentStatusFor(paidAfter, total);
@@ -458,11 +626,21 @@ export async function recordManualPayment(_prev: ActionState, formData: FormData
   try {
     await prisma.$transaction([
       prisma.payment.create({
-        data: { orderId, amount: payAmount, status: "PAID", method: method || "manual", paidAt: new Date() },
+        data: {
+          orderId,
+          amount: payAmount,
+          status: "PAID",
+          method: method || "manual",
+          paidAt: new Date(),
+        },
       }),
       prisma.order.update({ where: { id: orderId }, data: { paymentStatus } }),
       prisma.orderTimeline.create({
-        data: { orderId, status: "PAYMENT_RECEIVED", note: `Manual payment of ${payAmount} paise recorded by admin${method ? ` (${method})` : ""}.` },
+        data: {
+          orderId,
+          status: "PAYMENT_RECEIVED",
+          note: `Manual payment of ${payAmount} paise recorded by admin${method ? ` (${method})` : ""}.`,
+        },
       }),
     ]);
     await syncTrackingCache(orderId);
@@ -474,12 +652,19 @@ export async function recordManualPayment(_prev: ActionState, formData: FormData
   return { ok: true };
 }
 
-export async function deleteOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function deleteOrder(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   await requirePermission("order", "update");
   const orderId = formData.get("orderId");
-  if (typeof orderId !== "string" || !orderId) return { error: "Invalid order." };
+  if (typeof orderId !== "string" || !orderId)
+    return { error: "Invalid order." };
 
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { orderNumber: true },
+  });
   if (!order) return { error: "Order not found." };
 
   try {

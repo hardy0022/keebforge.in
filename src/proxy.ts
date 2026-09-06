@@ -24,14 +24,21 @@ async function isMaintenanceOn(hostname: string): Promise<boolean> {
   const env = detectEnvironment(hostname);
   const cached = maintenanceCache.get(env);
   if (cached && cached.expires > Date.now()) return cached.value;
-  const setting = await prisma.siteSetting.findUnique({ where: { key: MAINTENANCE_KEY[env] } });
+  const setting = await prisma.siteSetting.findUnique({
+    where: { key: MAINTENANCE_KEY[env] },
+  });
   const value = setting?.value === true;
-  maintenanceCache.set(env, { value, expires: Date.now() + MAINTENANCE_TTL_MS });
+  maintenanceCache.set(env, {
+    value,
+    expires: Date.now() + MAINTENANCE_TTL_MS,
+  });
   return value;
 }
 
 function isBypassPath(pathname: string): boolean {
-  return MAINTENANCE_BYPASS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  return MAINTENANCE_BYPASS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
 }
 
 export async function proxy(request: NextRequest) {
@@ -51,10 +58,15 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/auth/error") {
     const sp = request.nextUrl.searchParams;
     const code = sp.get("error");
-    if (sp.has("error_description") || sp.size > 1 || (code !== null && !SAFE_AUTH_ERROR_CODES.has(code))) {
+    if (
+      sp.has("error_description") ||
+      sp.size > 1 ||
+      (code !== null && !SAFE_AUTH_ERROR_CODES.has(code))
+    ) {
       const url = request.nextUrl.clone();
       url.search = "";
-      if (code && SAFE_AUTH_ERROR_CODES.has(code)) url.searchParams.set("error", code);
+      if (code && SAFE_AUTH_ERROR_CODES.has(code))
+        url.searchParams.set("error", code);
       return NextResponse.redirect(url, 307);
     }
   }
@@ -74,7 +86,11 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-const SAFE_AUTH_ERROR_CODES = new Set(["access_denied", "state_mismatch", "state_invalid"]);
+const SAFE_AUTH_ERROR_CODES = new Set([
+  "access_denied",
+  "state_mismatch",
+  "state_invalid",
+]);
 
 export const config = {
   matcher: [

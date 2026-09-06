@@ -2,7 +2,11 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/seo";
 
-const STATIC: { path: string; changeFrequency?: MetadataRoute.Sitemap[number]["changeFrequency"]; priority?: number }[] = [
+const STATIC: {
+  path: string;
+  changeFrequency?: MetadataRoute.Sitemap[number]["changeFrequency"];
+  priority?: number;
+}[] = [
   { path: "/", priority: 1 },
   { path: "/shop", priority: 0.9 },
   { path: "/mods", priority: 0.9 },
@@ -18,8 +22,14 @@ const STATIC: { path: string; changeFrequency?: MetadataRoute.Sitemap[number]["c
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, work] = await Promise.all([
-    prisma.product.findMany({ where: { active: true }, select: { slug: true, updatedAt: true } }),
-    prisma.workProject.findMany({ where: { active: true }, select: { slug: true, updatedAt: true } }),
+    prisma.product.findMany({
+      where: { active: true },
+      select: { slug: true, updatedAt: true },
+    }),
+    prisma.workProject.findMany({
+      where: { active: true },
+      select: { slug: true, updatedAt: true },
+    }),
   ]);
 
   const productUrls = products.map((p) => ({

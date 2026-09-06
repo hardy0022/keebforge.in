@@ -6,7 +6,8 @@ import { SECTION_LABELS } from "@/lib/shop";
 
 export const metadata: Metadata = buildMetadata({
   title: "Custom Orders — Shop | KeebForge",
-  description: "Made-to-order keyboards, switches and custom work, built specifically for you.",
+  description:
+    "Made-to-order keyboards, switches and custom work, built specifically for you.",
   path: "/shop/custom",
 });
 

@@ -98,7 +98,9 @@ export function AddressBook() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (formData.phone && !/^\d{10}$/.test(formData.phone)) return;
-    const url = editingAddress ? `/api/account/addresses/${editingAddress.id}` : "/api/account/addresses";
+    const url = editingAddress
+      ? `/api/account/addresses/${editingAddress.id}`
+      : "/api/account/addresses";
     const method = editingAddress ? "PATCH" : "POST";
 
     try {
@@ -120,7 +122,9 @@ export function AddressBook() {
     if (!confirm("Are you sure you want to delete this address?")) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/account/addresses/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/account/addresses/${id}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         loadAddresses();
       }
@@ -133,7 +137,9 @@ export function AddressBook() {
 
   async function handleSetDefault(id: string) {
     try {
-      const res = await fetch(`/api/account/addresses/${id}/default`, { method: "POST" });
+      const res = await fetch(`/api/account/addresses/${id}/default`, {
+        method: "POST",
+      });
       if (res.ok) {
         loadAddresses();
       }
@@ -157,13 +163,28 @@ export function AddressBook() {
 
       {addresses.length === 0 ? (
         <div className="account-empty">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
           <h3>No addresses saved</h3>
           <p>Add an address to speed up checkout.</p>
-          <button type="button" className="btn-prime" onClick={openAddModal} style={{ marginTop: 16 }}>
+          <button
+            type="button"
+            className="btn-prime"
+            onClick={openAddModal}
+            style={{ marginTop: 16 }}
+          >
             Add Address
           </button>
         </div>
@@ -174,20 +195,26 @@ export function AddressBook() {
               <div key={address.id} className="account-address-card">
                 <div className="account-address-header">
                   <span className="account-address-label">{address.label}</span>
-                  {address.isDefault && <span className="account-address-default">Default</span>}
+                  {address.isDefault && (
+                    <span className="account-address-default">Default</span>
+                  )}
                 </div>
                 <address className="account-address-details">
                   {address.name && <div>{address.name}</div>}
                   <div>{address.streetAddress}</div>
                   {address.apartment && <div>{address.apartment}</div>}
-                  <div>{address.city}, {address.state} {address.postalCode}</div>
+                  <div>
+                    {address.city}, {address.state} {address.postalCode}
+                  </div>
                   <div>{address.country}</div>
                   {address.email && <div>Email: {address.email}</div>}
                   {address.phone && <div>Phone: {address.phone}</div>}
                 </address>
                 <div className="account-address-actions">
                   {address.isDefault || !addresses.some((a) => a.isDefault) ? (
-                    <span className="account-address-default-text">Default address</span>
+                    <span className="account-address-default-text">
+                      Default address
+                    </span>
                   ) : (
                     <button
                       type="button"
@@ -197,7 +224,11 @@ export function AddressBook() {
                       Set as default
                     </button>
                   )}
-                  <button type="button" className="btn-ghost btn-sm" onClick={() => openEditModal(address)}>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    onClick={() => openEditModal(address)}
+                  >
                     Edit
                   </button>
                   <button
@@ -213,8 +244,23 @@ export function AddressBook() {
             ))}
           </div>
 
-          <button type="button" className="btn-ghost" onClick={openAddModal} style={{ marginTop: 20 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={openAddModal}
+            style={{ marginTop: 20 }}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -224,12 +270,35 @@ export function AddressBook() {
       )}
 
       {showModal && (
-        <div className="account-modal-overlay" onClick={closeModal} role="dialog" aria-modal="true" aria-labelledby="address-modal-title">
+        <div
+          className="account-modal-overlay"
+          onClick={closeModal}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="address-modal-title"
+        >
           <div className="account-modal" onClick={(e) => e.stopPropagation()}>
             <header className="account-modal-header">
-              <h3 id="address-modal-title">{editingAddress ? "Edit Address" : "Add Address"}</h3>
-              <button type="button" className="account-modal-close" onClick={closeModal} aria-label="Close">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <h3 id="address-modal-title">
+                {editingAddress ? "Edit Address" : "Add Address"}
+              </h3>
+              <button
+                type="button"
+                className="account-modal-close"
+                onClick={closeModal}
+                aria-label="Close"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -244,7 +313,9 @@ export function AddressBook() {
                   type="text"
                   required
                   value={formData.label}
-                  onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, label: e.target.value })
+                  }
                   placeholder="Home, Work, etc."
                 />
               </div>
@@ -256,7 +327,9 @@ export function AddressBook() {
                   type="text"
                   required
                   value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, firstName: e.target.value })
+                  }
                   placeholder="Recipient's first name"
                 />
               </div>
@@ -268,7 +341,9 @@ export function AddressBook() {
                   type="text"
                   required
                   value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lastName: e.target.value })
+                  }
                   placeholder="Recipient's last name"
                 />
               </div>
@@ -280,7 +355,9 @@ export function AddressBook() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   placeholder="you@example.com"
                 />
               </div>
@@ -292,7 +369,9 @@ export function AddressBook() {
                   type="text"
                   required
                   value={formData.streetAddress}
-                  onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, streetAddress: e.target.value })
+                  }
                   placeholder="e.g. 123, ABC Apartments, MG Road"
                 />
               </div>
@@ -303,7 +382,9 @@ export function AddressBook() {
                   id="apartment"
                   type="text"
                   value={formData.apartment}
-                  onChange={(e) => setFormData({ ...formData, apartment: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, apartment: e.target.value })
+                  }
                   placeholder="e.g. Near Metro Station, Opposite Park"
                 />
               </div>
@@ -315,7 +396,9 @@ export function AddressBook() {
                   type="text"
                   required
                   value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, city: e.target.value })
+                  }
                   placeholder="e.g. Bengaluru"
                 />
               </div>
@@ -327,11 +410,15 @@ export function AddressBook() {
                     id="state"
                     required
                     value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, state: e.target.value })
+                    }
                   >
                     <option value="">Select State</option>
                     {INDIAN_STATES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -345,7 +432,9 @@ export function AddressBook() {
                     maxLength={6}
                     pattern="[0-9]{6}"
                     value={formData.postalCode}
-                    onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, postalCode: e.target.value })
+                    }
                     placeholder="560001"
                   />
                 </div>
@@ -362,24 +451,42 @@ export function AddressBook() {
                   maxLength={10}
                   title="Enter a 10-digit phone number"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: onlyDigits(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone: onlyDigits(e.target.value),
+                    })
+                  }
                   placeholder="9998888000"
                 />
               </div>
 
               <div className="form-row">
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={formData.isDefault}
-                    onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isDefault: e.target.checked })
+                    }
                   />
                   Set as default address
                 </label>
               </div>
 
               <div className="account-modal-actions">
-                <button type="button" className="btn-ghost" onClick={closeModal}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={closeModal}
+                >
                   Cancel
                 </button>
                 <button type="submit" className="btn-form-submit">

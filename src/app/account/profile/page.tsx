@@ -8,7 +8,9 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -66,7 +68,9 @@ export default function ProfilePage() {
         <header className="account-section-header">
           <div>
             <h2 className="account-section-title">Personal Information</h2>
-            <p className="account-section-desc">Manage your personal information</p>
+            <p className="account-section-desc">
+              Manage your personal information
+            </p>
           </div>
         </header>
 
@@ -138,7 +142,11 @@ export default function ProfilePage() {
             </p>
           )}
 
-          <button type="submit" className="btn-form-submit" disabled={status === "loading"}>
+          <button
+            type="submit"
+            className="btn-form-submit"
+            disabled={status === "loading"}
+          >
             {status === "loading" ? (
               <>
                 <span className="spinner" aria-hidden="true" />

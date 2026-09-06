@@ -18,17 +18,29 @@ type PurchasableProduct = {
  * - NEW / CLEARANCE: normal inventory rules.
  */
 export function isPurchasable(p: PurchasableProduct): boolean {
-  if (!p.active || p.status === "DRAFT" || p.status === "ARCHIVED") return false;
+  if (!p.active || p.status === "DRAFT" || p.status === "ARCHIVED")
+    return false;
   if (p.productType === "CUSTOM") return p.status !== "OUT_OF_STOCK";
   const avail = Math.max(0, p.stock - p.reservedQuantity);
   if (avail > 0) return true;
-  return (p.variants ?? []).some((v) => v.active && v.stock - v.reservedQuantity > 0);
+  return (p.variants ?? []).some(
+    (v) => v.active && v.stock - v.reservedQuantity > 0,
+  );
 }
 
-export const SECTION_LABELS: Record<ShopSectionType, { title: string; blurb: string }> = {
-  CUSTOM: { title: "Made to Order", blurb: "Custom products built specifically for you." },
+export const SECTION_LABELS: Record<
+  ShopSectionType,
+  { title: string; blurb: string }
+> = {
+  CUSTOM: {
+    title: "Made to Order",
+    blurb: "Custom products built specifically for you.",
+  },
   NEW: { title: "Brand New", blurb: "New products available from KeebForge." },
-  CLEARANCE: { title: "Clearance", blurb: "Discounted, clearance, open-box, used or older-stock items." },
+  CLEARANCE: {
+    title: "Clearance",
+    blurb: "Discounted, clearance, open-box, used or older-stock items.",
+  },
 };
 
 export const CONDITION_LABELS: Record<string, string> = {

@@ -5,7 +5,10 @@ import { CartQty } from "@/components/cart/CartQty";
 import TrashIcon from "@/components/icons/trash-icon";
 import { buildMetadata } from "@/lib/seo";
 import { getCartWithItems, availableQuantity } from "@/lib/cart";
-import { resolveConfiguredPrice, type ProductConfigSnapshot } from "@/lib/product-options";
+import {
+  resolveConfiguredPrice,
+  type ProductConfigSnapshot,
+} from "@/lib/product-options";
 import { formatINR } from "@/lib/money";
 import { removeCartItem } from "@/app/actions/cart";
 
@@ -23,15 +26,33 @@ export default async function ShopCartPage() {
     const cfg = item.config as ProductConfigSnapshot | null;
     const resolved =
       cfg?.kind === "options"
-        ? resolveConfiguredPrice(item.product.optionGroups, item.product.price, cfg.optionIds)
+        ? resolveConfiguredPrice(
+            item.product.optionGroups,
+            item.product.price,
+            cfg.optionIds,
+          )
         : null;
-    const unitPrice = resolved?.ok ? resolved.unitPrice : item.variant?.price ?? item.product.price;
-    const selections = cfg?.kind === "options" ? (resolved?.ok ? resolved.selections : cfg.selections) : [];
+    const unitPrice = resolved?.ok
+      ? resolved.unitPrice
+      : (item.variant?.price ?? item.product.price);
+    const selections =
+      cfg?.kind === "options"
+        ? resolved?.ok
+          ? resolved.selections
+          : cfg.selections
+        : [];
     const available = item.variant
       ? availableQuantity(item.variant.stock, item.variant.reservedQuantity)
       : availableQuantity(item.product.stock, item.product.reservedQuantity);
     const image = item.product.images[0];
-    return { item, unitPrice, available, image, lineTotal: unitPrice * item.quantity, selections };
+    return {
+      item,
+      unitPrice,
+      available,
+      image,
+      lineTotal: unitPrice * item.quantity,
+      selections,
+    };
   });
   const subtotal = rows.reduce((s, r) => s + r.lineTotal, 0);
 
@@ -46,7 +67,10 @@ export default async function ShopCartPage() {
               Continue Shopping <span aria-hidden="true">&rarr;</span>
             </Link>
           </div>
-          <p className="sec-desc">Items in your cart. Prices are recalculated against live inventory at checkout.</p>
+          <p className="sec-desc">
+            Items in your cart. Prices are recalculated against live inventory
+            at checkout.
+          </p>
         </div>
       </section>
 
@@ -73,53 +97,93 @@ export default async function ShopCartPage() {
                 </div>
 
                 {/* ── Product rows ── */}
-                {rows.map(({ item, available, image, lineTotal, selections }) => (
-                  <article key={item.id} className="cart-row">
-                    <div className="cart-row-product">
-                      {image && (
-                        <div className="cart-row-img">
-                          <Image src={image.url} alt={image.alt ?? item.product.name} fill sizes="100px" className="object-cover" />
-                        </div>
-                      )}
-                      <div className="cart-row-details">
-                        <Link href={`/product/${item.product.slug}`} className="cart-row-name">
-                          {item.product.name}
-                        </Link>
-                        {item.product.brand && <p className="cart-row-brand">{item.product.brand.name}</p>}
-                        {item.variant && <p className="cart-row-meta">{item.variant.name}</p>}
-                        {selections.length > 0 && (
-                          <div className="cart-row-options">
-                            {selections.map((s) => (
-                              <span key={s.optionId} className="cart-row-option">
-                                {s.groupName}: {s.optionName}
-                                {s.addon > 0 && <span className="cart-row-addon"> (+{formatINR(s.addon)})</span>}
-                              </span>
-                            ))}
+                {rows.map(
+                  ({ item, available, image, lineTotal, selections }) => (
+                    <article key={item.id} className="cart-row">
+                      <div className="cart-row-product">
+                        {image && (
+                          <div className="cart-row-img">
+                            <Image
+                              src={image.url}
+                              alt={image.alt ?? item.product.name}
+                              fill
+                              sizes="100px"
+                              className="object-cover"
+                            />
                           </div>
                         )}
+                        <div className="cart-row-details">
+                          <Link
+                            href={`/product/${item.product.slug}`}
+                            className="cart-row-name"
+                          >
+                            {item.product.name}
+                          </Link>
+                          {item.product.brand && (
+                            <p className="cart-row-brand">
+                              {item.product.brand.name}
+                            </p>
+                          )}
+                          {item.variant && (
+                            <p className="cart-row-meta">{item.variant.name}</p>
+                          )}
+                          {selections.length > 0 && (
+                            <div className="cart-row-options">
+                              {selections.map((s) => (
+                                <span
+                                  key={s.optionId}
+                                  className="cart-row-option"
+                                >
+                                  {s.groupName}: {s.optionName}
+                                  {s.addon > 0 && (
+                                    <span className="cart-row-addon">
+                                      {" "}
+                                      (+{formatINR(s.addon)})
+                                    </span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="cart-row-qty">
-                      {item.product.productType === "CUSTOM" ? (
-                        <span className="cart-qty-static">1</span>
-                      ) : (
-                        <CartQty itemId={item.id} quantity={item.quantity} available={available} />
-                      )}
-                    </div>
+                      <div className="cart-row-qty">
+                        {item.product.productType === "CUSTOM" ? (
+                          <span className="cart-qty-static">1</span>
+                        ) : (
+                          <CartQty
+                            itemId={item.id}
+                            quantity={item.quantity}
+                            available={available}
+                          />
+                        )}
+                      </div>
 
-                    <div className="cart-row-total">
-                      <span className="cart-row-price">{formatINR(lineTotal)}</span>
-                      <form action={removeCartItem}>
-                        <input type="hidden" name="itemId" value={item.id} />
-                        <button type="submit" className="cart-remove-btn" aria-label={`Remove ${item.product.name} from cart`}>
-                          <TrashIcon size={14} dangerHover className="cart-remove-icon" aria-hidden />
-                          Remove
-                        </button>
-                      </form>
-                    </div>
-                  </article>
-                ))}
+                      <div className="cart-row-total">
+                        <span className="cart-row-price">
+                          {formatINR(lineTotal)}
+                        </span>
+                        <form action={removeCartItem}>
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <button
+                            type="submit"
+                            className="cart-remove-btn"
+                            aria-label={`Remove ${item.product.name} from cart`}
+                          >
+                            <TrashIcon
+                              size={14}
+                              dangerHover
+                              className="cart-remove-icon"
+                              aria-hidden
+                            />
+                            Remove
+                          </button>
+                        </form>
+                      </div>
+                    </article>
+                  ),
+                )}
               </div>
 
               {/* ── Right: Order Summary ── */}
@@ -140,17 +204,26 @@ export default async function ShopCartPage() {
 
                 <div className="cart-summary-row cart-summary-total">
                   <span>Total</span>
-                  <span className="cart-summary-total-amount">{formatINR(subtotal)}</span>
+                  <span className="cart-summary-total-amount">
+                    {formatINR(subtotal)}
+                  </span>
                 </div>
 
                 <p className="cart-summary-note">
-                  * Final total including shipping will be calculated at checkout.
+                  * Final total including shipping will be calculated at
+                  checkout.
                 </p>
 
-                <Link href="/shop/checkout" className="btn-prime w-full justify-center">
+                <Link
+                  href="/shop/checkout"
+                  className="btn-prime w-full justify-center"
+                >
                   Continue to Checkout <span aria-hidden="true">&rarr;</span>
                 </Link>
-                <Link href="/shop" className="btn-ghost w-full justify-center mt-2">
+                <Link
+                  href="/shop"
+                  className="btn-ghost w-full justify-center mt-2"
+                >
                   Keep Shopping
                 </Link>
               </aside>

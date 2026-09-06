@@ -17,7 +17,12 @@ import { deriveLegs } from "@/lib/shipping-estimate";
 import { PACKAGE_LIMITS, isValidPackage } from "@/lib/package-limits";
 import { generateOrderNumber } from "@/lib/orders";
 import { syncTrackingCache } from "@/lib/tracking";
-import { validateCoupon, couponOrderCreateData, incrementCouponUsage, type CouponEligible } from "@/lib/coupons";
+import {
+  validateCoupon,
+  couponOrderCreateData,
+  incrementCouponUsage,
+  type CouponEligible,
+} from "@/lib/coupons";
 import { ensureRazorpayCustomer } from "@/lib/razorpay-customer";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +36,19 @@ const bodySchema = z.object({
   switchQuantity: z.number().int().min(1).max(999),
   stabilizerQuantity: z.number().int().min(0).max(999),
   keycapsIncluded: z.boolean(),
-  serviceIds: z.array(z.string().min(1)).min(1, "Select at least one service").max(60),
+  serviceIds: z
+    .array(z.string().min(1))
+    .min(1, "Select at least one service")
+    .max(60),
   customer: z.object({
     firstName: z.string().trim().min(1, "First name is required").max(80),
     lastName: z.string().trim().min(1, "Last name is required").max(80),
-    email: z.string().trim().toLowerCase().email("Enter a valid email").max(200),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Enter a valid email")
+      .max(200),
     phone: z.string().trim().min(5, "Enter a valid phone number").max(20),
   }),
   // Mods Shipping/Packaging block from the configurator. Amounts here are
@@ -45,7 +58,10 @@ const bodySchema = z.object({
       method: z.enum(["customer_shipping", "pickup", "undecided"]),
       mode: z.enum(["surface", "express"]).optional(),
       address: z.object({
-        pincode: z.string().regex(/^\d{6}$/).or(z.literal("")),
+        pincode: z
+          .string()
+          .regex(/^\d{6}$/)
+          .or(z.literal("")),
       }),
       package: z.object({
         lengthCm: z.number().min(0),
@@ -89,25 +105,33 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? "Invalid order data" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     const cfg = parsed.data;
-    const customerName = [cfg.customer.firstName, cfg.customer.lastName].filter(Boolean).join(" ");
+    const customerName = [cfg.customer.firstName, cfg.customer.lastName]
+      .filter(Boolean)
+      .join(" ");
 
     // Authoritative inputs: services straight from the DB (active only).
     const ids = [...new Set(cfg.serviceIds)];
     const serviceConfigs = await loadActiveModConfigs(ids);
     if (serviceConfigs.length !== ids.length) {
       return NextResponse.json(
-        { error: "One or more selected services are no longer available. Please refresh your configuration." },
-        { status: 400 }
+        {
+          error:
+            "One or more selected services are no longer available. Please refresh your configuration.",
+        },
+        { status: 400 },
       );
     }
 
     const totals = calculateServiceOrder(serviceConfigs, cfg);
     if (totals.selectedCount === 0) {
-      return NextResponse.json({ error: "Select at least one service to continue" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Select at least one service to continue" },
+        { status: 400 },
+      );
     }
 
     // ── Authoritative mods shipping recalculation (both legs re-quoted here;
@@ -115,33 +139,71 @@ export async function POST(req: NextRequest) {
     const mods = cfg.modsShipping;
     let shipPaise = 0;
     let shipMeta: {
-      method: string; mode: string; weightGrams: number;
-      originPincode: string; destinationPincode: string;
-      pickupPaise: number | null; returnPaise: number | null; totalPaise: number;
+      method: string;
+      mode: string;
+      weightGrams: number;
+      originPincode: string;
+      destinationPincode: string;
+      pickupPaise: number | null;
+      returnPaise: number | null;
+      totalPaise: number;
     } | null = null;
     if (mods && mods.method !== "undecided") {
       const mode = toShippingMode(mods.mode) ?? "express";
       if (!enabledShippingModes().includes(mode)) {
-        return NextResponse.json({ error: "Unsupported shipping mode." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Unsupported shipping mode." },
+          { status: 400 },
+        );
       }
       const pin = mods.address.pincode || cfg.shippingAddress.postalCode;
       const origin = process.env.DELHIVERY_ORIGIN_PINCODE ?? "";
       if (!isValidPincode(pin) || !isValidPincode(origin)) {
-        return NextResponse.json({ error: "Enter a valid PIN code to calculate shipping." }, { status: 422 });
+        return NextResponse.json(
+          { error: "Enter a valid PIN code to calculate shipping." },
+          { status: 422 },
+        );
       }
       const pkg = mods.package;
-      if (!isValidPackage({ lengthCm: pkg.lengthCm, widthCm: pkg.widthCm, heightCm: pkg.heightCm, weightKg: pkg.weightKg })) {
+      if (
+        !isValidPackage({
+          lengthCm: pkg.lengthCm,
+          widthCm: pkg.widthCm,
+          heightCm: pkg.heightCm,
+          weightKg: pkg.weightKg,
+        })
+      ) {
         return NextResponse.json(
-          { error: `Enter packed dimensions up to ${PACKAGE_LIMITS.MAX_DIM_CM} cm per side and weight up to ${PACKAGE_LIMITS.MAX_WEIGHT_KG} kg.` },
+          {
+            error: `Enter packed dimensions up to ${PACKAGE_LIMITS.MAX_DIM_CM} cm per side and weight up to ${PACKAGE_LIMITS.MAX_WEIGHT_KG} kg.`,
+          },
           { status: 422 },
         );
       }
       const weightGrams = Math.max(
-        cartWeightGrams([{ quantity: 1, weight: Math.round(pkg.weightKg * 1000) }]) ?? 0,
-        calculateVolumetricWeight([{ quantity: 1, lengthCm: pkg.lengthCm, widthCm: pkg.widthCm, heightCm: pkg.heightCm }]) ?? 0,
+        cartWeightGrams([
+          { quantity: 1, weight: Math.round(pkg.weightKg * 1000) },
+        ]) ?? 0,
+        calculateVolumetricWeight([
+          {
+            quantity: 1,
+            lengthCm: pkg.lengthCm,
+            widthCm: pkg.widthCm,
+            heightCm: pkg.heightCm,
+          },
+        ]) ?? 0,
       );
-      const fwd = await calculateShipping({ destinationPincode: pin, paymentMode: "Pre-paid", weightGrams, mode });
-      if (!fwd.ok) return NextResponse.json({ error: fwd.message, errorCode: fwd.errorCode }, { status: 422 });
+      const fwd = await calculateShipping({
+        destinationPincode: pin,
+        paymentMode: "Pre-paid",
+        weightGrams,
+        mode,
+      });
+      if (!fwd.ok)
+        return NextResponse.json(
+          { error: fwd.message, errorCode: fwd.errorCode },
+          { status: 422 },
+        );
       const legs = deriveLegs(fwd.quote.amountPaise, mods.method);
       shipPaise = legs.totalPaise;
       shipMeta = {
@@ -161,7 +223,10 @@ export async function POST(req: NextRequest) {
     // Mixed carts are allowed: fixed-price work is charged now, quote items stay pending.
     const quoteOnly = totals.subtotal === 0 && totals.hasQuotes;
     if (!quoteOnly && totals.total <= 0) {
-      return NextResponse.json({ error: "Invalid order amount" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid order amount" },
+        { status: 400 },
+      );
     }
 
     const { profile } = await getCurrentAuth();
@@ -169,7 +234,9 @@ export async function POST(req: NextRequest) {
 
     // ── Persist saved address for logged-in customers (first one = default) ──
     if (profile && cfg.saveAddress) {
-      const existingCount = await prisma.address.count({ where: { profileId: profile.id } });
+      const existingCount = await prisma.address.count({
+        where: { profileId: profile.id },
+      });
       await prisma.address.create({
         data: {
           profileId: profile.id,
@@ -190,10 +257,14 @@ export async function POST(req: NextRequest) {
     let discountAmount = 0;
     let couponEligible: CouponEligible | null = null;
     if (parsed.data.couponCode) {
-      const res = await validateCoupon(parsed.data.couponCode, totals.subtotal, {
-        profileId: profile?.id ?? null,
-        email: cfg.customer.email,
-      });
+      const res = await validateCoupon(
+        parsed.data.couponCode,
+        totals.subtotal,
+        {
+          profileId: profile?.id ?? null,
+          email: cfg.customer.email,
+        },
+      );
       if (!res.ok) {
         return NextResponse.json({ error: res.error }, { status: 400 });
       }
@@ -201,7 +272,10 @@ export async function POST(req: NextRequest) {
       couponEligible = res.coupon;
       totals.total -= discountAmount;
       if (totals.total <= 0) {
-        return NextResponse.json({ error: "Invalid order amount" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Invalid order amount" },
+          { status: 400 },
+        );
       }
     }
 
@@ -230,7 +304,10 @@ export async function POST(req: NextRequest) {
       ...(shipMeta ? { modsShipping: shipMeta } : {}),
     };
 
-    const street = [cfg.shippingAddress.streetAddress, cfg.shippingAddress.addressLine2]
+    const street = [
+      cfg.shippingAddress.streetAddress,
+      cfg.shippingAddress.addressLine2,
+    ]
       .filter(Boolean)
       .join(", ");
 
@@ -240,8 +317,11 @@ export async function POST(req: NextRequest) {
       const razorpay = getRazorpay();
       if (!razorpay) {
         return NextResponse.json(
-          { error: "Online payments are temporarily unavailable. Please submit an inquiry instead." },
-          { status: 503 }
+          {
+            error:
+              "Online payments are temporarily unavailable. Please submit an inquiry instead.",
+          },
+          { status: 503 },
         );
       }
       const razorpayCustomerId = await ensureRazorpayCustomer(razorpay, {
@@ -254,7 +334,11 @@ export async function POST(req: NextRequest) {
         amount: totals.total, // server-calculated paise
         currency: "INR",
         receipt: orderNumber,
-        notes: { orderNumber, type: "SERVICE", customerEmail: cfg.customer.email },
+        notes: {
+          orderNumber,
+          type: "SERVICE",
+          customerEmail: cfg.customer.email,
+        },
       });
       rzpOrderId = rzpOrder.id;
       rzpCustomerId = razorpayCustomerId;
@@ -338,7 +422,11 @@ export async function POST(req: NextRequest) {
     if (couponEligible) await incrementCouponUsage(couponEligible.couponId);
 
     if (quoteOnly) {
-      return NextResponse.json({ orderNumber, orderId: order.id, requiresQuote: true });
+      return NextResponse.json({
+        orderNumber,
+        orderId: order.id,
+        requiresQuote: true,
+      });
     }
 
     return NextResponse.json({
@@ -347,10 +435,14 @@ export async function POST(req: NextRequest) {
       razorpayOrderId: rzpOrderId,
       amount: totals.total,
       currency: "INR",
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
+      keyId:
+        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
     console.error("Create service order error:", error);
-    return NextResponse.json({ error: "Failed to create service order" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create service order" },
+      { status: 500 },
+    );
   }
 }

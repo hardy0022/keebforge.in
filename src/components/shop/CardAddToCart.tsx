@@ -5,7 +5,13 @@ import { addToCart } from "@/app/actions/cart";
 import CartIcon from "@/components/icons/cart-icon";
 import type { AnimatedIconHandle } from "@/components/icons/types";
 
-export function CardAddToCart({ productId, disabled }: { productId: string; disabled?: boolean }) {
+export function CardAddToCart({
+  productId,
+  disabled,
+}: {
+  productId: string;
+  disabled?: boolean;
+}) {
   const [state, action, pending] = useActionState(addToCart, null);
   const cartIconRef = useRef<AnimatedIconHandle>(null);
 
