@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { defineCached, TAG, TTL } from "@/lib/cache";
 import type { ProductStatus, ProductType } from "@/lib/product-labels";
 export type { ProductStatus, ProductType };
 export { PRODUCT_STATUS_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/product-labels";
@@ -10,13 +11,34 @@ export function availableStock(stock: number, reserved: number) {
   return Math.max(0, stock - reserved);
 }
 
-// ─── Categories & brands ─────────────────────────────────────────────────────
+// ─── Categories & brands (admin catalog reads) ──────────────────────────────
+// Admin-only content that feeds the admin category/brand pickers on 5+ pages.
+// Cached under their own tags and invalidated by the matching admin actions
+// (saveCategory / saveBrand / saveProduct call the invalidate* helpers).
+// Note: the product counts embedded in `_count` may lag the 5-min window
+// until a category/product action purges the tag — cosmetic, TTL covers it.
 
-export const getAdminCategories = cache(() =>
-  prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }], include: { _count: { select: { products: true } } } })
+export const getAdminCategories = defineCached(
+  () => prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }], include: { _count: { select: { products: true } } } }),
+  { tags: [TAG.categories], revalidate: TTL.catalog, keys: ["admin-categories"] }
 );
 
-export const getAdminBrands = cache(() => prisma.brand.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { products: true } } } }));
+export const getAdminBrands = defineCached(
+  () => prisma.brand.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { products: true } } } }),
+  { tags: [TAG.brands], revalidate: TTL.catalog, keys: ["admin-brands"] }
+);
+
+// ─── Work / portfolio (admin content, same tag as the public /work feed) ────
+
+export const getAdminWorkProjects = defineCached(
+  () => prisma.workProject.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
+  { tags: [TAG.work], revalidate: TTL.stable, keys: ["admin-work-projects"] }
+);
+
+export const getAdminWorkProject = defineCached(
+  (id: string) => prisma.workProject.findUnique({ where: { id } }),
+  { tags: [TAG.work], revalidate: TTL.stable, keys: ["admin-work-project"] }
+);
 
 // ─── Product list ────────────────────────────────────────────────────────────
 

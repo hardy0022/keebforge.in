@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { Prisma, OrderStatus, PaymentStatus, ReviewStatus, ReviewType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { defineCached, TAG, TTL } from "@/lib/cache";
 
 import { fmtIST, istDayEnd, istDayKey, istDayStart, startOfTodayIST, endOfTodayIST, daysAgoISTDayStart } from "@/lib/ist";
 
@@ -259,7 +260,7 @@ export type AdminReviewRow = Prisma.ReviewGetPayload<{
   };
 }> & { images: { url: string }[] };
 
-export const getAdminReviews = cache((params: AdminReviewsQuery) => {
+const adminReviewsPage = cache(async (params: AdminReviewsQuery) => {
   const { status, type, rating, q, page = 1, pageSize = 20 } = params;
   const where: Prisma.ReviewWhereInput = {
     ...(status ? { status } : {}),
@@ -293,21 +294,34 @@ export const getAdminReviews = cache((params: AdminReviewsQuery) => {
     product: { select: { id: true, name: true, slug: true, active: true } },
   } satisfies Prisma.ReviewSelect;
 
-  return Promise.all([
+  const pageResults = await Promise.all([
     prisma.review.count({ where }),
     prisma.review.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize, select }),
-  ]).then(async ([total, items]) => {
-    const media = await prisma.media.findMany({
-      where: { entityType: "REVIEW", entityId: { in: items.map((r) => r.id) } },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    });
-    const byReview = new Map<string, { url: string }[]>();
-    for (const m of media) {
-      const list = byReview.get(m.entityId) ?? [];
-      list.push({ url: m.secureUrl });
-      byReview.set(m.entityId, list);
-    }
-    const rows: AdminReviewRow[] = items.map((r) => ({ ...r, images: byReview.get(r.id) ?? [] }));
-    return { items: rows, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
+  ]);
+  const [total, items] = pageResults;
+  const media = await prisma.media.findMany({
+    where: { entityType: "REVIEW", entityId: { in: items.map((r) => r.id) } },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
+  const byReview = new Map<string, { url: string }[]>();
+  for (const m of media) {
+    const list = byReview.get(m.entityId) ?? [];
+    list.push({ url: m.secureUrl });
+    byReview.set(m.entityId, list);
+  }
+  const rows: AdminReviewRow[] = items.map((r) => ({ ...r, images: byReview.get(r.id) ?? [] }));
+  return { items: rows, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
 });
+
+const cachedAdminReviews = defineCached(adminReviewsPage, {
+  tags: [TAG.reviews],
+  revalidate: TTL.reviews,
+  keys: ["admin-reviews"],
+});
+
+export function getAdminReviews(params: AdminReviewsQuery) {
+  // Search text is unbounded user input — route it around the persistent
+  // cache (same rule as the public shop search); moderation status/type/rating
+  // filters stay cache-keyed because admin actions invalidate on every change.
+  return params.q ? adminReviewsPage(params) : cachedAdminReviews(params);
+}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth/admin";
-import { prisma } from "@/lib/prisma";
+import { getAdminWorkProjects } from "@/lib/admin-catalog";
 import { WorkList } from "@/components/admin/work/WorkList";
 
 export const metadata: Metadata = {
@@ -11,9 +11,7 @@ export const metadata: Metadata = {
 
 export default async function AdminWorkPage() {
   await requirePermission("setting", "update");
-  const projects = await prisma.workProject.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  });
+  const projects = await getAdminWorkProjects();
 
   const rows = projects.map((p) => ({
     id: p.id,

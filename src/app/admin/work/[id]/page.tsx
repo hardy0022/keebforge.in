@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/auth/admin";
-import { prisma } from "@/lib/prisma";
+import { getAdminWorkProject } from "@/lib/admin-catalog";
 import { WorkForm, type WorkProjectProp } from "@/components/admin/work/WorkForm";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function AdminWorkEditPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission("setting", "update");
   const { id } = await params;
-  const project = await prisma.workProject.findUnique({ where: { id } });
+  const project = await getAdminWorkProject(id);
   if (!project) notFound();
 
   const prop: WorkProjectProp = {

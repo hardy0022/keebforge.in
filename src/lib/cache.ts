@@ -17,6 +17,7 @@ import { unstable_cache, updateTag } from "next/cache";
 export const TAG = {
   products: "products",
   categories: "categories",
+  brands: "brands",
   services: "services",
   work: "work",
   reviews: "reviews",
@@ -115,6 +116,11 @@ export function invalidateProducts() {
 export function invalidateCategories() {
   updateTag(TAG.categories);
   updateTag(TAG.products);
+}
+
+/** A brand changed (admin only; brand pickers re-render from this slice). */
+export function invalidateBrands() {
+  updateTag(TAG.brands);
 }
 
 /** Mods/services pricing or availability changed. */

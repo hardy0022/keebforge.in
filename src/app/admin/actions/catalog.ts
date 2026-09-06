@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { deleteImage, renameAsset } from "@/lib/cloudinary";
-import { invalidateCategories, invalidateProducts } from "@/lib/cache";
+import { invalidateBrands, invalidateCategories, invalidateProducts } from "@/lib/cache";
 
 export type CatalogActionState = { ok?: boolean; error?: string; id?: string; message?: string };
 
@@ -575,6 +575,7 @@ export async function saveBrand(_prev: CatalogActionState, formData: FormData): 
     revalidatePath("/admin/settings/brands");
     revalidatePath("/shop");
     invalidateProducts();
+    invalidateBrands();
     return { ok: true, id: brand.id };
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: "A brand with this slug already exists." };
