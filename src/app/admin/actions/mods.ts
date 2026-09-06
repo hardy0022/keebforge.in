@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ServiceUnit } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
+import { invalidateServices } from "@/lib/cache";
 
 export type ModActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -71,6 +72,7 @@ export async function updateModPrice(_prev: ModActionState, formData: FormData):
   });
   revalidatePath("/admin/mods");
   revalidatePath("/mods");
+  invalidateServices();
   return { ok: true, message: "Price updated" };
 }
 
@@ -118,5 +120,6 @@ export async function saveMod(_prev: ModActionState, formData: FormData): Promis
 
   revalidatePath("/admin/mods");
   revalidatePath("/mods");
+  invalidateServices();
   return { ok: true, message: "Mod saved" };
 }

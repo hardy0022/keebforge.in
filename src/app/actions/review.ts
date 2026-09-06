@@ -11,6 +11,7 @@ import {
 } from "@/lib/cloudinary";
 import { IMAGE_TYPES_MESSAGE, sniffImageType } from "@/lib/image-validation";
 import { MAX_REVIEW_IMAGES, recalcProductRating, verifiedProfileIds } from "@/lib/reviews";
+import { invalidateReviews } from "@/lib/cache";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -190,6 +191,9 @@ const verified = product ? (await verifiedProfileIds(product.id, [profile.id])).
   }
 
   if (product) await recalcProductRating(product.id);
+  // A review edit can touch an APPROVED review (public feed + product rating),
+  // so flush the reviews slice (and the product-rating payload) on any submit.
+  invalidateReviews();
   if (product) revalidatePath(`/product/${product.slug}`);
   else revalidatePath("/");
   revalidatePath("/admin/reviews");
@@ -212,6 +216,7 @@ export async function deleteOwnReview(formData: FormData): Promise<ReviewSubmitS
   await prisma.media.deleteMany({ where: { entityType: "REVIEW", entityId: id } });
   for (const m of media) await deleteImage(m.publicId).catch(() => {});
   if (review.productId) await recalcProductRating(review.productId);
+  invalidateReviews();
 
   const slug = review.productSlugSnapshot;
   if (slug) revalidatePath(`/product/${slug}`);

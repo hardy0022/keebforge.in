@@ -2,33 +2,52 @@ import "server-only";
 import { cache } from "react";
 import type { Prisma, ShopSectionType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { TAG, TTL, defineCached } from "@/lib/cache";
 
-/** Mod groups with their active mods, for a device. */
-export const getModsCatalog = cache((device?: "KEYBOARD" | "MOUSE") =>
-  prisma.mods.findMany({
-    where: { active: true, ...(device ? { device } : {}) },
-    orderBy: { sortOrder: "asc" },
-    include: {
-      services: {
-        where: { active: true },
-        orderBy: { sortOrder: "asc" },
+/** Mod groups with their active mods, for a device. Admin-only edits. */
+export const getModsCatalog = defineCached(
+  (device?: "KEYBOARD" | "MOUSE") =>
+    prisma.mods.findMany({
+      where: { active: true, ...(device ? { device } : {}) },
+      orderBy: { sortOrder: "asc" },
+      include: {
+        services: {
+          where: { active: true },
+          orderBy: { sortOrder: "asc" },
+        },
       },
-    },
-  })
+    }),
+  { tags: [TAG.services], revalidate: TTL.stable, keys: ["mods-catalog"] }
 );
 
-export const getWorkProjectBySlug = cache((slug: string) =>
-  prisma.workProject.findUnique({ where: { slug } })
+export const getWorkProjectBySlug = defineCached(
+  (slug: string) => prisma.workProject.findUnique({ where: { slug } }),
+  { tags: [TAG.work], revalidate: TTL.stable, keys: ["work-project-by-slug"] }
 );
 
-export const getSiteSetting = cache((key: string) =>
-  prisma.siteSetting.findUnique({ where: { key } }).then((s) => s?.value ?? null)
+/** All active portfolio projects for /work. Admin-only edits. */
+export const getWorkProjects = defineCached(
+  () =>
+    prisma.workProject.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { featured: "desc" }, { createdAt: "desc" }],
+    }),
+  { tags: [TAG.work], revalidate: TTL.stable, keys: ["work-projects"] }
+);
+
+/** Single siteSetting read, cached short and invalidated on admin save.
+ *  Env-specific keys (maintenanceMode.production vs .development) stay
+ *  separate — one key, one cache entry, never merged. */
+export const getSiteSetting = defineCached(
+  (key: string) => prisma.siteSetting.findUnique({ where: { key } }).then((s) => s?.value ?? null),
+  { tags: [TAG.siteSettings], revalidate: TTL.settings, keys: ["site-setting"] }
 );
 
 // ─── Shop catalog ───────────────────────────────────────────────────────────
 
-export const getCategoryBySlug = cache((slug: string) =>
-  prisma.category.findFirst({ where: { slug, active: true } })
+export const getCategoryBySlug = defineCached(
+  (slug: string) => prisma.category.findFirst({ where: { slug, active: true } }),
+  { tags: [TAG.categories], revalidate: TTL.catalog, keys: ["category-by-slug"] }
 );
 
 export type ShopSort = "newest" | "price-asc" | "price-desc" | "name-asc" | "name-desc";
@@ -85,7 +104,9 @@ const PRODUCT_LIST = {
 
 export type ShopProduct = Prisma.ProductGetPayload<{ select: typeof PRODUCT_LIST }>;
 
-export const getShopProducts = cache((params: ShopParams) => {
+/** Deduped raw query (React.cache only) — used for search, whose unbounded
+ *  query strings must not grow the persistent cache. */
+const shopProducts = cache(async (params: ShopParams) => {
   const {
     categorySlug,
     productType,
@@ -134,39 +155,72 @@ export const getShopProducts = cache((params: ShopParams) => {
   }));
 });
 
-export const getProductBySlug = cache((slug: string) =>
-  prisma.product.findFirst({
-    where: { slug, active: true },
-    include: {
-      category: true,
-      brand: { where: { active: true } },
-      variants: { where: { active: true }, orderBy: { price: "asc" } },
-      optionGroups: {
-        where: { enabled: true },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        include: {
-          options: { where: { enabled: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
-        },
-      },
-      images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }] },
-    },
-  })
+/** Cross-request cached listing (all filter variants except search). */
+const cachedShopProducts = defineCached(
+  (params: ShopParams) => shopProducts(params),
+  { keys: ["shop-products"], tags: [TAG.products, TAG.categories], revalidate: TTL.catalog },
 );
 
-export const getRelatedProducts = cache(async (productId: string, categoryId: string, take = 4) => {
-  const sameCategory = await prisma.product.findMany({
-    where: { active: true, id: { not: productId }, categoryId },
-    orderBy: { createdAt: "desc" },
-    take,
-    select: PRODUCT_LIST,
-  });
-  if (sameCategory.length >= take) return sameCategory;
-  // ponytail: top up thin categories with other active products so the grid never shows 1 lonely card
-  const fill = await prisma.product.findMany({
-    where: { active: true, id: { notIn: [productId, ...sameCategory.map((p) => p.id)] } },
-    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-    take: take - sameCategory.length,
-    select: PRODUCT_LIST,
-  });
-  return [...sameCategory, ...fill];
-});
+/** Search hits the raw query (unbounded user strings must not fill the data
+ *  cache); every other listing shape is cached and invalidated by product /
+ *  category admin mutations. */
+export function getShopProducts(params: ShopParams) {
+  const key = {
+    categorySlug: params.categorySlug,
+    productType: params.productType,
+    brandSlug: params.brandSlug,
+    minPrice: params.minPrice,
+    maxPrice: params.maxPrice,
+    inStock: params.inStock,
+    sort: params.sort ?? "newest",
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 24,
+  };
+  const q = params.search?.trim();
+  return q ? shopProducts({ ...key, search: q }) : cachedShopProducts(key);
+}
+
+export const getProductBySlug = defineCached(
+  (slug: string) =>
+    prisma.product.findFirst({
+      where: { slug, active: true },
+      include: {
+        category: true,
+        brand: { where: { active: true } },
+        variants: { where: { active: true }, orderBy: { price: "asc" } },
+        optionGroups: {
+          where: { enabled: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          include: {
+            options: { where: { enabled: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+          },
+        },
+        images: { where: { active: true }, orderBy: [{ primary: "desc" }, { sortOrder: "asc" }] },
+      },
+    }),
+  // unstable_cache tags are static per wrapper, so per-slug tags aren't
+  // available here (Next 16 without cache components); a single product edit
+  // invalidates the whole products slice instead.
+  { tags: [TAG.products, TAG.categories], revalidate: TTL.catalog, keys: ["product-by-slug"] }
+);
+
+export const getRelatedProducts = defineCached(
+  async (productId: string, categoryId: string, take: number = 4) => {
+    const sameCategory = await prisma.product.findMany({
+      where: { active: true, id: { not: productId }, categoryId },
+      orderBy: { createdAt: "desc" },
+      take,
+      select: PRODUCT_LIST,
+    });
+    if (sameCategory.length >= take) return sameCategory;
+    // ponytail: top up thin categories with other active products so the grid never shows 1 lonely card
+    const fill = await prisma.product.findMany({
+      where: { active: true, id: { notIn: [productId, ...sameCategory.map((p) => p.id)] } },
+      orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+      take: take - sameCategory.length,
+      select: PRODUCT_LIST,
+    });
+    return [...sameCategory, ...fill];
+  },
+  { tags: [TAG.products, TAG.categories], revalidate: TTL.catalog, keys: ["related-products"] }
+);

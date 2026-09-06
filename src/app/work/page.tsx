@@ -6,7 +6,7 @@ import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { CtaSection } from "@/components/ui/CtaSection";
 import { buildMetadata } from "@/lib/seo";
-import { prisma } from "@/lib/prisma";
+import { getWorkProjects } from "@/lib/data";
 
 export const metadata: Metadata = buildMetadata({
   title: "Sample Work & Portfolio | KeebForge",
@@ -30,10 +30,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
   const [{ rp }] = [await searchParams];
   const page = Math.max(1, parseInt(rp ?? "1", 10) || 1);
 
-  const projects = await prisma.workProject.findMany({
-    where: { active: true },
-    orderBy: [{ sortOrder: "asc" }, { featured: "desc" }, { createdAt: "desc" }],
-  });
+  const projects = await getWorkProjects();
 
   const PER_PAGE = 12;
   const featured = projects[0];

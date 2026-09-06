@@ -1,17 +1,18 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { AddToCart } from "@/components/shop/AddToCart";
 import { ProductConfigurator } from "@/components/shop/ProductConfigurator";
 import { ShippingWarranty } from "@/components/shop/ShippingWarranty";
-import { ProductCard } from "@/components/shop/ProductCard";
-import { SectionHead } from "@/components/ui/SectionHead";
 import { WhyForge } from "@/components/home/WhyForge";
 import { ProductGallery } from "@/components/shop/ProductGallery";
 import { ReviewSection } from "@/components/reviews/ReviewSection";
+import { RelatedProducts } from "@/components/shop/RelatedProducts";
+import { ReviewSectionSkeleton, RelatedProductsSkeleton } from "@/components/shop/skeletons";
 import { buildMetadata, JsonLd, breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
-import { getProductBySlug, getRelatedProducts } from "@/lib/data";
+import { getProductBySlug } from "@/lib/data";
 import { availableQuantity } from "@/lib/cart";
 import { formatINR, formatINRRange } from "@/lib/money";
 import { isPurchasable, CONDITION_LABELS } from "@/lib/shop";
@@ -65,7 +66,6 @@ export default async function ProductPage({ params, searchParams }: Props & { se
   const features = getJsonList(product.features);
   const included = getJsonList(product.whatsIncluded);
 
-  const related = await getRelatedProducts(product.id, product.categoryId);
   const url = `${SITE_URL}/product/${product.slug}`;
 
   const variantPrices = product.variants.map((v) => v.price ?? product.price);
@@ -246,21 +246,14 @@ export default async function ProductPage({ params, searchParams }: Props & { se
       />
 
       {/* ─── CUSTOMER REVIEWS ────────────────────────────────────────────── */}
-      <ReviewSection scope={{ type: "product", product: { id: product.id, name: product.name, slug: product.slug } }} page={reviewPage} />
+      <Suspense fallback={<ReviewSectionSkeleton />}>
+        <ReviewSection scope={{ type: "product", product: { id: product.id, name: product.name, slug: product.slug } }} page={reviewPage} />
+      </Suspense>
 
       {/* ─── RELATED ─────────────────────────────────────────────────────── */}
-      {related.length > 0 && (
-        <section className="svc-section" aria-labelledby="related-heading">
-          <div className="wrap">
-            <SectionHead title="You May Also Like" />
-            <div className="shop-grid">
-              {related.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      <Suspense fallback={<RelatedProductsSkeleton />}>
+        <RelatedProducts productId={product.id} categoryId={product.categoryId} />
+      </Suspense>
 
       <WhyForge num="// Why Forge" />
 

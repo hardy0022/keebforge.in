@@ -1,7 +1,7 @@
 import "server-only";
-import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { TAG, TTL, defineCached } from "@/lib/cache";
 
 /** Review photos live in the generic Media table (entityType REVIEW). */
 export type ReviewWithImages = Prisma.ReviewGetPayload<{ include: { profile: true } }> & {
@@ -12,30 +12,35 @@ export const REVIEW_PAGE_SIZE = 8;
 export const MAX_REVIEW_IMAGES = 4;
 
 /** Aggregate rating summary for a product, from APPROVED PRODUCT reviews only. */
-export const getReviewSummary = cache((productId: string) =>
-  prisma.review
-    .aggregate({
-      where: { productId, type: "PRODUCT", status: "APPROVED" },
-      _avg: { rating: true },
-      _count: { _all: true },
-    })
-    .then((r) => ({
-      count: r._count._all,
-      average: r._avg.rating ?? null,
-    }))
+export const getReviewSummary = defineCached(
+  (productId: string) =>
+    prisma.review
+      .aggregate({
+        where: { productId, type: "PRODUCT", status: "APPROVED" },
+        _avg: { rating: true },
+        _count: { _all: true },
+      })
+      .then((r) => ({
+        count: r._count._all,
+        average: r._avg.rating ?? null,
+      })),
+  { tags: [TAG.reviews], revalidate: TTL.reviews, keys: ["review-summary"] }
 );
 
 /** Per-star distribution (5 → 1) for the review-summary bars. */
-export const getReviewDistribution = cache(async (productId: string) => {
-  const rows = await prisma.review.groupBy({
-    by: ["rating"],
-    where: { productId, type: "PRODUCT", status: "APPROVED" },
-    _count: { _all: true },
-  });
-  const dist = [0, 0, 0, 0, 0]; // index 0 = 5★ … index 4 = 1★
-  for (const r of rows) if (r.rating >= 1 && r.rating <= 5) dist[5 - r.rating] = r._count._all;
-  return dist;
-});
+export const getReviewDistribution = defineCached(
+  async (productId: string) => {
+    const rows = await prisma.review.groupBy({
+      by: ["rating"],
+      where: { productId, type: "PRODUCT", status: "APPROVED" },
+      _count: { _all: true },
+    });
+    const dist = [0, 0, 0, 0, 0]; // index 0 = 5★ … index 4 = 1★
+    for (const r of rows) if (r.rating >= 1 && r.rating <= 5) dist[5 - r.rating] = r._count._all;
+    return dist;
+  },
+  { tags: [TAG.reviews], revalidate: TTL.reviews, keys: ["review-distribution"] }
+);
 
 /** Paginated APPROVED reviews (DB-level), newest first, with photo media. */
 async function reviewsPage(where: Prisma.ReviewWhereInput, opts: { page?: number; pageSize?: number } = {}) {
@@ -74,32 +79,45 @@ async function reviewsPage(where: Prisma.ReviewWhereInput, opts: { page?: number
 }
 
 /** Paginated APPROVED product reviews (DB-level), newest first. */
-export const getProductReviews = cache((productId: string, opts: { page?: number; pageSize?: number } = {}) =>
-  reviewsPage({ productId, type: "PRODUCT", status: "APPROVED" }, opts)
+export const getProductReviews = defineCached(
+  (productId: string, opts: { page?: number; pageSize?: number } = {}) =>
+    reviewsPage(
+      { productId, type: "PRODUCT", status: "APPROVED" },
+      { page: opts.page ?? 1, pageSize: opts.pageSize ?? REVIEW_PAGE_SIZE }
+    ),
+  { tags: [TAG.reviews], revalidate: TTL.reviews, keys: ["product-reviews"] }
 );
 
 /** Site-wide customer feed for /work: APPROVED product + general reviews. */
-export const getPublicReviews = cache((opts: { page?: number; pageSize?: number } = {}) =>
-  reviewsPage({ status: "APPROVED", type: { in: ["PRODUCT", "GENERAL"] } }, opts)
+export const getPublicReviews = defineCached(
+  (opts: { page?: number; pageSize?: number } = {}) =>
+    reviewsPage(
+      { status: "APPROVED", type: { in: ["PRODUCT", "GENERAL"] } },
+      { page: opts.page ?? 1, pageSize: opts.pageSize ?? REVIEW_PAGE_SIZE }
+    ),
+  { tags: [TAG.reviews], revalidate: TTL.reviews, keys: ["public-reviews"] }
 );
 
 /** Site-wide rating summary (5 → 1 distribution) for approved product+general reviews. */
-export const getSiteReviewSummary = cache(async () => {
-  const ratings = await prisma.review.findMany({
-    where: { status: "APPROVED", type: { in: ["PRODUCT", "GENERAL"] } },
-    select: { rating: true },
-  });
-  const count = ratings.length;
-  const distribution = [0, 0, 0, 0, 0]; // index 0 = 5★ … index 4 = 1★
-  let sum = 0;
-  for (const r of ratings) {
-    if (r.rating >= 1 && r.rating <= 5) {
-      distribution[5 - r.rating]++;
-      sum += r.rating;
+export const getSiteReviewSummary = defineCached(
+  async () => {
+    const ratings = await prisma.review.findMany({
+      where: { status: "APPROVED", type: { in: ["PRODUCT", "GENERAL"] } },
+      select: { rating: true },
+    });
+    const count = ratings.length;
+    const distribution = [0, 0, 0, 0, 0]; // index 0 = 5★ … index 4 = 1★
+    let sum = 0;
+    for (const r of ratings) {
+      if (r.rating >= 1 && r.rating <= 5) {
+        distribution[5 - r.rating]++;
+        sum += r.rating;
+      }
     }
-  }
-  return { count, average: count ? sum / count : null, distribution };
-});
+    return { count, average: count ? sum / count : null, distribution };
+  },
+  { tags: [TAG.reviews], revalidate: TTL.reviews, keys: ["site-review-summary"] }
+);
 
 /** Reviewer profile ids that have a fulfilled order containing this product. */
 export async function verifiedProfileIds(productId: string, profileIds: string[]): Promise<Set<string>> {

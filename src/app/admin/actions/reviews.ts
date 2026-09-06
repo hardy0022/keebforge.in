@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { deleteImage } from "@/lib/cloudinary";
 import { recalcProductRating } from "@/lib/reviews";
+import { invalidateReviews } from "@/lib/cache";
 
 /** Moderator sets a review's moderation status. */
 export async function moderateReview(reviewId: string, status: ReviewStatus) {
@@ -14,6 +15,7 @@ export async function moderateReview(reviewId: string, status: ReviewStatus) {
   if (!review) return;
   await prisma.review.update({ where: { id: reviewId }, data: { status } });
   if (review.productId) await recalcProductRating(review.productId);
+  invalidateReviews();
   revalidatePath("/admin/reviews");
   if (review.productSlugSnapshot) revalidatePath(`/product/${review.productSlugSnapshot}`);
 }
@@ -31,6 +33,7 @@ export async function deleteReviewAsAdmin(reviewId: string) {
   await prisma.media.deleteMany({ where: { entityType: "REVIEW", entityId: reviewId } });
   for (const m of media) await deleteImage(m.publicId).catch(() => {});
   if (review.productId) await recalcProductRating(review.productId);
+  invalidateReviews();
   revalidatePath("/admin/reviews");
   if (review.productSlugSnapshot) revalidatePath(`/product/${review.productSlugSnapshot}`);
 }

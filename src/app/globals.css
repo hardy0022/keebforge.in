@@ -12945,3 +12945,32 @@ a.reviews-page:hover {
     justify-content: flex-start;
   }
 }
+
+/* ═══ Route-loading / Suspense skeletons ═════════════════════════════════════
+   Reuse real layout classes (shop-card, product-gallery-main, review-card…)
+   + `.sk` fill blocks so placeholders swap without layout shift.
+   Shimmer is visual only; disabled for prefers-reduced-motion. */
+.sk {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg3);
+  border-radius: var(--r-sm);
+}
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(232, 238, 248, 0.06), transparent);
+  animation: sk-shimmer 1.8s ease-in-out infinite;
+}
+@keyframes sk-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk::after {
+    animation: none;
+  }
+}

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { getSiteSetting } from "@/lib/data";
 
 /* Central social config — update handles here only.
    Reddit/Discord/Instagram mirror the owner's real profiles (see /about);
@@ -89,10 +89,7 @@ function SocialButton({ label }: { label: (typeof SOCIALS)[number]["label"] }) {
 }
 
 export async function SiteFooter() {
-  const accepting = await prisma.siteSetting
-    .findUnique({ where: { key: "acceptingOrders" } })
-    .then((s) => s?.value !== false)
-    .catch(() => true);
+  const accepting = (await getSiteSetting("acceptingOrders").catch(() => null)) !== false;
 
   return (
     <footer className="site-footer">

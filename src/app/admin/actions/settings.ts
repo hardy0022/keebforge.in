@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/auth/admin";
 import type { ActionState } from "@/components/admin/ActionForm";
 import { MAINTENANCE_KEY, type Environment } from "@/lib/environment";
 import { PICKUP_SETTING_KEY, createDelhiveryWarehouse, editDelhiveryWarehouse, type PickupLocation } from "@/lib/delhivery";
+import { invalidateSiteSettings } from "@/lib/cache";
 
 const ENVIRONMENTS: Environment[] = ["production", "development"];
 
@@ -29,6 +30,7 @@ export async function toggleMaintenanceMode(_prev: ActionState, formData: FormDa
   });
 
   revalidatePath("/admin/settings");
+  invalidateSiteSettings();
 
   const label = env === "production" ? "Production" : "Development";
   return { ok: true, message: `${label} maintenance mode ${next ? "enabled" : "disabled"}.` };
@@ -104,5 +106,6 @@ export async function saveDelhiveryPickup(_prev: ActionState, formData: FormData
   });
 
   revalidatePath("/admin/settings");
+  invalidateSiteSettings();
   return { ok: true, message: "Pickup location saved and registered with Delhivery." };
 }

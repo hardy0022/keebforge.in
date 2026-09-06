@@ -12,6 +12,24 @@ const CASED_PATHS: Record<string, string> = {
 // Paths that are never blocked by maintenance mode.
 const MAINTENANCE_BYPASS = ["/admin", "/auth", "/maintenance"];
 
+// Maintenance flag TTL. Kept short (30s) so it still surfaces immediately-ish
+// after an admin flips the switch, while stopping every single public request
+// (incl. RSC navigations/prefetches) from paying a Postgres round-trip on the
+// critical path. ponytail: per-process cache — on serverless edge, each
+// instance re-checks at most once per 30s, which still cuts DB load ~99%.
+const MAINTENANCE_TTL_MS = 30_000;
+const maintenanceCache = new Map<string, { value: boolean; expires: number }>();
+
+async function isMaintenanceOn(hostname: string): Promise<boolean> {
+  const env = detectEnvironment(hostname);
+  const cached = maintenanceCache.get(env);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  const setting = await prisma.siteSetting.findUnique({ where: { key: MAINTENANCE_KEY[env] } });
+  const value = setting?.value === true;
+  maintenanceCache.set(env, { value, expires: Date.now() + MAINTENANCE_TTL_MS });
+  return value;
+}
+
 function isBypassPath(pathname: string): boolean {
   return MAINTENANCE_BYPASS.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
@@ -46,9 +64,7 @@ export async function proxy(request: NextRequest) {
   // Determine the environment FIRST from the host, then check ONLY that
   // environment's maintenance setting so production and development are isolated.
   if (!isBypassPath(pathname)) {
-    const env = detectEnvironment(request.nextUrl.hostname);
-    const setting = await prisma.siteSetting.findUnique({ where: { key: MAINTENANCE_KEY[env] } });
-    if (setting?.value === true) {
+    if (await isMaintenanceOn(request.nextUrl.hostname)) {
       const url = request.nextUrl.clone();
       url.pathname = "/maintenance";
       return NextResponse.redirect(url, 302);

@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { deleteImage, renameAsset } from "@/lib/cloudinary";
+import { invalidateCategories, invalidateProducts } from "@/lib/cache";
 
 export type CatalogActionState = { ok?: boolean; error?: string; id?: string; message?: string };
 
@@ -387,6 +388,9 @@ export async function saveProduct(_prev: CatalogActionState, formData: FormData)
     revalidatePath("/admin/products/inventory");
     revalidatePath("/shop");
 
+    // Data-cache: the whole products slice (listings + detail + related + home).
+    invalidateProducts();
+
     // Option groups sync (empty payload clears all groups).
     if (optionConfig.groups.length > 0 || (await prisma.productOptionGroup.count({ where: { productId: product.id } })) > 0) {
       await syncOptionGroups(product.id, optionConfig.groups);
@@ -420,6 +424,7 @@ export async function setProductStatus(_prev: CatalogActionState, formData: Form
   });
   revalidatePath("/admin/products");
   revalidatePath("/shop");
+  invalidateProducts();
   return { ok: true };
 }
 
@@ -491,6 +496,7 @@ export async function duplicateProduct(_prev: CatalogActionState, formData: Form
   });
 
   revalidatePath("/admin/products");
+  invalidateProducts();
   return { ok: true, id: copy.id };
 }
 
@@ -523,6 +529,7 @@ export async function saveCategory(_prev: CatalogActionState, formData: FormData
     });
     revalidatePath("/admin/products/categories");
     revalidatePath("/admin/settings/categories");
+    invalidateCategories();
     return { ok: true, id: cat.id };
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: "A category with this slug already exists." };
@@ -567,6 +574,7 @@ export async function saveBrand(_prev: CatalogActionState, formData: FormData): 
     });
     revalidatePath("/admin/settings/brands");
     revalidatePath("/shop");
+    invalidateProducts();
     return { ok: true, id: brand.id };
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: "A brand with this slug already exists." };
@@ -643,6 +651,7 @@ export async function saveVariant(_prev: CatalogActionState, formData: FormData)
   });
   revalidatePath(`/admin/products/${product.id}`);
   revalidatePath("/admin/products/inventory");
+  invalidateProducts();
   return { ok: true, id: variant.id };
 }
 
@@ -661,6 +670,7 @@ export async function deleteVariant(_prev: CatalogActionState, formData: FormDat
   }
   revalidatePath(`/admin/products/${variant.product.id}`);
   revalidatePath("/admin/products/inventory");
+  invalidateProducts();
   return { ok: true };
 }
 
@@ -716,6 +726,7 @@ export async function adjustInventory(_prev: CatalogActionState, formData: FormD
 
   revalidatePath("/admin/products/inventory");
   revalidatePath(`/admin/products/${productId}`);
+  invalidateProducts();
   return { ok: true };
 }
 
@@ -824,5 +835,6 @@ export async function importProducts(_prev: CatalogActionState, formData: FormDa
   }
 
   revalidatePath("/admin/products");
+  invalidateProducts();
   return { ok: true, message: `Imported ${created} product${created === 1 ? "" : "s"}, skipped ${skipped}.` };
 }

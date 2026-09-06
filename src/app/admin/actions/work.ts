@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/auth/admin";
 import { deleteImage, mediaFolder, uploadBuffer } from "@/lib/cloudinary";
 import { IMAGE_TYPES_MESSAGE, isAllowedImageMime, sniffImageType } from "@/lib/image-validation";
 import type { ActionState } from "@/components/admin/ActionForm";
+import { invalidateWork } from "@/lib/cache";
 
 const MAX_IMAGES = 20;
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -139,6 +140,7 @@ export async function saveWork(_prev: ActionState, formData: FormData): Promise<
   revalidatePath("/admin/work");
   revalidatePath(`/admin/work/${projectId}`);
   revalidatePath("/admin/work/new");
+  invalidateWork();
   return { ok: true, message: "Project saved", id: projectId };
 }
 
@@ -147,6 +149,7 @@ export async function toggleWork(projectId: string, active: boolean): Promise<Ac
   await prisma.workProject.update({ where: { id: projectId }, data: { active } });
   for (const path of CLOSE_PATHS) revalidatePath(path);
   revalidatePath("/admin/work");
+  invalidateWork();
   return { ok: true, message: active ? "Published" : "Unpublished" };
 }
 
@@ -162,6 +165,7 @@ export async function moveWork(projectId: string, delta: 1 | -1): Promise<Action
   await prisma.$transaction(ordered.map((p, i) => prisma.workProject.update({ where: { id: p.id }, data: { sortOrder: i } })));
   for (const path of CLOSE_PATHS) revalidatePath(path);
   revalidatePath("/admin/work");
+  invalidateWork();
   return { ok: true, message: "Reordered" };
 }
 
@@ -176,5 +180,6 @@ export async function deleteWork(projectId: string): Promise<ActionState> {
   }
   for (const path of CLOSE_PATHS) revalidatePath(path);
   revalidatePath("/admin/work");
+  invalidateWork();
   return { ok: true, message: "Project deleted" };
 }
