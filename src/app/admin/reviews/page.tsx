@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { getAdminReviews } from "@/lib/admin";
 import { fmtIST } from "@/lib/ist";
-import { moderateReview } from "@/app/admin/actions/reviews";
 import { ReviewDeleteButton } from "@/components/admin/reviews/ReviewDeleteButton";
+import { ReviewModeration } from "@/components/admin/reviews/ReviewModeration";
 
 export const metadata: Metadata = {
   title: "Reviews | KeebForge Admin",
@@ -281,39 +281,7 @@ export default async function AdminReviewsPage({
                         <div
                           style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
                         >
-                          <form
-                            action={moderateReview.bind(null, r.id, "APPROVED")}
-                          >
-                            <button
-                              type="submit"
-                              className="btn-admin sm ok"
-                              disabled={r.status === "APPROVED"}
-                            >
-                              Approve
-                            </button>
-                          </form>
-                          <form
-                            action={moderateReview.bind(null, r.id, "PENDING")}
-                          >
-                            <button
-                              type="submit"
-                              className="btn-admin sm"
-                              disabled={r.status === "PENDING"}
-                            >
-                              Requeue
-                            </button>
-                          </form>
-                          <form
-                            action={moderateReview.bind(null, r.id, "REJECTED")}
-                          >
-                            <button
-                              type="submit"
-                              className="btn-admin sm"
-                              disabled={r.status === "REJECTED"}
-                            >
-                              Reject
-                            </button>
-                          </form>
+                          <ReviewModeration reviewId={r.id} status={r.status} />
                           <ReviewDeleteButton reviewId={r.id} />
                         </div>
                       </td>

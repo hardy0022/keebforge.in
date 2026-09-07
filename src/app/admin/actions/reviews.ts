@@ -8,17 +8,22 @@ import { deleteImage } from "@/lib/cloudinary";
 import { recalcProductRating } from "@/lib/reviews";
 import { invalidateReviews } from "@/lib/caching/cache";
 
-/** Moderator sets a review's moderation status. */
-export async function moderateReview(reviewId: string, status: ReviewStatus) {
+/** Moderator sets a review's moderation status. Returns a result so the
+ * optimistic client can reconcile/roll back; plain <form> usage ignores it. */
+export async function moderateReview(
+  reviewId: string,
+  status: ReviewStatus,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   await requirePermission("product", "view");
   const review = await prisma.review.findUnique({ where: { id: reviewId } });
-  if (!review) return;
+  if (!review) return { ok: false, error: "Review not found." };
   await prisma.review.update({ where: { id: reviewId }, data: { status } });
   if (review.productId) await recalcProductRating(review.productId);
   invalidateReviews();
   revalidatePath("/admin/reviews");
   if (review.productSlugSnapshot)
     revalidatePath(`/product/${review.productSlugSnapshot}`);
+  return { ok: true };
 }
 
 /** Admin hard-deletes a review (with its photos). */

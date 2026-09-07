@@ -66,24 +66,11 @@ export function checkAction(
 
 /** Page/action guard: unauthenticated → login; non-admin → /unauthorized. */
 export async function requireAdminContext(): Promise<AdminContext> {
+  const ctx = await getAdminContext();
+  if (ctx) return ctx;
+
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) redirect("/auth/login");
-
-  const profile = await prisma.profile.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true },
-  });
-
-  if (profileHasAdminRole(profile)) return { user: session.user, profile };
-
-  if (await hasOrgAdminRole(session.user.id)) {
-    return {
-      user: session.user,
-      profile: { ...profile!, role: "ADMIN" as Role },
-    };
-  }
-
-  redirect("/unauthorized");
+  redirect(session?.user ? "/unauthorized" : "/auth/login");
 }
 
 /** Guard requiring a specific permission; insufficient role lands on /unauthorized. */

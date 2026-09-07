@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatINR } from "@/lib/money";
@@ -1244,6 +1244,16 @@ export function ProductCheckout({
 }) {
   const router = useRouter();
 
+  // One unguessable id per checkout mount -> retried "Place order" calls can't
+  // mint duplicate orders (server replays the existing Razorpay order instead).
+  const checkoutIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    checkoutIdRef.current =
+      checkoutIdRef.current ??
+      globalThis.crypto?.randomUUID?.() ??
+      `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }, []);
+
   // cart + auth data
   const [lines, setLines] = useState<CheckoutLine[] | null>(null);
   const [authUser, setAuthUser] = useState<{
@@ -1482,6 +1492,7 @@ export function ProductCheckout({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          checkoutId: checkoutIdRef.current,
           shippingAddress: {
             firstName: form.firstName.trim(),
             lastName: form.lastName.trim(),

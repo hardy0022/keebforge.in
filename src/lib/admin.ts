@@ -48,6 +48,7 @@ export const getAdminStats = cache(async () => {
     totalCustomers,
     activeProducts,
     lowStock,
+    activeRepairs,
   ] = await Promise.all([
     prisma.order.count({
       where: { isDeleted: false, createdAt: { gte: startToday, lt: endToday } },
@@ -74,15 +75,14 @@ export const getAdminStats = cache(async () => {
         stock: { lte: prisma.product.fields.lowStockThreshold },
       },
     }),
+    prisma.order.count({
+      where: {
+        isDeleted: false,
+        type: "REPAIR",
+        status: { notIn: [...TERMINAL, "COMPLETED"] },
+      },
+    }),
   ]);
-
-  const activeRepairs = await prisma.order.count({
-    where: {
-      isDeleted: false,
-      type: "REPAIR",
-      status: { notIn: [...TERMINAL, "COMPLETED"] },
-    },
-  });
 
   return {
     todayOrders,
@@ -134,12 +134,13 @@ export const getRevenueSeries = cache(async (days: number) => {
 
 /** Repair pipeline counts per stage, from orders carrying repair records. */
 export const getRepairPipeline = cache(async () => {
-  const rows = await prisma.order.findMany({
+  const grouped = await prisma.order.groupBy({
+    by: ["status"],
     where: { isDeleted: false, type: "REPAIR" },
-    select: { status: true },
+    _count: { _all: true },
   });
   const stage: Record<string, number> = {};
-  for (const r of rows) stage[r.status] = (stage[r.status] ?? 0) + 1;
+  for (const g of grouped) stage[g.status] = g._count._all;
   return stage;
 });
 

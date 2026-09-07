@@ -112,6 +112,10 @@ export async function updateOrderStatus(
   });
   if (!order) return { error: "Order not found." };
 
+  // Idempotent replay: an identical status with no new note is a no-op, so a
+  // double-click or retried request can't mint duplicate timeline entries.
+  if (order.status === status && !note) return { ok: true };
+
   try {
     await prisma.$transaction([
       prisma.order.update({ where: { id: orderId }, data: { status } }),

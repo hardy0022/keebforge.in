@@ -3,6 +3,7 @@ import { createAuthMiddleware } from "better-auth/api";
 import { organization } from "better-auth/plugins";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { dash, sentinel } from "@better-auth/infra";
+import { Resend } from "resend";
 import { prisma } from "../../lib/prisma";
 import { isStrongPassword } from "../password";
 
@@ -21,7 +22,29 @@ export const auth = betterAuth({
       : "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
-  emailAndPassword: { enabled: true },
+  emailAndPassword: {
+    enabled: true,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: "KeebForge <no-reply@keebforge.in>",
+          to: user.email,
+          subject: "Reset your KeebForge password",
+          html:
+            `<h2>Reset your password — KeebForge.in</h2>` +
+            `<p>Hi ${user.name.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!)},</p>` +
+            `<p>We received a request to reset your password. Tap the button below to choose a new one. This link expires in 1 hour.</p>` +
+            `<p style="margin:24px 0"><a href="${url}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;border-radius:10px;text-decoration:none;font-weight:600">Reset password</a></p>` +
+            `<p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`,
+        });
+      } catch (e) {
+        // Must never fail the request (and leak that the email didn't send).
+        console.error("Resend error (password reset):", e);
+      }
+    },
+  },
   // Lets users delete their own account from /account/settings. The delete-user
   // route is disabled by default; enabling it is the only change needed — no
   // schema or deletion logic of our own.
@@ -49,7 +72,11 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx) => {
       // Enforce the register-page password policy server-side (sign-up and
       // password change only — sign-in is never gated on strength).
-      if (ctx.path === "/sign-up/email" || ctx.path === "/change-password") {
+      if (
+        ctx.path === "/sign-up/email" ||
+        ctx.path === "/change-password" ||
+        ctx.path === "/reset-password"
+      ) {
         const password = (ctx.body as { password?: unknown } | undefined)
           ?.password;
         if (typeof password === "string" && !isStrongPassword(password)) {

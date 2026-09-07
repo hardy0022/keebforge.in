@@ -71,6 +71,7 @@ const bodySchema = z.object({
   couponCode: z.string().trim().max(40).optional(),
   billingSameAsShipping: z.boolean().optional(),
   billingAddress: billingSchema.optional(),
+  checkoutId: z.string().trim().min(8).max(120).optional(),
 });
 
 /** Shipping-mode error taxonomy mapped to HTTP status. */
@@ -132,6 +133,51 @@ export async function POST(req: NextRequest) {
         { error: "Email is required." },
         { status: 400 },
       );
+    }
+
+    // ── Checkout idempotency ────────────────────────────────────────────────
+    // The client sends one unguessable checkoutId per checkout session. A retry
+    // (double click, dropped response) must not mint a second order, so we replay
+    // the Razorpay order already bound to this checkout instead of re-creating it.
+    const replayCheckoutId = parsed.data.checkoutId;
+    if (replayCheckoutId) {
+      const prior = await prisma.order.findFirst({
+        where: {
+          billingDetails: { path: ["checkoutId"], equals: replayCheckoutId },
+        },
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          total: true,
+          billingDetails: true,
+        },
+      });
+      if (prior) {
+        const b = (prior.billingDetails ?? {}) as { razorpayOrderId?: string };
+        if (b.razorpayOrderId) {
+          console.log(
+            `[create-order] replay checkout ${replayCheckoutId} -> order ${prior.orderNumber}`,
+          );
+          return NextResponse.json({
+            orderId: prior.id,
+            orderNumber: prior.orderNumber,
+            razorpayOrderId: b.razorpayOrderId,
+            amount: prior.total,
+            currency: "INR",
+            keyId:
+              process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ??
+              process.env.RAZORPAY_KEY_ID,
+            customerName: prior.customerName,
+            customerEmail: prior.customerEmail,
+            customerPhone: prior.customerPhone,
+          });
+        }
+        // Order created but Razorpay never returned an order id (gateway error):
+        // fall through and mint a fresh order — the failed attempt is an orphan.
+      }
     }
 
     // ── Server-side cart is the single source of truth ──────────────────────
@@ -474,6 +520,9 @@ export async function POST(req: NextRequest) {
       where: { id: order.id },
       data: {
         billingDetails: {
+          ...(parsed.data.checkoutId
+            ? { checkoutId: parsed.data.checkoutId }
+            : {}),
           razorpayOrderId: rzpOrder.id,
           razorpayOrderAmount: rzpOrder.amount,
           ...(razorpayCustomerId ? { razorpayCustomerId } : {}),

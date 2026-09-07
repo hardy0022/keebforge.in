@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useTransition } from "react";
 import { updateCartItem } from "@/app/actions/cart";
 
 export function CartQty({
@@ -12,13 +12,14 @@ export function CartQty({
   quantity: number;
   available: number;
 }) {
-  const [state, action, pending] = useActionState(updateCartItem, null);
+  const [state, action] = useActionState(updateCartItem, null);
+  const [pending, startTransition] = useTransition();
 
   const submit = (q: number) => {
     const fd = new FormData();
     fd.set("itemId", itemId);
     fd.set("quantity", String(Math.max(1, Math.min(available, q))));
-    action(fd);
+    startTransition(() => action(fd));
   };
 
   return (

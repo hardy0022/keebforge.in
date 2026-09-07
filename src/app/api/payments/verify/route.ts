@@ -86,8 +86,16 @@ export async function POST(req: NextRequest) {
 
     if (expectedSignature !== razorpay_signature) {
       await prisma.$transaction([
-        prisma.payment.create({
-          data: {
+        prisma.payment.upsert({
+          where: { razorpayPaymentId: razorpay_payment_id },
+          update: {
+            status: "FAILED",
+            failureReason: "Signature verification failed",
+            ...(billing.razorpayCustomerId
+              ? { razorpayCustomerId: billing.razorpayCustomerId }
+              : {}),
+          },
+          create: {
             orderId: order.id,
             amount: order.total,
             currency: "INR",
@@ -131,9 +139,27 @@ export async function POST(req: NextRequest) {
       profileId = linked;
     }
 
-    await prisma.$transaction([
-      prisma.payment.create({
-        data: {
+    // The PAID transition mirrors the webhook's idempotency: the order-level
+    // guard makes it run at most once even if a webhook and this verify race on
+    // the same razorpayPaymentId (a concurrent PAID write makes us skip, never
+    // throw on a duplicate payment row).
+    await prisma.$transaction(async (tx) => {
+      const current = await tx.order.findUnique({
+        where: { id: order.id },
+        select: { paymentStatus: true },
+      });
+      if (current?.paymentStatus === "PAID") return;
+
+      await tx.payment.upsert({
+        where: { razorpayPaymentId: razorpay_payment_id },
+        update: {
+          status: "PAID",
+          paidAt: new Date(),
+          ...(billing.razorpayCustomerId
+            ? { razorpayCustomerId: billing.razorpayCustomerId }
+            : {}),
+        },
+        create: {
           orderId: order.id,
           amount: order.total,
           currency: "INR",
@@ -147,23 +173,25 @@ export async function POST(req: NextRequest) {
             : {}),
           paidAt: new Date(),
         },
-      }),
-      prisma.order.update({
+      });
+
+      await tx.order.update({
         where: { id: order.id },
         data: {
           paymentStatus: "PAID",
           status: "PAYMENT_RECEIVED",
           ...(profileId ? { profileId } : {}),
         },
-      }),
-      prisma.orderTimeline.create({
+      });
+
+      await tx.orderTimeline.create({
         data: {
           orderId: order.id,
           status: "PAYMENT_RECEIVED",
           note: `Payment captured via Razorpay (${razorpay_payment_id}).`,
         },
-      }),
-    ]);
+      });
+    });
 
     await syncTrackingCache(order.id);
 
