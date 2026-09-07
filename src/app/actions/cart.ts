@@ -1,11 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
-import { availableQuantity, cartForCurrentUser, CART_COOKIE } from "@/lib/cart";
+import {
+  availableQuantity,
+  cartForCurrentUser,
+  cartOwnerWhere,
+  resolveCartOwner,
+} from "@/lib/cart";
 import {
   configKey,
   configSnapshot,
@@ -49,20 +51,36 @@ const qtySchema = z.object({
   quantity: z.coerce.number().int().min(1).max(50),
 });
 
-export type CartActionState = { ok?: boolean; error?: string; count?: number };
+export type CartActionState = {
+  ok?: boolean;
+  error?: string;
+  count?: number;
+  quantity?: number;
+  available?: number;
+};
 
-/** Server-side validation of quantity against live stock. Returns error or ok. */
-async function quantityCheck(
-  productId: string,
+/**
+ * Server-side validation of quantity against live stock, performed in-memory
+ * on an already-loaded product (narrow select). Returns error string or null.
+ */
+function checkQuantity(
+  product: {
+    active: boolean;
+    status: string;
+    productType: string;
+    stock: number;
+    reservedQuantity: number;
+    variants: {
+      id: string;
+      active: boolean;
+      stock: number;
+      reservedQuantity: number;
+    }[];
+  },
   variantId: string | null,
   quantity: number,
-) {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: { variants: { where: { active: true } } },
-  });
-  if (!product || !product.active)
-    return "This product is no longer available.";
+): string | null {
+  if (!product.active) return "This product is no longer available.";
 
   // Custom orders are built on demand — inventory doesn't gate ordering.
   if (product.productType === "CUSTOM") {
@@ -104,10 +122,47 @@ export async function addToCart(
   if (variantId && optionIds)
     return { error: "Choose either a variant or options, not both." };
 
-  // Custom orders are built to order one at a time — quantity is always 1.
+  // Single narrow load carries everything addToCart needs: active/status/type for
+  // gating, product + variant stock for availability, and config options when set.
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { productType: true, active: true },
+    select: {
+      id: true,
+      active: true,
+      status: true,
+      productType: true,
+      price: true,
+      stock: true,
+      reservedQuantity: true,
+      variants: {
+        where: { active: true },
+        select: {
+          id: true,
+          active: true,
+          stock: true,
+          reservedQuantity: true,
+        },
+      },
+      optionGroups: {
+        where: { enabled: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          required: true,
+          enabled: true,
+          options: {
+            orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+            select: {
+              id: true,
+              name: true,
+              priceAddon: true,
+              enabled: true,
+            },
+          },
+        },
+      },
+    },
   });
   if (!product || !product.active)
     return { error: "This product is no longer available." };
@@ -117,19 +172,7 @@ export async function addToCart(
   // Configurable products: resolve price + selections from live DB data.
   let config: ProductConfigSnapshot | null = null;
   if (optionIds) {
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      include: {
-        optionGroups: {
-          where: { enabled: true },
-          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-          include: {
-            options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
-          },
-        },
-      },
-    });
-    if (!product || !product.active || product.optionGroups.length === 0) {
+    if (product.optionGroups.length === 0) {
       return { error: "This product is no longer available." };
     }
     const resolved = resolveConfiguredPrice(
@@ -141,7 +184,7 @@ export async function addToCart(
     config = configSnapshot(resolved);
   }
 
-  const check = await quantityCheck(productId, variantId ?? null, qty);
+  const check = checkQuantity(product, variantId ?? null, qty);
   if (check) return { error: check };
 
   const cart = await cartForCurrentUser();
@@ -150,6 +193,7 @@ export async function addToCart(
   // Made-to-order units never merge — each build is its own quantity-1 line.
   const candidates = await prisma.cartItem.findMany({
     where: { cartId: cart.id, productId, variantId: variantId ?? null },
+    select: { id: true, quantity: true, config: true },
   });
   const key = config ? configKey(config.optionIds) : null;
   const existing = madeToOrder
@@ -162,7 +206,7 @@ export async function addToCart(
         });
   const nextQty = existing ? existing.quantity + qty : qty;
   // Re-validate combined quantity against live stock (same item may already be in cart).
-  const checkAgain = await quantityCheck(productId, variantId ?? null, nextQty);
+  const checkAgain = checkQuantity(product, variantId ?? null, nextQty);
   if (checkAgain) return { error: checkAgain };
 
   if (existing) {
@@ -186,7 +230,6 @@ export async function addToCart(
     where: { cartId: cart.id },
     _sum: { quantity: true },
   });
-  revalidatePath("/shop/cart");
   return { ok: true, count: count._sum.quantity ?? 0 };
 }
 
@@ -199,53 +242,63 @@ export async function updateCartItem(
     quantity: formData.get("quantity"),
   });
   if (!parsed.success) return { error: "Invalid request." };
+  const { itemId, quantity } = parsed.data;
 
-  const { user, profile } = await getCurrentAuth();
-  if (!user || !profile) {
-    const owner = (await cookies()).get(CART_COOKIE)?.value;
-    if (!owner) return { error: "Your cart is empty." };
-  }
+  const owner = await resolveCartOwner();
+  if (!owner) return { error: "Your cart is empty." };
 
-  const item = await prisma.cartItem.findUnique({
-    where: { id: parsed.data.itemId },
-    include: { product: true, variant: true },
+  // Ownership-scoped load of only what inventory validation needs (no heavy
+  // includes, no separate availability query — stock comes back in one call).
+  const item = await prisma.cartItem.findFirst({
+    where: { id: itemId, cart: cartOwnerWhere(owner) },
+    select: {
+      id: true,
+      quantity: true,
+      productId: true,
+      variantId: true,
+      product: {
+        select: {
+          active: true,
+          productType: true,
+          status: true,
+          stock: true,
+          reservedQuantity: true,
+        },
+      },
+      variant: {
+        select: { active: true, stock: true, reservedQuantity: true },
+      },
+    },
   });
   if (!item) return { error: "Item not found in your cart." };
 
-  const check = await quantityCheck(
-    item.productId,
-    item.variantId,
-    parsed.data.quantity,
-  );
-  if (check) return { error: check };
+  const avail = item.product.productType === "CUSTOM"
+    ? quantity
+    : item.variant
+      ? availableQuantity(item.variant.stock, item.variant.reservedQuantity)
+      : availableQuantity(item.product.stock, item.product.reservedQuantity);
+  if (avail <= 0) return { error: "This product is out of stock." };
+  if (quantity > avail) return { error: `Only ${avail} available.` };
 
-  await prisma.cartItem.update({
-    where: { id: item.id },
-    data: { quantity: parsed.data.quantity },
+  await prisma.cartItem.updateMany({
+    where: { id: itemId, cart: cartOwnerWhere(owner) },
+    data: { quantity },
   });
-  revalidatePath("/shop/cart");
-  return { ok: true };
+  return { ok: true, quantity, available: avail };
 }
 
-export async function removeCartItem(formData: FormData): Promise<void> {
+export async function removeCartItem(
+  formData: FormData,
+): Promise<{ ok?: boolean; error?: string }> {
   const itemId = formData.get("itemId");
-  if (typeof itemId !== "string") return;
+  if (typeof itemId !== "string" || !itemId) return { ok: true };
 
-  const { user, profile } = await getCurrentAuth();
-  let ownerWhere: { profileId: string } | { guestToken: string } | null = null;
-  if (user && profile) {
-    ownerWhere = { profileId: profile.id };
-  } else {
-    const token = (await cookies()).get(CART_COOKIE)?.value;
-    if (token) ownerWhere = { guestToken: token };
-  }
-  if (!ownerWhere) return;
+  const owner = await resolveCartOwner();
+  if (!owner) return { error: "Your cart is empty." };
 
-  const cart = await prisma.cart.findFirst({
-    where: ownerWhere,
-    select: { id: true },
+  // Ownership-scoped atomic delete — no separate cart lookup needed.
+  await prisma.cartItem.deleteMany({
+    where: { id: itemId, cart: cartOwnerWhere(owner) },
   });
-  if (!cart) return;
-  await prisma.cartItem.deleteMany({ where: { id: itemId, cartId: cart.id } });
-  revalidatePath("/shop/cart");
+  return { ok: true };
 }

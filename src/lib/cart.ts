@@ -102,3 +102,77 @@ export async function getCartWithItems() {
     include: cartInclude,
   });
 }
+
+/**
+ * Lean cart read for the /shop/cart page render. Unlike getCartWithItems, it:
+ *  - uses narrow `select`s (no full Product/Brand/Variant rows, no costPrice,
+ *    descriptions, seo, specs, etc. — those are sensitive/unneeded here),
+ *  - omits serviceItem entirely (the cart page never renders it),
+ *  - keeps only the fields the page needs to render rows + totals.
+ * This is display data; price/inventory are still re-validated server-side at
+ * checkout (payments/create-order uses getCartWithItems, untouched).
+ */
+const cartPageSelect = {
+  items: {
+    select: {
+      id: true,
+      quantity: true,
+      config: true,
+      product: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          price: true,
+          productType: true,
+          stock: true,
+          reservedQuantity: true,
+          brand: { select: { name: true } },
+          images: {
+            where: { active: true },
+            orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
+            take: 1,
+            select: { url: true, alt: true },
+          },
+          optionGroups: {
+            where: { enabled: true },
+            orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+            select: {
+              id: true,
+              name: true,
+              required: true,
+              enabled: true,
+              options: {
+                orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+                select: {
+                  id: true,
+                  name: true,
+                  priceAddon: true,
+                  enabled: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      variant: {
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          stock: true,
+          reservedQuantity: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.CartSelect;
+
+export async function getCartPageView() {
+  const owner = await resolveCartOwner();
+  if (!owner) return null;
+  return prisma.cart.findFirst({
+    where: cartOwnerWhere(owner),
+    select: cartPageSelect,
+  });
+}

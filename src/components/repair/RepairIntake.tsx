@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   submitRepairRequest,
   type RepairRequestState,
@@ -106,16 +106,17 @@ function workOptions(service: ServiceType): string[] {
 
 export function RepairIntake({
   defaults,
-  addresses,
 }: {
   defaults: { name: string; email: string; phone: string };
-  addresses: AddressDTO[];
 }) {
   const [state, formAction, pending] = useActionState<
     RepairRequestState,
     FormData
   >(submitRepairRequest, {});
   const [phase, setPhase] = useState<"form" | "review">("form");
+
+  const [addresses, setAddresses] = useState<AddressDTO[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(true);
 
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
   const [deviceType, setDeviceType] = useState("KEYBOARD");
@@ -132,9 +133,7 @@ export function RepairIntake({
   const [phone, setPhone] = useState(defaults.phone);
   const [contactNotes, setContactNotes] = useState("");
   const [shippingMethod, setShippingMethod] = useState("SHIP");
-  const defaultAddress =
-    addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
-  const [useAddressId, setUseAddressId] = useState(defaultAddress?.id ?? "");
+  const [useAddressId, setUseAddressId] = useState("");
   const [street, setStreet] = useState("");
   const [landmark, setLandmark] = useState("");
   const [city, setCity] = useState("");
@@ -142,6 +141,40 @@ export function RepairIntake({
   const [postalCode, setPostalCode] = useState("");
 
   const [gateError, setGateError] = useState<string | null>(null);
+
+  // ponytail: saved addresses are only needed to prefill the shipping/pickup
+  // section (a later, non-critical step), so fetch them client-side after
+  // mount instead of making the server render wait (removes 1 blocking DB RT).
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/account/addresses")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        if (!alive || !Array.isArray(list)) return;
+        const items: AddressDTO[] = list.map((a) => ({
+          id: a.id,
+          label: a.label,
+          streetAddress: a.streetAddress,
+          city: a.city,
+          state: a.state,
+          postalCode: a.postalCode,
+          isDefault: a.isDefault,
+        }));
+        setAddresses(items);
+        // Match the old server-passed behaviour: pre-select the saved default.
+        if (items.length > 0) {
+          const def = items.find((x) => x.isDefault) ?? items[0];
+          setUseAddressId(def.id);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setAddressesLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const toggleWork = (w: string) =>
     setWorkTypes((cur) =>
@@ -547,7 +580,16 @@ export function RepairIntake({
                 ))}
               </div>
               {(shippingMethod === "SHIP" || shippingMethod === "PICKUP") &&
-                (addresses.length > 0 ? (
+                (addressesLoading ? (
+                  <div
+                    className="skeleton"
+                    style={{
+                      height: 120,
+                      borderRadius: "var(--r-md)",
+                      marginTop: 16,
+                    }}
+                  />
+                ) : addresses.length > 0 ? (
                   <div className="ri-address-list">
                     {[...addresses, null].map((a) =>
                       a ? (

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { CartQty } from "@/components/cart/CartQty";
 import TrashIcon from "@/components/icons/trash-icon";
 import { buildMetadata } from "@/lib/seo";
-import { getCartWithItems, availableQuantity } from "@/lib/cart";
+import { getCartPageView, availableQuantity } from "@/lib/cart";
 import {
   resolveConfiguredPrice,
   type ProductConfigSnapshot,
@@ -19,7 +19,7 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function ShopCartPage() {
-  const cart = await getCartWithItems();
+  const cart = await getCartPageView();
   const items = cart?.items ?? [];
 
   const rows = items.map((item) => {

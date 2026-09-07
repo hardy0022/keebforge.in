@@ -74,21 +74,17 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ponytail: count comes from the existing cart API; same-page adds re-sync
-  // via the "kf-cart-changed" event dispatched by AddToCart/CardAddToCart.
+  // ponytail: badge count via a lightweight /api/cart/count (1 aggregate +
+  // auth) instead of the full cart — the full getCartWithItems path cost ~10
+  // sequential DB round trips on every navigation just to render a badge.
   useEffect(() => {
     let alive = true;
     const load = () =>
-      fetch("/api/cart")
+      fetch("/api/cart/count")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (alive && d && Array.isArray(d.items)) {
-            setCartCount(
-              d.items.reduce(
-                (n: number, i: { quantity?: number }) => n + (i.quantity ?? 1),
-                0,
-              ),
-            );
+          if (alive && d && typeof d.count === "number") {
+            setCartCount(d.count);
           }
         })
         .catch((err) => console.error("cart count refresh failed", err));
