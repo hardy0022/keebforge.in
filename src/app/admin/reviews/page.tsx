@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { getAdminReviews } from "@/lib/admin";
-import { fmtIST } from "@/lib/ist";
+import { fmtIST } from "@/lib/utils/ist";
 import { ReviewDeleteButton } from "@/components/admin/reviews/ReviewDeleteButton";
 import { ReviewModeration } from "@/components/admin/reviews/ReviewModeration";
 

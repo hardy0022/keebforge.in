@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { getModsCatalog } from "@/lib/data";
+import { getModsCatalog } from "@/lib/catalog/data";
 import { GROUP_DESC } from "@/components/mods/ModConfigurator";
 import { ModsManager, type ModsDevice } from "./ModsManager";
 

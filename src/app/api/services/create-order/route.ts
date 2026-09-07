@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
 import Razorpay from "razorpay";
 import { z } from "zod";
 import { calculateServiceOrder } from "@/lib/mods/pricing";
@@ -12,18 +12,18 @@ import {
   enabledShippingModes,
   isValidPincode,
   toShippingMode,
-} from "@/lib/delhivery";
-import { deriveLegs } from "@/lib/shipping-estimate";
-import { PACKAGE_LIMITS, isValidPackage } from "@/lib/package-limits";
+} from "@/lib/shipping/delhivery";
+import { deriveLegs } from "@/lib/shipping/shipping-estimate";
+import { PACKAGE_LIMITS, isValidPackage } from "@/lib/shipping/package-limits";
 import { generateOrderNumber } from "@/lib/orders";
-import { syncTrackingCache } from "@/lib/tracking";
+import { syncTrackingCache } from "@/lib/orders/tracking";
 import {
   validateCoupon,
   couponOrderCreateData,
   incrementCouponUsage,
   type CouponEligible,
-} from "@/lib/coupons";
-import { ensureRazorpayCustomer } from "@/lib/razorpay-customer";
+} from "@/lib/checkout/coupons";
+import { ensureRazorpayCustomer } from "@/lib/payments/razorpay-customer";
 
 export const dynamic = "force-dynamic";
 

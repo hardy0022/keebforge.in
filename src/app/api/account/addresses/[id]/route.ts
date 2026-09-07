@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
 
 async function getCurrentProfile() {
   // getCurrentAuth (not a raw findUnique): it creates the Profile on first

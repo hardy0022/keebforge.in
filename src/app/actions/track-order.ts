@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_STAGES } from "@/lib/orders";
-import { trackShipment, type TrackingResult } from "@/lib/delhivery";
+import { trackShipment, type TrackingResult } from "@/lib/shipping/delhivery";
 
 /**
  * Reads the public-safe Tracking cache — never the raw Order tables (no

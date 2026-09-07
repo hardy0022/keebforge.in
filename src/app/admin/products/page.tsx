@@ -2,15 +2,15 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 import {
   getAdminProducts,
   getAdminCategories,
   getAdminBrands,
   PRODUCT_STATUS_LABELS,
   PRODUCT_TYPE_LABELS,
-} from "@/lib/admin-catalog";
-import { fmtIST } from "@/lib/ist";
+} from "@/lib/admin/catalog";
+import { fmtIST } from "@/lib/utils/ist";
 
 export const metadata: Metadata = {
   title: "Products | KeebForge Admin",

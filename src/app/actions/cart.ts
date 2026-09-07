@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import {
   availableQuantity,
   cartForCurrentUser,
@@ -13,7 +13,7 @@ import {
   configSnapshot,
   resolveConfiguredPrice,
   type ProductConfigSnapshot,
-} from "@/lib/product-options";
+} from "@/lib/catalog/product-options";
 
 const optionIdsSchema = z
   .string()

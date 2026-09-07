@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentAuth, requireUser } from "@/lib/auth";
+import { getCurrentAuth, requireUser } from "@/lib/auth/session";
 import { AccountLayout } from "@/components/account/AccountLayout";
 
 export default async function AccountLayoutWrapper({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCartWithItems } from "@/lib/cart";
-import { resolveConfiguredPrice } from "@/lib/product-options";
+import { resolveConfiguredPrice } from "@/lib/catalog/product-options";
 import {
   calculateShipping,
   chargeableWeightGrams,
@@ -12,7 +12,7 @@ import {
   ShippingMode,
   toShippingMode,
   enabledShippingModes,
-} from "@/lib/delhivery";
+} from "@/lib/shipping/delhivery";
 
 export const dynamic = "force-dynamic";
 

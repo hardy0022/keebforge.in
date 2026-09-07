@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
-import { prisma } from "@/lib/prisma";
-import { daysAgoISTDayStart, fmtIST, istDayKey } from "@/lib/ist";
+import { prisma } from "@/lib/db/prisma";
+import { daysAgoISTDayStart, fmtIST, istDayKey } from "@/lib/utils/ist";
 import { revenueTime } from "@/lib/admin";
 
 /** Human buckets mapping the 18-status pipeline to a compact analytics view. */

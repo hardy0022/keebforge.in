@@ -15,10 +15,10 @@ import {
   RelatedProductsSkeleton,
 } from "@/components/shop/skeletons";
 import { buildMetadata, JsonLd, breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
-import { getProductBySlug } from "@/lib/data";
+import { getProductBySlug } from "@/lib/catalog/data";
 import { availableQuantity } from "@/lib/cart";
-import { formatINR, formatINRRange } from "@/lib/money";
-import { isPurchasable, CONDITION_LABELS } from "@/lib/shop";
+import { formatINR, formatINRRange } from "@/lib/utils/money";
+import { isPurchasable, CONDITION_LABELS } from "@/lib/catalog/shop";
 
 type Props = { params: Promise<{ slug: string }> };
 

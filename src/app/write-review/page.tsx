@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getCurrentAuth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
 
 export const metadata: Metadata = {

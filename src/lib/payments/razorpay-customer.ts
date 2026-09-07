@@ -1,5 +1,5 @@
 import type Razorpay from "razorpay";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 
 /**
  * Server-only helper: returns a reusable Razorpay Customer id for an order,

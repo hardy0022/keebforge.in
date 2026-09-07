@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
 
 export async function saveNewsletterOpt(optIn: boolean) {
   const { profile } = await requireUser();

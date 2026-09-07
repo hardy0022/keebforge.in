@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
 import { availableQuantity, getCartWithItems } from "@/lib/cart";
-import { configSnapshot, resolveConfiguredPrice } from "@/lib/product-options";
+import { configSnapshot, resolveConfiguredPrice } from "@/lib/catalog/product-options";
 import {
   calculateShipping,
   chargeableWeightGrams,
@@ -12,14 +12,14 @@ import {
   isFreeShipping,
   quoteFingerprint,
   toShippingMode,
-} from "@/lib/delhivery";
+} from "@/lib/shipping/delhivery";
 import {
   validateCoupon,
   couponOrderCreateData,
   incrementCouponUsage,
   type CouponEligible,
-} from "@/lib/coupons";
-import { ensureRazorpayCustomer } from "@/lib/razorpay-customer";
+} from "@/lib/checkout/coupons";
+import { ensureRazorpayCustomer } from "@/lib/payments/razorpay-customer";
 import { Prisma } from "@prisma/client";
 import Razorpay from "razorpay";
 

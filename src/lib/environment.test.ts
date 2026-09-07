@@ -2,7 +2,7 @@ import {
   detectEnvironment,
   MAINTENANCE_KEY,
   type Environment,
-} from "@/lib/environment";
+} from "@/lib/config/environment";
 
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(`FAIL: ${msg}`);

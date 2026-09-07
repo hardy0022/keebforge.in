@@ -2,8 +2,8 @@
 
 import { Resend } from "resend";
 import { z } from "zod";
-import { cloudinaryConfigured, uploadBuffer } from "@/lib/cloudinary";
-import { IMAGE_TYPES_MESSAGE, sniffImageType } from "@/lib/image-validation";
+import { cloudinaryConfigured, uploadBuffer } from "@/lib/images/cloudinary";
+import { IMAGE_TYPES_MESSAGE, sniffImageType } from "@/lib/images/validation";
 
 const inquirySchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(80),

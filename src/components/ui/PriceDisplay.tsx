@@ -1,4 +1,4 @@
-import { formatINR, formatINRRange } from "@/lib/money";
+import { formatINR, formatINRRange } from "@/lib/utils/money";
 import type { ServiceUnit } from "@prisma/client";
 
 type Props = {

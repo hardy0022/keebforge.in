@@ -744,6 +744,7 @@ model Shipment {
   trackingUrl           String?
   status                ShippingStatus @default(NOT_DISPATCHED)
   shippingCost          Int            @default(0)
+  pickupId              String? // Delhivery pickup request that covers this shipment
   estimatedDispatchDate DateTime?
   estimatedDeliveryDate DateTime?
   shippedAt             DateTime?

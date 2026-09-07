@@ -3,8 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { ShippingStatus } from "@prisma/client";
-import { fmtIST } from "@/lib/ist";
+import { fmtIST } from "@/lib/utils/ist";
 import { bookWarehousePickup } from "@/app/admin/actions/orders";
+import {
+  DELHIVERY_PICKUP_SLOTS,
+  nextPickup,
+  slotLabel,
+} from "@/lib/shipping/pickup-slots";
 import { ActionForm, Spinner } from "@/components/admin/orders/ActionForm";
 
 const SHIP_STATUSES: ShippingStatus[] = [
@@ -25,25 +30,12 @@ const SHIP_STATUS_LABELS: Record<ShippingStatus, string> = {
   RETURNED: "Returned",
 };
 
-const todayIST = () =>
-  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-
-/** Next full IST hour (HH:00) — a pickup default that is never in the past. */
-const nextISTHour = () => {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
-  const h = Number(parts.find((p) => p.type === "hour")?.value ?? 11);
-  return `${String((h + 1) % 24).padStart(2, "0")}:00`;
-};
-
 export type ShipmentRow = {
   id: string;
   courier: string | null;
   trackingNumber: string | null;
   status: ShippingStatus;
+  pickupId: string | null;
   createdAt: string;
   order: {
     orderNumber: string;
@@ -69,6 +61,7 @@ export function ShipmentsManager({
     setSelected((cur) =>
       cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
     );
+  const pickupDefault = nextPickup();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -111,8 +104,8 @@ export function ShipmentsManager({
               >
                 <input
                   type="hidden"
-                  name="packageCount"
-                  value={String(selected.length)}
+                  name="shipmentIds"
+                  value={selected.join(",")}
                 />
                 <label
                   style={{ display: "flex", flexDirection: "column", gap: 4 }}
@@ -124,7 +117,7 @@ export function ShipmentsManager({
                     name="pickupDate"
                     type="date"
                     className="input"
-                    defaultValue={todayIST()}
+                    defaultValue={pickupDefault.dateKey}
                     required
                     disabled={pending}
                   />
@@ -133,16 +126,22 @@ export function ShipmentsManager({
                   style={{ display: "flex", flexDirection: "column", gap: 4 }}
                 >
                   <span style={{ fontSize: "0.72rem", color: "var(--t2)" }}>
-                    Time
+                    Pickup slot
                   </span>
-                  <input
+                  <select
                     name="pickupTime"
-                    type="time"
-                    className="input"
-                    defaultValue={nextISTHour()}
+                    className="select"
+                    style={{ width: 165 }}
+                    defaultValue={pickupDefault.slotStart}
                     required
                     disabled={pending}
-                  />
+                  >
+                    {DELHIVERY_PICKUP_SLOTS.map((s) => (
+                      <option key={s.start} value={s.start}>
+                        {slotLabel(s)}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <button
                   type="submit"
@@ -216,6 +215,7 @@ export function ShipmentsManager({
                   <th>Waybill</th>
                   <th>Delivery status</th>
                   <th>Booked</th>
+                  <th>Pickup ID</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,6 +287,11 @@ export function ShipmentsManager({
                             ? { year: "numeric" }
                             : {}),
                         })}
+                      </td>
+                      <td className="num" style={{ fontFamily: "var(--ff-mono)" }}>
+                        {s.pickupId ?? (
+                          <span className="muted">—</span>
+                        )}
                       </td>
                     </tr>
                   );

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { getAdminCategories } from "@/lib/admin-catalog";
+import { getAdminCategories } from "@/lib/admin/catalog";
 import { CategoryForm } from "@/components/admin/catalog/CategoryForm";
 
 export const metadata: Metadata = {

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { getSiteSetting } from "@/lib/data";
-import { MAINTENANCE_KEY } from "@/lib/environment";
-import { PICKUP_SETTING_KEY } from "@/lib/delhivery";
+import { getSiteSetting } from "@/lib/catalog/data";
+import { MAINTENANCE_KEY } from "@/lib/config/environment";
+import { PICKUP_SETTING_KEY } from "@/lib/shipping/delhivery";
 import { MaintenanceModeCard } from "./MaintenanceModeCard";
 import { PickupLocationCard } from "./PickupLocationCard";
 

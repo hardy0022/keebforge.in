@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { getCurrentAuth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { getProductBySlug } from "@/lib/data";
+import { getCurrentAuth } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
+import { getProductBySlug } from "@/lib/catalog/data";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
-import { cldUrl } from "@/lib/cloudinary-url";
+import { cldUrl } from "@/lib/images/cloudinary-url";
 
 export const metadata: Metadata = {
   title: "Write a review | KeebForge",

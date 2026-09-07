@@ -8,7 +8,7 @@ import type {
   ReviewType,
   ShippingStatus,
 } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { defineCached, TAG, TTL } from "@/lib/caching/cache";
 
 import {
@@ -19,7 +19,7 @@ import {
   startOfTodayIST,
   endOfTodayIST,
   daysAgoISTDayStart,
-} from "@/lib/ist";
+} from "@/lib/utils/ist";
 
 /** Terminal / non-active order statuses (used for pipeline + "active" counts). */
 const TERMINAL: OrderStatus[] = ["DELIVERED", "ORDER_COMPLETED"];

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
-import { formatINR } from "@/lib/money";
+import { requireAdmin } from "@/lib/auth/session";
+import { formatINR } from "@/lib/utils/money";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
 import {
   getAdminStats,
@@ -11,7 +11,7 @@ import {
   getRecentOrders,
   getRecentActivity,
 } from "@/lib/admin";
-import { fmtIST } from "@/lib/ist";
+import { fmtIST } from "@/lib/utils/ist";
 
 export const metadata: Metadata = {
   title: "Dashboard | KeebForge Admin",

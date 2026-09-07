@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { ensureRazorpayCustomer } from "@/lib/razorpay-customer";
+import { prisma } from "@/lib/db/prisma";
+import { ensureRazorpayCustomer } from "@/lib/payments/razorpay-customer";
 import Razorpay from "razorpay";
 
 export const dynamic = "force-dynamic";

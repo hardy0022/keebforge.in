@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { buildMetadata } from "@/lib/seo";
-import { getCurrentAuth } from "@/lib/auth";
+import { getCurrentAuth } from "@/lib/auth/session";
 import { RepairIntake } from "@/components/repair/RepairIntake";
 import { WhyForge } from "@/components/home/WhyForge";
 

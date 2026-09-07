@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getCurrentAuth, requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentAuth, requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
 import { SettingsPanel } from "@/components/account/SettingsPanel";
 
 export const metadata: Metadata = {

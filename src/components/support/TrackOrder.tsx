@@ -14,13 +14,13 @@ import {
   ORDER_PHASE_LABELS,
   orderPhaseFor,
   delhiveryStatusLabel,
-} from "@/lib/track-phases";
-import { formatINR } from "@/lib/money";
+} from "@/lib/shipping/track-phases";
+import { formatINR } from "@/lib/utils/money";
 import { RazorpayScript } from "@/components/payments/RazorpayScript";
 import {
   launchRazorpayPayment,
   type CreateOrderResponse,
-} from "@/lib/razorpay-pay";
+} from "@/lib/payments/razorpay-pay";
 
 const SHIPMENT_LABELS: Record<string, string> = {
   NOT_DISPATCHED: "Not dispatched",

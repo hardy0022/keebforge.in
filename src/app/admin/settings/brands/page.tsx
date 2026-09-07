@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { getAdminBrands } from "@/lib/admin-catalog";
+import { getAdminBrands } from "@/lib/admin/catalog";
 import { BrandForm } from "@/components/admin/catalog/BrandForm";
 
 export const metadata: Metadata = {

@@ -11,7 +11,7 @@ import {
   type HTMLMotionProps,
 } from "motion/react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/cn";
 
 const DEFAULT_COLORS = ["#c679c4", "#fa3d1d", "#ffb005", "#e1e1fe", "#0358f7"];
 const BAND_HALF = 17;

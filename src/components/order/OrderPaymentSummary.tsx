@@ -6,8 +6,8 @@ import { RazorpayScript } from "@/components/payments/RazorpayScript";
 import {
   launchRazorpayPayment,
   type CreateOrderResponse,
-} from "@/lib/razorpay-pay";
-import { formatINR } from "@/lib/money";
+} from "@/lib/payments/razorpay-pay";
+import { formatINR } from "@/lib/utils/money";
 
 type Props = {
   orderNumber: string;

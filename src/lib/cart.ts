@@ -1,8 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
-import { Prisma, prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
+import { Prisma, prisma } from "@/lib/db/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
 
 export const CART_COOKIE = "kf_cart";
 export const CART_MAX_AGE = 60 * 60 * 24 * 30; // 30 days

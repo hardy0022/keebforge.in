@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 
 export type AppliedCoupon = { code: string; discount: number; label?: string };
 

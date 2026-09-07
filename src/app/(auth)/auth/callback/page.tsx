@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentAuth } from "@/lib/auth";
+import { getCurrentAuth } from "@/lib/auth/session";
 import { getAdminContext } from "@/lib/auth/admin";
 
 /** Post-OAuth landing: route admins to /admin, everyone else to /. */

@@ -6,7 +6,7 @@ import {
   submitRepairRequest,
   type RepairRequestState,
 } from "@/app/actions/repair-request";
-import { INDIAN_STATES } from "@/lib/indian-states";
+import { INDIAN_STATES } from "@/lib/config/indian-states";
 
 export type AddressDTO = {
   id: string;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { sendInquiry, type InquiryState } from "@/app/actions/inquiry";
-import { sniffImageFile } from "@/lib/image-validation";
+import { sniffImageFile } from "@/lib/images/validation";
 
 const ACCEPT = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_IMAGES = 5;

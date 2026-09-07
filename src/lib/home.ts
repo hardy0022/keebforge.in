@@ -1,6 +1,6 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { TAG, TTL, defineCached } from "@/lib/caching/cache";
 import { getPublicReviews, getSiteReviewSummary } from "@/lib/reviews";
 

@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import type { OrderStatus, PaymentStatus } from "@prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_CHIP,
@@ -12,8 +12,8 @@ import {
   ORDER_TYPE_LABELS,
 } from "@/lib/orders";
 import { getAdminOrder } from "@/lib/admin";
-import { trackShipment } from "@/lib/delhivery";
-import { fmtIST } from "@/lib/ist";
+import { trackShipment } from "@/lib/shipping/delhivery";
+import { fmtIST } from "@/lib/utils/ist";
 import { OrderHeaderActions } from "@/components/admin/orders/OrderHeaderActions";
 import { FinancialPanel } from "@/components/admin/orders/FinancialPanel";
 import { OrderTimelineAdd } from "@/components/admin/orders/OrderTimelineAdd";

@@ -3,15 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
-import { deleteImage, renameAsset } from "@/lib/cloudinary";
+import { deleteImage, renameAsset } from "@/lib/images/cloudinary";
 import {
   invalidateBrands,
   invalidateCategories,
   invalidateProducts,
 } from "@/lib/caching/cache";
-import { slugify } from "@/lib/slugify";
+import { slugify } from "@/lib/utils/slugify";
 
 export type CatalogActionState = {
   ok?: boolean;

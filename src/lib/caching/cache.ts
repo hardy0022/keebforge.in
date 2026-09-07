@@ -5,7 +5,7 @@ import { unstable_cache, updateTag } from "next/cache";
 /**
  * Central caching config + data-cache wrapper for DB-backed public reads.
  *
- * Every cacheable read helper (src/lib/data.ts, reviews.ts, home.ts) exits
+ * Every cacheable read helper (src/lib/catalog/data.ts, reviews.ts, home.ts) exits
  * through `defineCached`, so all pages share one set of tags/durations and
  * every admin mutation invaldes through the helpers at the bottom of this
  * file. Nothing user-specific (cart, checkout, orders, invoices, addresses,

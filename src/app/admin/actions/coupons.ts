@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { CouponType } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import type { ActionState } from "@/components/admin/ActionForm";
-import { parseISTDateKeyStart, parseISTDateKeyEnd } from "@/lib/ist";
+import { parseISTDateKeyStart, parseISTDateKeyEnd } from "@/lib/utils/ist";
 
 const couponSchema = z.object({
   id: z.string().optional(),

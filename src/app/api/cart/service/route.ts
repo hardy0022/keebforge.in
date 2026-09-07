@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
 import { CART_COOKIE } from "@/lib/cart";
 
 export const dynamic = "force-dynamic";

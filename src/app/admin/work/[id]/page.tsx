@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/auth/admin";
-import { getAdminWorkProject } from "@/lib/admin-catalog";
+import { getAdminWorkProject } from "@/lib/admin/catalog";
 import {
   WorkForm,
   type WorkProjectProp,

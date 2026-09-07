@@ -14,10 +14,10 @@ import {
   type ServiceConfig,
   type ServiceOrderConfigInput,
 } from "@/lib/mods/pricing";
-import { PACKAGE_LIMITS } from "@/lib/package-limits";
-import { deriveLegs } from "@/lib/shipping-estimate";
-import { INDIAN_STATES } from "@/lib/indian-states";
-import { formatPaiseWhole } from "@/lib/money";
+import { PACKAGE_LIMITS } from "@/lib/shipping/package-limits";
+import { deriveLegs } from "@/lib/shipping/shipping-estimate";
+import { INDIAN_STATES } from "@/lib/config/indian-states";
+import { formatPaiseWhole } from "@/lib/utils/money";
 import {
   AddressPicker,
   type SavedAddressOption,

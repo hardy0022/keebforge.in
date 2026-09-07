@@ -4,7 +4,7 @@ import { cache } from "react";
 import type { Profile, Role, User } from "@prisma/client";
 import { auth } from "@/lib/auth/better-auth";
 import { canAction } from "@/lib/auth/roles";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 
 /**
  * Server-side admin authorization, backed by Profile.role OR

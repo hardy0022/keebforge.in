@@ -1,6 +1,6 @@
 "use client";
 
-import { formatPaiseWhole } from "@/lib/money";
+import { formatPaiseWhole } from "@/lib/utils/money";
 
 type Point = { label: string; revenue: number; orders: number };
 

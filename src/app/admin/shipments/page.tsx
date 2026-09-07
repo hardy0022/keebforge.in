@@ -45,6 +45,7 @@ export default async function AdminShipmentsPage({
     courier: s.courier,
     trackingNumber: s.trackingNumber,
     status: s.status,
+    pickupId: s.pickupId,
     createdAt: s.createdAt.toISOString(),
     order: {
       orderNumber: s.order.orderNumber,

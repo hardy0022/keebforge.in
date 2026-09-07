@@ -14,10 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset",
-    "assets:optimize": "node scripts/optimize-assets.mjs",
-    "check:coupons": "tsx src/lib/coupon-eval.ts",
-    "check:environment": "tsx src/lib/environment.test.ts",
-    "format": "prettier --write ."
+    "check:coupons": "tsx src/lib/checkout/coupon-eval.ts",
+    "check:environment": "tsx src/lib/environment.test.ts"
   },
   "dependencies": {
     "@better-auth/infra": "^0.4.2",
@@ -51,7 +49,6 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
-    "prettier": "^3.9.6",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",

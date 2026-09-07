@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { ShopProduct } from "@/lib/data";
+import type { ShopProduct } from "@/lib/catalog/data";
 
 interface ProductGalleryProps {
   images: ShopProduct["images"];

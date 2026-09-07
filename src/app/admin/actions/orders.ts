@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
-import { syncTrackingCache } from "@/lib/tracking";
+import { syncTrackingCache } from "@/lib/orders/tracking";
+import { pickupSlotEndsAt } from "@/lib/shipping/pickup-slots";
 import {
   bookPickup,
   cancelShipment,
@@ -14,7 +15,7 @@ import {
   PICKUP_SETTING_KEY,
   type CreateShipmentInput,
   type PickupLocation,
-} from "@/lib/delhivery";
+} from "@/lib/shipping/delhivery";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -807,9 +808,11 @@ export async function bookPickupDelivery(
     };
   const time = pickupTime.length === 5 ? `${pickupTime}:00` : pickupTime;
 
-  // Delhivery rejects past pickups; convert the IST date+time input to a UTC
-  // instant (IST is fixed +05:30, no DST) and fail fast with a clear message.
-  const pickupAt = Date.parse(`${pickupDate}T${time}+05:30`);
+  // Delhivery rejects pickups outside a slot, and a slot stays open until its
+  // END time — a 18:00–21:00 slot picked at 19:00 is valid. Check the end, not
+  // the start, so the admin isn't blocked from an in-progress slot. IST is
+  // fixed +05:30 (no DST), so the slot end converts to a UTC instant directly.
+  const pickupAt = pickupSlotEndsAt(pickupDate, time);
   if (!Number.isFinite(pickupAt) || pickupAt <= Date.now()) {
     return { error: "Pickup must be at a future time (IST)." };
   }
@@ -823,13 +826,19 @@ export async function bookPickupDelivery(
   if (!result.ok) return { error: result.message };
 
   try {
-    await prisma.orderTimeline.create({
-      data: {
-        orderId,
-        status: "SHIPMENT_BOOKED",
-        note: `Pickup booked with Delhivery for ${pickupDate} ${time} from ${pickup.name} (${packageCount} package${packageCount === 1 ? "" : "s"}).`,
-      },
-    });
+    await prisma.$transaction([
+      prisma.shipment.updateMany({
+        where: { orderId },
+        data: { pickupId: result.pickupId },
+      }),
+      prisma.orderTimeline.create({
+        data: {
+          orderId,
+          status: "SHIPMENT_BOOKED",
+          note: `Pickup booked with Delhivery for ${pickupDate} ${time} from ${pickup.name}${result.pickupId ? ` (pickup ID ${result.pickupId})` : ""} (${packageCount} package${packageCount === 1 ? "" : "s"}).`,
+        },
+      }),
+    ]);
     await syncTrackingCache(orderId);
   } catch (e) {
     console.error("bookPickupDelivery (timeline) failed:", e);
@@ -848,12 +857,13 @@ export async function bookPickupDelivery(
 const warehousePickupSchema = z.object({
   pickupDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   pickupTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
-  packageCount: z.coerce.number().int().min(1).max(1000),
+  shipmentIds: z.string().min(1),
 });
 
 /**
- * Books a warehouse pickup from the /admin/shipments page — not tied to one
- * order/timeline (a pickup covers every manifested package at the warehouse).
+ * Books a warehouse pickup from the /admin/shipments page, stamps each
+ * selected shipment with the Delhivery pickupId, and records a timeline note
+ * on every affected order — so the pickup is linked to the shipments it covers.
  */
 export async function bookWarehousePickup(
   _prev: ActionState,
@@ -863,11 +873,29 @@ export async function bookWarehousePickup(
   const parsed = warehousePickupSchema.safeParse({
     pickupDate: formData.get("pickupDate"),
     pickupTime: formData.get("pickupTime"),
-    packageCount: formData.get("packageCount"),
+    shipmentIds: formData.get("shipmentIds"),
   });
   if (!parsed.success)
-    return { error: "Enter a pickup date, time, and package count." };
-  const { pickupDate, pickupTime, packageCount } = parsed.data;
+    return { error: "Enter a pickup date, time, and select shipments." };
+  const { pickupDate, pickupTime } = parsed.data;
+  const ids = parsed.data.shipmentIds.split(",").filter(Boolean);
+  if (ids.length === 0)
+    return { error: "Select at least one shipment for the pickup." };
+  const packageCount = ids.length;
+
+  const shipments = await prisma.shipment.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      orderId: true,
+      trackingNumber: true,
+      order: { select: { orderNumber: true } },
+    },
+  });
+  if (shipments.length !== ids.length)
+    return {
+      error: "Some selected shipments are missing. Reload the page and try again.",
+    };
 
   const pickup = pickupLocationFromPs(await resolvePickupLocation());
   if (!pickup.name)
@@ -877,7 +905,7 @@ export async function bookWarehousePickup(
     };
   const time = pickupTime.length === 5 ? `${pickupTime}:00` : pickupTime;
 
-  const pickupAt = Date.parse(`${pickupDate}T${time}+05:30`);
+  const pickupAt = pickupSlotEndsAt(pickupDate, time);
   if (!Number.isFinite(pickupAt) || pickupAt <= Date.now()) {
     return { error: "Pickup must be at a future time (IST)." };
   }
@@ -889,9 +917,33 @@ export async function bookWarehousePickup(
     expectedPackageCount: packageCount,
   });
   if (!result.ok) return { error: result.message };
+
+  try {
+    await prisma.$transaction([
+      prisma.shipment.updateMany({
+        where: { id: { in: ids } },
+        data: { pickupId: result.pickupId },
+      }),
+      prisma.orderTimeline.createMany({
+        data: shipments.map((s) => ({
+          orderId: s.orderId,
+          status: "SHIPMENT_BOOKED",
+          note: `Warehouse pickup booked with Delhivery for ${pickupDate} ${time} from ${pickup.name}${result.pickupId ? ` (pickup ID ${result.pickupId})` : ""}. ${packageCount} package${packageCount === 1 ? "" : "s"} in this pickup.`,
+        })),
+      }),
+    ]);
+  } catch (e) {
+    console.error("bookWarehousePickup (timeline) failed:", e);
+    return {
+      error:
+        "Pickup booked with Delhivery but the shipment pickup link couldn't be saved.",
+    };
+  }
+  revalidatePath("/admin/shipments");
+  for (const s of shipments) revalidatePath(`/admin/orders/${s.order.orderNumber}`);
   return {
     ok: true,
-    message: `Pickup booked for ${pickupDate} ${time} from ${pickup.name}`,
+    message: `Pickup booked for ${pickupDate} ${time} from ${pickup.name} — ${packageCount} shipment${packageCount === 1 ? "" : "s"} linked.`,
   };
 }
 const manualPaymentSchema = z.object({

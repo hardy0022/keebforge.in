@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { ServiceUnit } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { invalidateServices } from "@/lib/caching/cache";
 

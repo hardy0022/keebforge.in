@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { USERNAME_PATTERN } from "@/lib/username";
+import { prisma } from "@/lib/db/prisma";
+import { USERNAME_PATTERN } from "@/lib/utils/username";
 
 export const runtime = "nodejs";
 

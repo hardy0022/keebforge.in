@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { CouponsManager } from "./CouponsManager";
 
 export const metadata: Metadata = {

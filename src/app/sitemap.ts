@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { SITE_URL } from "@/lib/seo";
 
 const STATIC: {

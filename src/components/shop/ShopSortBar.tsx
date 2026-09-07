@@ -1,6 +1,6 @@
 "use client";
 
-import type { ShopSort } from "@/lib/data";
+import type { ShopSort } from "@/lib/catalog/data";
 
 const SORTS: { value: ShopSort; label: string }[] = [
   { value: "newest", label: "Newest" },

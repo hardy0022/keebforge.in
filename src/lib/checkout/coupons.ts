@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import {
   evaluateCoupon,
   type CouponEligible,
   type CouponResult,
-} from "@/lib/coupon-eval";
+} from "@/lib/checkout/coupon-eval";
 
 export { evaluateCoupon, type CouponEligible, type CouponResult };
 

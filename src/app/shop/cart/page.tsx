@@ -6,7 +6,7 @@ import { getCartPageView, availableQuantity } from "@/lib/cart";
 import {
   resolveConfiguredPrice,
   type ProductConfigSnapshot,
-} from "@/lib/product-options";
+} from "@/lib/catalog/product-options";
 
 export const metadata: Metadata = buildMetadata({
   title: "Your Cart | KeebForge",

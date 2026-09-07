@@ -101,10 +101,10 @@ const nextConfig: NextConfig = {
   images: {
     // Cloudinary transforms + caches every application-uploaded image and
     // delivers it straight to the browser (custom loader, see
-    // src/lib/image-loader.ts) — Vercel no longer re-fetches those bytes.
+    // src/lib/images/loader.ts) — Vercel no longer re-fetches those bytes.
     // Local /public assets are pre-optimized and served as-is.
     loader: "custom",
-    loaderFile: "./src/lib/image-loader.ts",
+    loaderFile: "./src/lib/images/loader.ts",
     remotePatterns: [{ protocol: "https", hostname: "res.cloudinary.com" }],
   },
   async headers() {

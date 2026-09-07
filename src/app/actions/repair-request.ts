@@ -2,10 +2,10 @@
 
 import { Resend } from "resend";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
 import { generateOrderNumber } from "@/lib/orders";
-import { syncTrackingCache } from "@/lib/tracking";
+import { syncTrackingCache } from "@/lib/orders/tracking";
 
 export type RepairRequestState = {
   ok?: boolean;

@@ -4,8 +4,8 @@ import { authClient } from "@/lib/auth/auth-client";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EyeIcon } from "./SignInForm";
-import { usernameError } from "@/lib/username";
-import { PASSWORD_RULES } from "@/lib/password";
+import { usernameError } from "@/lib/utils/username";
+import { PASSWORD_RULES } from "@/lib/utils/password";
 
 export function RegisterForm({ next }: { next?: string }) {
   const router = useRouter();

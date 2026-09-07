@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentAuth, requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentAuth, requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
 import { OrderStatus } from "@prisma/client";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 import { ORDER_STATUS_CHIP, ORDER_STATUS_LABELS } from "@/lib/orders";
 
 export const metadata: Metadata = {

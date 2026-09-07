@@ -9,8 +9,8 @@ import {
   deleteVariant,
   adjustInventory,
 } from "@/app/admin/actions/catalog";
-import { PRODUCT_STATUS_LABELS } from "@/lib/product-labels";
-import { formatINR } from "@/lib/money";
+import { PRODUCT_STATUS_LABELS } from "@/lib/catalog/product-labels";
+import { formatINR } from "@/lib/utils/money";
 
 type VariantProp = {
   id: string;

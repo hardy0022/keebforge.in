@@ -6,7 +6,7 @@ import {
   getAdminProduct,
   getAdminCategories,
   getAdminBrands,
-} from "@/lib/admin-catalog";
+} from "@/lib/admin/catalog";
 import { ProductForm } from "@/components/admin/products/ProductForm";
 
 export const metadata: Metadata = {

@@ -71,7 +71,7 @@ export function parseISTDateKeyEnd(key: string): Date | null {
 }
 
 /**
- * Self-check for the IST day-boundary logic. Run: tsx src/lib/ist.ts
+ * Self-check for the IST day-boundary logic. Run: tsx src/lib/utils/ist.ts
  * Fails on assertion if a business-day boundary is misclassified.
  */
 if (import.meta.url === `file://${process.argv[1]}`) {

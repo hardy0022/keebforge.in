@@ -1,7 +1,7 @@
 import { ShopSortBar } from "@/components/shop/ShopSortBar";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import type { EmptyStateConfig } from "@/components/shop/ShopEmptyState";
-import { getShopProducts, type ShopSort } from "@/lib/data";
+import { getShopProducts, type ShopSort } from "@/lib/catalog/data";
 
 const SORTS: ShopSort[] = [
   "newest",

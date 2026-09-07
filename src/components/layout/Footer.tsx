@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { getSiteSetting } from "@/lib/data";
+import { getSiteSetting } from "@/lib/catalog/data";
 
 /* Central social config — update handles here only.
    Reddit/Discord/Instagram mirror the owner's real profiles (see /about);

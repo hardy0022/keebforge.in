@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Profile } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth/better-auth";
 import { requireAdminContext, type AdminContext } from "@/lib/auth/admin";
 

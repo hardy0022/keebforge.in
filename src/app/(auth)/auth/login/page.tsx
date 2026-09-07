@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getCurrentAuth } from "@/lib/auth";
+import { getCurrentAuth } from "@/lib/auth/session";
 import { getAdminContext } from "@/lib/auth/admin";
 import { SignInForm } from "@/components/auth/SignInForm";
 import { AuthShell } from "@/components/auth/AuthShell";

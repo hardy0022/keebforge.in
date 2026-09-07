@@ -13,8 +13,8 @@ import {
   sniffImageFile,
   IMAGE_ACCEPT,
   IMAGE_TYPES_MESSAGE,
-} from "@/lib/image-validation";
-import { cldUrl } from "@/lib/cloudinary-url";
+} from "@/lib/images/validation";
+import { cldUrl } from "@/lib/images/cloudinary-url";
 import { ReviewStars } from "./ReviewStars";
 import { useRouter } from "next/navigation";
 

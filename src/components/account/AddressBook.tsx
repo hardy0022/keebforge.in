@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { INDIAN_STATES } from "@/lib/indian-states";
+import { INDIAN_STATES } from "@/lib/config/indian-states";
 
 interface Address {
   id: string;

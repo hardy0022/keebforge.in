@@ -4,8 +4,8 @@ import { organization } from "better-auth/plugins";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { dash, sentinel } from "@better-auth/infra";
 import { Resend } from "resend";
-import { prisma } from "../../lib/prisma";
-import { isStrongPassword } from "../password";
+import { prisma } from "@/lib/db/prisma";
+import { isStrongPassword } from "@/lib/utils/password";
 
 /**
  * KeebForge authentication — Better Auth (sole auth authority).

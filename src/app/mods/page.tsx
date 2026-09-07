@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { buildMetadata } from "@/lib/seo";
-import { getModsCatalog } from "@/lib/data";
-import { DEFAULT_SHIPPING_MODE, enabledShippingModes } from "@/lib/delhivery";
+import { getModsCatalog } from "@/lib/catalog/data";
+import { DEFAULT_SHIPPING_MODE, enabledShippingModes } from "@/lib/shipping/delhivery";
 import {
   ModConfigurator,
   type ConfigService,

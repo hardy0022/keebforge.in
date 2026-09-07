@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { detectEnvironment, MAINTENANCE_KEY } from "@/lib/environment";
+import { prisma } from "@/lib/db/prisma";
+import { detectEnvironment, MAINTENANCE_KEY } from "@/lib/config/environment";
 
 // Next.js redirect() matches sources case-insensitively, so case-variant old
 // URLs are handled here instead of next.config to avoid shadowing real routes.

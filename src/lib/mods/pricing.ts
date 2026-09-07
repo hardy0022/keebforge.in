@@ -9,7 +9,7 @@
  * they are never persisted or charged.
  */
 
-import { formatPaiseWhole } from "@/lib/money";
+import { formatPaiseWhole } from "@/lib/utils/money";
 
 export type ServiceUnit = "PER_SWITCH" | "PER_STABILIZER" | "FLAT" | "QUOTE";
 export type ServiceDevice = "KEYBOARD" | "MOUSE" | "OTHER";

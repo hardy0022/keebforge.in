@@ -6,7 +6,7 @@ import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { CtaSection } from "@/components/ui/CtaSection";
 import { buildMetadata } from "@/lib/seo";
-import { getWorkProjects } from "@/lib/data";
+import { getWorkProjects } from "@/lib/catalog/data";
 
 export const metadata: Metadata = buildMetadata({
   title: "Sample Work & Portfolio | KeebForge",

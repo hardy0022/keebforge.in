@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 import type { ShippingStatus } from "@prisma/client";
-import { formatINR } from "@/lib/money";
-import { fmtIST } from "@/lib/ist";
-import { delhiveryStatusLabel } from "@/lib/track-phases";
+import { formatINR } from "@/lib/utils/money";
+import { fmtIST } from "@/lib/utils/ist";
+import { delhiveryStatusLabel } from "@/lib/shipping/track-phases";
+import {
+  DELHIVERY_PICKUP_SLOTS,
+  nextPickup,
+  slotLabel,
+} from "@/lib/shipping/pickup-slots";
 import {
   updateShipping,
   createShipmentDelivery,
@@ -22,20 +27,6 @@ const SHIP_STATUSES: ShippingStatus[] = [
   "DELIVERED",
   "RETURNED",
 ];
-
-const todayIST = () =>
-  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-
-/** Next full IST hour (HH:00) — a pickup default that is never in the past. */
-const nextISTHour = () => {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
-  const h = Number(parts.find((p) => p.type === "hour")?.value ?? 11);
-  return `${String((h + 1) % 24).padStart(2, "0")}:00`;
-};
 
 export function ShippingPanel({
   orderId,
@@ -77,6 +68,7 @@ export function ShippingPanel({
   const [updatePt, setUpdatePt] = useState<"Pre-paid" | "COD">("Pre-paid");
   const shipped = Boolean(shipment?.trackingNumber);
   const isDelhivery = shipped && shipment?.courier === "Delhivery";
+  const pickupDefault = nextPickup();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -529,20 +521,25 @@ export function ShippingPanel({
                     name="pickupDate"
                     type="date"
                     className="input"
-                    defaultValue={todayIST()}
+                    defaultValue={pickupDefault.dateKey}
                     required
                     style={{ flex: "1 1 150px" }}
                     disabled={pending}
                   />
-                  <input
+                  <select
                     name="pickupTime"
-                    type="time"
-                    className="input"
-                    defaultValue={nextISTHour()}
+                    className="select"
+                    defaultValue={pickupDefault.slotStart}
                     required
-                    style={{ flex: "1 1 120px" }}
+                    style={{ flex: "1 1 160px" }}
                     disabled={pending}
-                  />
+                  >
+                    {DELHIVERY_PICKUP_SLOTS.map((s) => (
+                      <option key={s.start} value={s.start}>
+                        {slotLabel(s)}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     name="packageCount"
                     type="number"

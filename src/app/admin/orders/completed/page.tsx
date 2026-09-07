@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS } from "@/lib/orders";
 import { getAdminOrders, COMPLETED_STATUSES } from "@/lib/admin";
-import { fmtIST } from "@/lib/ist";
+import { fmtIST } from "@/lib/utils/ist";
 
 export const metadata: Metadata = {
   title: "Completed Orders | KeebForge Admin",

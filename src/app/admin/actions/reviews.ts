@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import type { ReviewStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
-import { deleteImage } from "@/lib/cloudinary";
+import { deleteImage } from "@/lib/images/cloudinary";
 import { recalcProductRating } from "@/lib/reviews";
 import { invalidateReviews } from "@/lib/caching/cache";
 

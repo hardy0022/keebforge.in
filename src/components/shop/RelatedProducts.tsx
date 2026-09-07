@@ -1,6 +1,6 @@
 import { ProductCard } from "@/components/shop/ProductCard";
 import { SectionHead } from "@/components/ui/SectionHead";
-import { getRelatedProducts } from "@/lib/data";
+import { getRelatedProducts } from "@/lib/catalog/data";
 
 /** "You May Also Like" grid, rendered as its own RSC so it can be
  *  Suspense-streamed after the main product UI. */

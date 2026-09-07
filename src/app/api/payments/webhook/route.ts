@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import crypto from "crypto";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 
 export const dynamic = "force-dynamic";
 

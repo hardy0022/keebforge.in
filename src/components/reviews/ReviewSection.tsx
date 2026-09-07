@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getCurrentAuth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
 import {
   getProductReviews,
   getPublicReviews,

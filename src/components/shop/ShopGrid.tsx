@@ -5,7 +5,7 @@ import {
   DEFAULT_EMPTY_STATE,
   type EmptyStateConfig,
 } from "@/components/shop/ShopEmptyState";
-import type { ShopProduct } from "@/lib/data";
+import type { ShopProduct } from "@/lib/catalog/data";
 
 /* 1 … around current … last, with ellipsis gaps; short ranges shown whole. */
 function pageItems(page: number, pages: number): (number | "…")[] {

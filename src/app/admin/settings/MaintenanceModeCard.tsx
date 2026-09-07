@@ -7,7 +7,7 @@ import {
   type ActionState,
 } from "@/components/admin/ActionForm";
 import { toggleMaintenanceMode } from "@/app/admin/actions/settings";
-import type { Environment } from "@/lib/environment";
+import type { Environment } from "@/lib/config/environment";
 
 export function MaintenanceModeCard({
   environment,

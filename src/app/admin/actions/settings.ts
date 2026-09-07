@@ -3,16 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import type { ActionState } from "@/components/admin/ActionForm";
-import { MAINTENANCE_KEY, type Environment } from "@/lib/environment";
+import { MAINTENANCE_KEY, type Environment } from "@/lib/config/environment";
 import {
   PICKUP_SETTING_KEY,
   createDelhiveryWarehouse,
   editDelhiveryWarehouse,
   type PickupLocation,
-} from "@/lib/delhivery";
+} from "@/lib/shipping/delhivery";
 import { invalidateSiteSettings } from "@/lib/caching/cache";
 
 const ENVIRONMENTS: Environment[] = ["production", "development"];

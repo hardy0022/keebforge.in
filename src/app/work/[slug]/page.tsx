@@ -6,7 +6,7 @@ import remarkBreaks from "remark-breaks";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { WorkImageSlider } from "@/components/work/WorkImageSlider";
 import { buildMetadata } from "@/lib/seo";
-import { getWorkProjectBySlug } from "@/lib/data";
+import { getWorkProjectBySlug } from "@/lib/catalog/data";
 
 type WorkImage = { url: string; alt?: string; publicId?: string };
 

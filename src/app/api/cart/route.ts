@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCurrentAuth } from "@/lib/auth";
+import { getCurrentAuth } from "@/lib/auth/session";
 import { getCartWithItems } from "@/lib/cart";
 import { loadActiveModConfigs } from "@/lib/mods/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
 

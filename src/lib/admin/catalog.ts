@@ -1,15 +1,15 @@
 import "server-only";
 import { cache } from "react";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { defineCached, TAG, TTL } from "@/lib/caching/cache";
 import { availableQuantity } from "@/lib/cart";
-import type { ProductStatus, ProductType } from "@/lib/product-labels";
+import type { ProductStatus, ProductType } from "@/lib/catalog/product-labels";
 export type { ProductStatus, ProductType };
 export {
   PRODUCT_STATUS_LABELS,
   PRODUCT_TYPE_LABELS,
-} from "@/lib/product-labels";
+} from "@/lib/catalog/product-labels";
 export { availableQuantity as availableStock } from "@/lib/cart";
 
 // ─── Categories & brands (admin catalog reads) ──────────────────────────────

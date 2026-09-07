@@ -3,8 +3,8 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addToCart } from "@/app/actions/cart";
-import { formatINR } from "@/lib/money";
-import { defaultOptionId, type OptionGroupLike } from "@/lib/product-options";
+import { formatINR } from "@/lib/utils/money";
+import { defaultOptionId, type OptionGroupLike } from "@/lib/catalog/product-options";
 import CartIcon from "@/components/icons/cart-icon";
 import type { AnimatedIconHandle } from "@/components/icons/types";
 

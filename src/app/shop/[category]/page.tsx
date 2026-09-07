@@ -5,7 +5,7 @@ import { WhyForge } from "@/components/home/WhyForge";
 import { ShopSortBar } from "@/components/shop/ShopSortBar";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import { buildMetadata } from "@/lib/seo";
-import { getCategoryBySlug, getShopProducts, type ShopSort } from "@/lib/data";
+import { getCategoryBySlug, getShopProducts, type ShopSort } from "@/lib/catalog/data";
 
 const SORTS: ShopSort[] = [
   "newest",

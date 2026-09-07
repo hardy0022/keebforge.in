@@ -1,9 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentAuth, requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { formatINR } from "@/lib/money";
+import { getCurrentAuth, requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
+import { formatINR } from "@/lib/utils/money";
 import {
   ORDER_STATUS_CHIP,
   ORDER_STATUS_LABELS,

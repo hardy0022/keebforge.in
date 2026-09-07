@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { ShopProduct } from "@/lib/data";
-import { formatINR } from "@/lib/money";
-import { isPurchasable, CONDITION_LABELS, MAX_CARD_FEATURES } from "@/lib/shop";
+import type { ShopProduct } from "@/lib/catalog/data";
+import { formatINR } from "@/lib/utils/money";
+import { isPurchasable, CONDITION_LABELS, MAX_CARD_FEATURES } from "@/lib/catalog/shop";
 import { CardAddToCart } from "@/components/shop/CardAddToCart";
-import { CardIcon, type ProductCardFeature } from "@/lib/card-icons";
+import { CardIcon, type ProductCardFeature } from "@/components/ui/CardIcons";
 import { BlurFadeImage } from "@/components/ui/blur-fade-image";
 
 export function ProductCard({ product }: { product: ShopProduct }) {

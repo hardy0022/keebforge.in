@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { prisma } from "@/lib/prisma";
-import { formatINR } from "@/lib/money";
-import { fmtIST } from "@/lib/ist";
+import { prisma } from "@/lib/db/prisma";
+import { formatINR } from "@/lib/utils/money";
+import { fmtIST } from "@/lib/utils/ist";
 
 export const metadata: Metadata = {
   title: "Customers | KeebForge Admin",

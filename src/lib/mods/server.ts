@@ -1,5 +1,5 @@
 import "server-only";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import type { ServiceConfig } from "./pricing";
 
 /** Maps a Prisma Service row onto the pricing module's input shape. */

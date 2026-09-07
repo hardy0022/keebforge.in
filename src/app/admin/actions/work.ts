@@ -3,17 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { WorkCategory } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
-import { deleteImage, mediaFolder, uploadBuffer } from "@/lib/cloudinary";
+import { deleteImage, mediaFolder, uploadBuffer } from "@/lib/images/cloudinary";
 import {
   IMAGE_TYPES_MESSAGE,
   isAllowedImageMime,
   sniffImageType,
-} from "@/lib/image-validation";
+} from "@/lib/images/validation";
 import type { ActionState } from "@/components/admin/ActionForm";
 import { invalidateWork } from "@/lib/caching/cache";
-import { slugify } from "@/lib/slugify";
+import { slugify } from "@/lib/utils/slugify";
 
 const MAX_IMAGES = 20;
 const MAX_BYTES = 8 * 1024 * 1024;

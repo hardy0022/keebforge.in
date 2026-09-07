@@ -4,7 +4,7 @@
  */
 
 import { createHash } from "crypto";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 
 const BASE_URL =
   process.env.DELHIVERY_API_URL ?? "https://staging-express.delhivery.com";
@@ -1233,8 +1233,29 @@ export function parsePickupRequest(
       `[pickup] delhivery error status=${httpStatus}`,
       bodyText.slice(0, 300),
     );
-    if (httpStatus === 401 || httpStatus === 403)
+    if (httpStatus === 401 || httpStatus === 403) {
+      // Delhivery returns 401 for an unregistered/mismatched pickup-location
+      // name TOO, with the reason in the body ("Invalid Pickup Location
+      // ClientWarehouse matching query does not exist."). Surface that instead
+      // of blaming credentials, or the admin never learns the real cause.
+      if (/pickup[_ -]?location|clientwarehouse|invalid pickup/i.test(bodyText)) {
+        let msg = "Pickup location isn't registered with Delhivery.";
+        try {
+          const o = JSON.parse(bodyText) as Record<string, unknown>;
+          const v =
+            typeof o.pickup_location === "string"
+              ? o.pickup_location
+              : typeof o.error === "string"
+                ? o.error
+                : null;
+          if (v) msg = v;
+        } catch {
+          // keep default
+        }
+        return { ok: false, errorCode: "UPSTREAM_ERROR", message: msg };
+      }
       return pickupFail("INVALID_CREDENTIALS");
+    }
     if (httpStatus === 429) return pickupFail("RATE_LIMITED");
     if (httpStatus === 400) {
       // Field-level validation errors come back as {"field": "reason"} — surface
@@ -1278,11 +1299,12 @@ export function parsePickupRequest(
     console.error("[pickup] delhivery refusal:", bodyText.slice(0, 300));
     return { ok: false, errorCode: "UPSTREAM_ERROR", message: msg };
   }
+  const rawId = s.pickup_id ?? s.id;
   const id =
-    typeof s.pickup_id === "string"
-      ? s.pickup_id
-      : s.id && typeof s.id === "string"
-        ? s.id
+    typeof rawId === "string" && rawId.length > 0
+      ? rawId
+      : typeof rawId === "number"
+        ? String(rawId)
         : null;
   return { ok: true, pickupId: id, raw: bodyText };
 }
@@ -1467,8 +1489,8 @@ export async function editDelhiveryWarehouse(
 // ── Self-check ───────────────────────────────────────────────────────────────
 // npx tsx src/lib/delhivery/index.ts — offline regression matrix for the whole lib.
 if (
-  process.argv[1]?.endsWith("delhivery/index.ts") ||
-  process.argv[1]?.endsWith("delhivery/index.js")
+  process.argv[1]?.endsWith("shipping/delhivery.ts") ||
+  process.argv[1]?.endsWith("shipping/delhivery.js")
 ) {
   runSelfCheck();
 }
@@ -2266,6 +2288,11 @@ function runSelfCheck() {
     t(r.ok && r.pickupId === "PICK123", "pickup: pickup_id captured");
   }
   {
+    // Delhivery returns pickup_id as a JSON number (e.g. 319061654) — keep it.
+    const r = parsePickupRequest(200, JSON.stringify({ pickup_id: 319061654 }));
+    t(r.ok && r.pickupId === "319061654", "pickup: numeric pickup_id captured");
+  }
+  {
     const r = parsePickupRequest(
       200,
       JSON.stringify({
@@ -2283,6 +2310,21 @@ function runSelfCheck() {
     parsePickupRequest(401, '{"detail":"Invalid token"}').ok === false,
     "pickup: 401 → credentials",
   );
+  {
+    const r = parsePickupRequest(
+      401,
+      JSON.stringify({
+        pickup_location:
+          "Invalid Pickup Location ClientWarehouse matching query does not exist.",
+      }),
+    );
+    t(
+      r.ok === false &&
+        r.message.includes("Invalid Pickup Location") &&
+        r.message.includes("ClientWarehouse"),
+      "pickup: 401 warehouse-name reason surfaced (not masked as creds)",
+    );
+  }
   t(
     parsePickupRequest(200, "<html>err").ok === false,
     "pickup: non-JSON → error",

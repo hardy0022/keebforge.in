@@ -1,23 +1,23 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 import {
   ORDER_BUCKET_LABELS,
   getAnalyticsKPIs,
   getAnalyticsSeries,
   getOrderStatusBreakdown,
   getWorkshopMods,
-} from "@/lib/admin-analytics";
+} from "@/lib/admin/analytics";
 import {
   getRecentActivity,
   getRecentOrders,
   getLowStockProducts,
 } from "@/lib/admin";
-import { getTopProducts } from "@/lib/admin-catalog";
+import { getTopProducts } from "@/lib/admin/catalog";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
 import { RevenueOrdersChart } from "@/components/admin/RevenueOrdersChart";
-import { fmtIST } from "@/lib/ist";
+import { fmtIST } from "@/lib/utils/ist";
 
 export const metadata: Metadata = {
   title: "Analytics | KeebForge Admin",

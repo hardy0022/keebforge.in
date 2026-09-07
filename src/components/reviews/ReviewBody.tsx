@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from "react";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
-import { cldUrl } from "@/lib/cloudinary-url";
+import { cldUrl } from "@/lib/images/cloudinary-url";
 import type { ReviewCardItem } from "@/components/reviews/ReviewCard";
 
 function formatDate(d: Date): string {

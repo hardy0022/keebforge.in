@@ -11,10 +11,10 @@ import {
   PRODUCT_STATUS_LABELS,
   PRODUCT_TYPE_LABELS,
   type ProductType,
-} from "@/lib/product-labels";
-import { CARD_ICONS, CARD_ICON_NAMES } from "@/lib/card-icons";
-import { MAX_CARD_FEATURES, CONDITION_LABELS } from "@/lib/shop";
-import { cldUrl } from "@/lib/cloudinary-url";
+} from "@/lib/catalog/product-labels";
+import { CARD_ICONS, CARD_ICON_NAMES } from "@/components/ui/CardIcons";
+import { MAX_CARD_FEATURES, CONDITION_LABELS } from "@/lib/catalog/shop";
+import { cldUrl } from "@/lib/images/cloudinary-url";
 
 const SECTION_TYPE_OPTIONS = [
   { value: "NEW", label: "New / In Stock" },

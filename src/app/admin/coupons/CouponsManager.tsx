@@ -7,8 +7,8 @@ import {
   toggleCoupon,
   deleteCoupon,
 } from "@/app/admin/actions/coupons";
-import { formatINR } from "@/lib/money";
-import { istDayKey } from "@/lib/ist";
+import { formatINR } from "@/lib/utils/money";
+import { istDayKey } from "@/lib/utils/ist";
 
 type CouponRow = {
   id: string;

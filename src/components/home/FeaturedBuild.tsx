@@ -10,8 +10,8 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { formatINR } from "@/lib/money";
-import { cn } from "@/lib/utils";
+import { formatINR } from "@/lib/utils/money";
+import { cn } from "@/lib/utils/cn";
 import ArrowBigLeftIcon from "@/components/icons/arrow-big-left-icon";
 import ArrowBigRightIcon from "@/components/icons/arrow-big-right-icon";
 import type { HomeProduct } from "@/lib/home";

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ShopCatalog } from "@/components/shop/ShopCatalog";
 import { WhyForge } from "@/components/home/WhyForge";
 import { buildMetadata } from "@/lib/seo";
-import { SECTION_LABELS } from "@/lib/shop";
+import { SECTION_LABELS } from "@/lib/catalog/shop";
 
 export const metadata: Metadata = buildMetadata({
   title: "Clearance — Shop | KeebForge",

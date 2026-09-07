@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth/admin";
-import { getAdminWorkProjects } from "@/lib/admin-catalog";
+import { getAdminWorkProjects } from "@/lib/admin/catalog";
 import { WorkList } from "@/components/admin/work/WorkList";
 
 export const metadata: Metadata = {

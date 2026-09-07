@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatINR } from "@/lib/money";
-import { cldUrl } from "@/lib/cloudinary-url";
+import { formatINR } from "@/lib/utils/money";
+import { cldUrl } from "@/lib/images/cloudinary-url";
 import { RazorpayScript } from "@/components/payments/RazorpayScript";
 import { AffordabilityWidget } from "@/components/payments/AffordabilityWidget";
 import { calculateServiceOrder, type ServiceConfig } from "@/lib/mods/pricing";
@@ -17,11 +17,11 @@ import {
   AddressPicker,
   type SavedAddressOption,
 } from "@/components/mods/AddressPicker";
-import { INDIAN_STATES } from "@/lib/indian-states";
+import { INDIAN_STATES } from "@/lib/config/indian-states";
 import {
   launchRazorpayPayment,
   type CreateOrderResponse,
-} from "@/lib/razorpay-pay";
+} from "@/lib/payments/razorpay-pay";
 import {
   CouponPanel,
   type AppliedCoupon,

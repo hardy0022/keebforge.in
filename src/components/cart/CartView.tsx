@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { updateCartItem, removeCartItem } from "@/app/actions/cart";
 import TrashIcon from "@/components/icons/trash-icon";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 
 export type CartSelection = {
   optionId: string;

@@ -1,15 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
 import {
   cloudinaryConfigured,
   deleteImage,
   mediaFolder,
   uploadBuffer,
-} from "@/lib/cloudinary";
-import { IMAGE_TYPES_MESSAGE, sniffImageType } from "@/lib/image-validation";
+} from "@/lib/images/cloudinary";
+import { IMAGE_TYPES_MESSAGE, sniffImageType } from "@/lib/images/validation";
 import {
   MAX_REVIEW_IMAGES,
   recalcProductRating,

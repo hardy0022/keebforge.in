@@ -1,7 +1,7 @@
 "use client";
 
 import { authClient } from "@/lib/auth/auth-client";
-import { PASSWORD_RULES } from "@/lib/password";
+import { PASSWORD_RULES } from "@/lib/utils/password";
 import { EyeIcon } from "@/components/auth/SignInForm";
 
 import { Suspense, useMemo, useState } from "react";

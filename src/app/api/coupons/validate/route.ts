@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentAuth } from "@/lib/auth";
-import { validateCoupon } from "@/lib/coupons";
+import { getCurrentAuth } from "@/lib/auth/session";
+import { validateCoupon } from "@/lib/checkout/coupons";
 
 export const dynamic = "force-dynamic";
 

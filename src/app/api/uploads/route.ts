@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { getAdminContext } from "@/lib/auth/admin";
 import { canAction } from "@/lib/auth/roles";
 import {
@@ -7,12 +7,12 @@ import {
   deleteImage,
   mediaFolder,
   uploadBuffer,
-} from "@/lib/cloudinary";
+} from "@/lib/images/cloudinary";
 import {
   IMAGE_TYPES_MESSAGE,
   isAllowedImageMime,
   sniffImageType,
-} from "@/lib/image-validation";
+} from "@/lib/images/validation";
 
 export const runtime = "nodejs";
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import type { Prisma, ShopSectionType } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { TAG, TTL, defineCached } from "@/lib/caching/cache";
 
 /** Mod groups with their active mods, for a device. Admin-only edits. */

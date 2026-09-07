@@ -5,9 +5,9 @@ import {
   getInventoryRows,
   getInventoryMovements,
   availableStock,
-} from "@/lib/admin-catalog";
+} from "@/lib/admin/catalog";
 import { InventoryForm } from "@/components/admin/products/ProductDetailClient";
-import { fmtIST } from "@/lib/ist";
+import { fmtIST } from "@/lib/utils/ist";
 
 export const metadata: Metadata = {
   title: "Inventory | KeebForge Admin",

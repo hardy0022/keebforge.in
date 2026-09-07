@@ -117,7 +117,7 @@ export function configSnapshot(
 }
 
 // ── Self-check ───────────────────────────────────────────────────────────────
-// npx tsx src/lib/product-options.ts
+// npx tsx src/lib/catalog/product-options.ts
 if (process.argv[1]?.endsWith("product-options.ts")) {
   const groups: OptionGroupLike[] = [
     {

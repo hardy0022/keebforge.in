@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getCurrentAuth } from "@/lib/auth";
-import { syncTrackingCache } from "@/lib/tracking";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAuth } from "@/lib/auth/session";
+import { syncTrackingCache } from "@/lib/orders/tracking";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";

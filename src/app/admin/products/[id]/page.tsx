@@ -3,14 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/utils/money";
 import {
   getAdminProduct,
   PRODUCT_STATUS_LABELS,
   PRODUCT_TYPE_LABELS,
   availableStock,
-} from "@/lib/admin-catalog";
-import { fmtIST } from "@/lib/ist";
+} from "@/lib/admin/catalog";
+import { fmtIST } from "@/lib/utils/ist";
 import {
   ProductStatusBar,
   VariantsManager,

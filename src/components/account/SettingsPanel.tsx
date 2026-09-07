@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
-import { PASSWORD_RULES } from "@/lib/password";
+import { PASSWORD_RULES } from "@/lib/utils/password";
 import { saveNewsletterOpt } from "@/app/account/settings/actions";
 
 interface SettingsPanelProps {

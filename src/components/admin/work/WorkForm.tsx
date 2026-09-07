@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveWork } from "@/app/admin/actions/work";
 import { Spinner } from "@/components/admin/ActionForm";
-import { cldUrl } from "@/lib/cloudinary-url";
+import { cldUrl } from "@/lib/images/cloudinary-url";
 
 type ImageItem = {
   key: string;
