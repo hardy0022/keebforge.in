@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
-import { CartQty } from "@/components/cart/CartQty";
-import TrashIcon from "@/components/icons/trash-icon";
+import { CartView, type CartRow } from "@/components/cart/CartView";
 import { buildMetadata } from "@/lib/seo";
 import { getCartPageView, availableQuantity } from "@/lib/cart";
 import {
   resolveConfiguredPrice,
   type ProductConfigSnapshot,
 } from "@/lib/product-options";
-import { formatINR } from "@/lib/money";
-import { removeCartItem } from "@/app/actions/cart";
 
 export const metadata: Metadata = buildMetadata({
   title: "Your Cart | KeebForge",
@@ -22,7 +18,7 @@ export default async function ShopCartPage() {
   const cart = await getCartPageView();
   const items = cart?.items ?? [];
 
-  const rows = items.map((item) => {
+  const rows: CartRow[] = items.map((item) => {
     const cfg = item.config as ProductConfigSnapshot | null;
     const resolved =
       cfg?.kind === "options"
@@ -44,17 +40,28 @@ export default async function ShopCartPage() {
     const available = item.variant
       ? availableQuantity(item.variant.stock, item.variant.reservedQuantity)
       : availableQuantity(item.product.stock, item.product.reservedQuantity);
-    const image = item.product.images[0];
+    const image = item.product.images[0] ?? null;
     return {
-      item,
+      id: item.id,
+      name: item.product.name,
+      slug: item.product.slug,
+      brand: item.product.brand?.name ?? null,
+      variantName: item.variant?.name ?? null,
+      productType: item.product.productType,
+      selections: selections.map((s) => ({
+        optionId: s.optionId,
+        groupName: s.groupName,
+        optionName: s.optionName,
+        addon: s.addon,
+      })),
+      image: image
+        ? { url: image.url, alt: image.alt ?? null }
+        : null,
       unitPrice,
       available,
-      image,
-      lineTotal: unitPrice * item.quantity,
-      selections,
+      quantity: item.quantity,
     };
   });
-  const subtotal = rows.reduce((s, r) => s + r.lineTotal, 0);
 
   return (
     <main>
@@ -85,149 +92,7 @@ export default async function ShopCartPage() {
               </Link>
             </div>
           ) : (
-            /* ── Two-column layout ── */
-            <div className="cart-layout">
-              {/* ── Left: Product list ── */}
-              <div className="cart-list">
-                {/* ── Column headings ── */}
-                <div className="cart-col-headings">
-                  <span className="cart-col-product">Product</span>
-                  <span className="cart-col-qty">Quantity</span>
-                  <span className="cart-col-total">Total</span>
-                </div>
-
-                {/* ── Product rows ── */}
-                {rows.map(
-                  ({ item, available, image, lineTotal, selections }) => (
-                    <article key={item.id} className="cart-row">
-                      <div className="cart-row-product">
-                        {image && (
-                          <div className="cart-row-img">
-                            <Image
-                              src={image.url}
-                              alt={image.alt ?? item.product.name}
-                              fill
-                              sizes="100px"
-                              className="object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="cart-row-details">
-                          <Link
-                            href={`/product/${item.product.slug}`}
-                            className="cart-row-name"
-                          >
-                            {item.product.name}
-                          </Link>
-                          {item.product.brand && (
-                            <p className="cart-row-brand">
-                              {item.product.brand.name}
-                            </p>
-                          )}
-                          {item.variant && (
-                            <p className="cart-row-meta">{item.variant.name}</p>
-                          )}
-                          {selections.length > 0 && (
-                            <div className="cart-row-options">
-                              {selections.map((s) => (
-                                <span
-                                  key={s.optionId}
-                                  className="cart-row-option"
-                                >
-                                  {s.groupName}: {s.optionName}
-                                  {s.addon > 0 && (
-                                    <span className="cart-row-addon">
-                                      {" "}
-                                      (+{formatINR(s.addon)})
-                                    </span>
-                                  )}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="cart-row-qty">
-                        {item.product.productType === "CUSTOM" ? (
-                          <span className="cart-qty-static">1</span>
-                        ) : (
-                          <CartQty
-                            itemId={item.id}
-                            quantity={item.quantity}
-                            available={available}
-                          />
-                        )}
-                      </div>
-
-                      <div className="cart-row-total">
-                        <span className="cart-row-price">
-                          {formatINR(lineTotal)}
-                        </span>
-                        <form action={removeCartItem}>
-                          <input type="hidden" name="itemId" value={item.id} />
-                          <button
-                            type="submit"
-                            className="cart-remove-btn"
-                            aria-label={`Remove ${item.product.name} from cart`}
-                          >
-                            <TrashIcon
-                              size={14}
-                              dangerHover
-                              className="cart-remove-icon"
-                              aria-hidden
-                            />
-                            Remove
-                          </button>
-                        </form>
-                      </div>
-                    </article>
-                  ),
-                )}
-              </div>
-
-              {/* ── Right: Order Summary ── */}
-              <aside className="cart-summary">
-                <h2 className="cart-summary-title">Order Summary</h2>
-
-                <div className="cart-summary-row">
-                  <span>Products subtotal</span>
-                  <span>{formatINR(subtotal)}</span>
-                </div>
-
-                <div className="cart-summary-row cart-summary-shipping">
-                  <span>Shipping</span>
-                  <span>At checkout</span>
-                </div>
-
-                <div className="cart-summary-divider" />
-
-                <div className="cart-summary-row cart-summary-total">
-                  <span>Total</span>
-                  <span className="cart-summary-total-amount">
-                    {formatINR(subtotal)}
-                  </span>
-                </div>
-
-                <p className="cart-summary-note">
-                  * Final total including shipping will be calculated at
-                  checkout.
-                </p>
-
-                <Link
-                  href="/shop/checkout"
-                  className="btn-prime w-full justify-center"
-                >
-                  Continue to Checkout <span aria-hidden="true">&rarr;</span>
-                </Link>
-                <Link
-                  href="/shop"
-                  className="btn-ghost w-full justify-center mt-2"
-                >
-                  Keep Shopping
-                </Link>
-              </aside>
-            </div>
+            <CartView rows={rows} />
           )}
         </div>
       </section>

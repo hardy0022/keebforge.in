@@ -64,6 +64,13 @@ export function AddToCart({
   const [qty, setQty] = useState(1);
   const [buyNow, setBuyNow] = useState(false);
   const [state, action, pending] = useActionState(addToCart, null);
+  const prevPendingRef = useRef(pending);
+  useEffect(() => {
+    if (prevPendingRef.current && !pending && state?.ok) {
+      window.dispatchEvent(new Event("kf-cart-changed"));
+    }
+    prevPendingRef.current = pending;
+  }, [pending, state]);
   const cartIconRef = useRef<AnimatedIconHandle>(null);
 
   const matches = (v: VariantProp, picks: Record<string, string>) =>
