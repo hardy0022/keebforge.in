@@ -6,6 +6,19 @@ import { prisma } from "@/lib/db/prisma";
 import { getCurrentAuth } from "@/lib/auth/session";
 import { generateOrderNumber } from "@/lib/orders";
 import { syncTrackingCache } from "@/lib/orders/tracking";
+import {
+  cloudinaryConfigured,
+  deleteImage,
+  mediaFolder,
+  uploadBuffer,
+} from "@/lib/images/cloudinary";
+import {
+  IMAGE_TYPES_MESSAGE,
+  sniffImageType,
+} from "@/lib/images/validation";
+
+const MAX_PHOTOS = 3;
+const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 
 export type RepairRequestState = {
   ok?: boolean;
@@ -140,6 +153,63 @@ export async function submitRepairRequest(
   const orderNumber = generateOrderNumber();
   const { profile } = await getCurrentAuth();
 
+  // Photos (optional): validate by bytes before any write so a bad upload
+  // never creates (or duplicates) an order. Uploaded to the order's own
+  // Cloudinary folder after the row exists, mirrored in review.ts.
+  const rawPhotos = formData
+    .getAll("photos")
+    .filter((f): f is File => f instanceof File);
+  if (rawPhotos.length > MAX_PHOTOS)
+    return { error: `You can attach at most ${MAX_PHOTOS} photos.` };
+  if (rawPhotos.length > 0 && !cloudinaryConfigured()) {
+    return {
+      error:
+        "Photo upload is temporarily unavailable — you can submit your request without photos.",
+    };
+  }
+  const photos = await Promise.all(
+    rawPhotos.map(async (f) => ({
+      name: f.name,
+      buffer: Buffer.from(await f.arrayBuffer()),
+    })),
+  );
+  for (const img of photos) {
+    if (img.buffer.length > MAX_PHOTO_BYTES)
+      return {
+        error: `Each photo must be under 3 MB — "${img.name}" is too large.`,
+      };
+    if (!sniffImageType(img.buffer))
+      return {
+        error: `"${img.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}`,
+      };
+  }
+
+  // Upload into the per-order folder now so a Cloudinary hiccup is surfaced
+  // before the order is persisted (no request without its photos surviving
+  // silently); assets are rolled back if persisting the order then fails.
+  const uploaded: {
+    url: string;
+    publicId: string;
+    width: number;
+    height: number;
+  }[] = [];
+  let photoFolder = "";
+  if (photos.length > 0) {
+    photoFolder = mediaFolder("WORK", orderNumber);
+    try {
+      for (const img of photos) {
+        uploaded.push(await uploadBuffer(img.buffer, { folder: photoFolder }));
+      }
+    } catch (e) {
+      console.error("Repair photo upload error:", e);
+      for (const u of uploaded) await deleteImage(u.publicId).catch(() => {});
+      return {
+        error:
+          "One or more photos failed to upload. Please retry, or submit without photos.",
+      };
+    }
+  }
+
   try {
     const order = await prisma.order.create({
       data: {
@@ -199,8 +269,34 @@ export async function submitRepairRequest(
     });
 
     await syncTrackingCache(order.id);
+
+    // Persist uploaded photos against the order (entityId = order.id, folder =
+    // the per-order /work folder above). A Media-row failure only orphans the
+    // Cloudinary assets — never the request.
+    if (uploaded.length > 0) {
+      try {
+        await prisma.media.createMany({
+          data: uploaded.map((u, i) => ({
+            publicId: u.publicId,
+            secureUrl: u.url,
+            entityType: "ORDER" as const,
+            entityId: order.id,
+            folder: photoFolder,
+            role: "CUSTOMER_UPLOAD" as const,
+            sortOrder: i,
+            width: u.width,
+            height: u.height,
+          })),
+        });
+      } catch (e) {
+        console.error("Repair photo persist error:", e);
+        for (const u of uploaded) await deleteImage(u.publicId).catch(() => {});
+      }
+    }
   } catch (e) {
     console.error("Repair request persist error:", e);
+    // Roll back any photos already on Cloudinary — the order itself failed.
+    for (const u of uploaded) await deleteImage(u.publicId).catch(() => {});
     return {
       error:
         "The request could not be saved right now. Please email contact@keebforge.in directly.",
@@ -230,6 +326,9 @@ export async function submitRepairRequest(
             ? ` — ${ship.streetAddress}, ${ship.city}, ${ship.state} ${ship.postalCode}`
             : ""),
       ],
+      uploaded.length > 0
+        ? ["Photos", uploaded.map((u) => u.url).join("\n")]
+        : ["Photos", "None"],
     ];
     await resend.emails.send({
       from: process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>",

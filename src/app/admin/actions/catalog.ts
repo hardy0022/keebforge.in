@@ -590,6 +590,29 @@ export async function setProductStatus(
   return { ok: true };
 }
 
+export async function deleteProduct(
+  _prev: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  await requirePermission("product", "delete");
+  const id = formData.get("id");
+  if (typeof id !== "string") return { error: "Invalid product." };
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { images: true },
+  });
+  if (!product) return { error: "Product not found." };
+
+  await prisma.product.delete({ where: { id } });
+  for (const img of product.images) {
+    if (img.publicId) await deleteImage(img.publicId).catch(() => {});
+  }
+  revalidatePath("/admin/products");
+  revalidatePath("/shop");
+  invalidateProducts();
+  return { ok: true };
+}
+
 export async function duplicateProduct(
   _prev: CatalogActionState,
   formData: FormData,

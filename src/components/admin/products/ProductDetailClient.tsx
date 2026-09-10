@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 import {
   setProductStatus,
+  deleteProduct,
   duplicateProduct,
   saveVariant,
   deleteVariant,
@@ -65,28 +66,28 @@ export function ProductStatusBar({
           <input
             type="hidden"
             name="status"
-            value={isArchived ? "ACTIVE" : "ARCHIVED"}
-          />
-          <button
-            className={`btn-admin ${isArchived ? "" : "danger"}`}
-            type="submit"
-          >
-            {isArchived ? "Restore" : "Archive"}
-          </button>
-        </form>
-        <form
-          action={async (fd: FormData) => {
-            await setProductStatus({}, fd);
-          }}
-        >
-          <input type="hidden" name="id" value={productId} />
-          <input
-            type="hidden"
-            name="status"
             value={isActive ? "DRAFT" : "ACTIVE"}
           />
           <button className="btn-admin" type="submit">
             {isActive ? "Unpublish" : "Publish"}
+          </button>
+        </form>
+        <form
+          action={async (fd: FormData) => {
+            await deleteProduct({}, fd);
+          }}
+          onSubmit={(e) => {
+            if (
+              !confirm(
+                "Delete this product permanently? This removes it from the database and cannot be undone. Order history keeps its item snapshot.",
+              )
+            )
+              e.preventDefault();
+          }}
+        >
+          <input type="hidden" name="id" value={productId} />
+          <button className="btn-admin danger" type="submit">
+            Delete permanently
           </button>
         </form>
         <form

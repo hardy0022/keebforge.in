@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { SITE_URL } from "@/lib/seo";
+import { TAG, TTL } from "@/lib/caching/cache";
 
 const STATIC: {
   path: string;
@@ -9,6 +11,8 @@ const STATIC: {
 }[] = [
   { path: "/", priority: 1 },
   { path: "/shop", priority: 0.9 },
+  { path: "/shop/clearance", priority: 0.7 },
+  { path: "/shop/custom", priority: 0.7 },
   { path: "/mods", priority: 0.9 },
   { path: "/workshop", priority: 0.8 },
   { path: "/about", priority: 0.5 },
@@ -16,21 +20,33 @@ const STATIC: {
   { path: "/work", priority: 0.7 },
   { path: "/contact", priority: 0.5 },
   { path: "/track-order", priority: 0.5 },
+  { path: "/privacy-policy", priority: 0.4 },
+  { path: "/terms", priority: 0.4 },
   { path: "/shipping-information", priority: 0.4 },
   { path: "/returns-refunds", priority: 0.4 },
 ];
 
+const getDynamicUrls = unstable_cache(
+  async () => {
+    const [products, work] = await Promise.all([
+      prisma.product.findMany({
+        where: { active: true },
+        select: { slug: true, updatedAt: true },
+      }),
+      prisma.workProject.findMany({
+        where: { active: true },
+        select: { slug: true, updatedAt: true },
+      }),
+    ]);
+
+    return { products, work };
+  },
+  ["sitemap-dynamic"],
+  { tags: [TAG.products, TAG.work], revalidate: TTL.catalog },
+);
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, work] = await Promise.all([
-    prisma.product.findMany({
-      where: { active: true },
-      select: { slug: true, updatedAt: true },
-    }),
-    prisma.workProject.findMany({
-      where: { active: true },
-      select: { slug: true, updatedAt: true },
-    }),
-  ]);
+  const { products, work } = await getDynamicUrls();
 
   const productUrls = products.map((p) => ({
     url: `${SITE_URL}/product/${p.slug}`,

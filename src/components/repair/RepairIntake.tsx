@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, startTransition } from "react";
 import {
   submitRepairRequest,
   type RepairRequestState,
 } from "@/app/actions/repair-request";
 import { INDIAN_STATES } from "@/lib/config/indian-states";
+import {
+  sniffImageFile,
+  IMAGE_ACCEPT,
+  IMAGE_TYPES_MESSAGE,
+} from "@/lib/images/validation";
 
 export type AddressDTO = {
   id: string;
@@ -17,6 +22,11 @@ export type AddressDTO = {
   postalCode: string;
   isDefault: boolean;
 };
+
+const MAX_PHOTOS = 3;
+const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+
+type NewPhoto = { uid: string; url: string; file: File };
 
 const SERVICE_CARDS = [
   {
@@ -141,6 +151,7 @@ export function RepairIntake({
   const [postalCode, setPostalCode] = useState("");
 
   const [gateError, setGateError] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<NewPhoto[]>([]);
 
   // ponytail: saved addresses are only needed to prefill the shipping/pickup
   // section (a later, non-critical step), so fetch them client-side after
@@ -180,6 +191,46 @@ export function RepairIntake({
     setWorkTypes((cur) =>
       cur.includes(w) ? cur.filter((x) => x !== w) : [...cur, w],
     );
+
+  async function onFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const room = MAX_PHOTOS - photos.length;
+    const accepted: NewPhoto[] = [];
+    for (const f of files.slice(0, room)) {
+      if (f.size > MAX_PHOTO_BYTES) {
+        alert(`Each photo must be under 3 MB — "${f.name}" is too large.`);
+        continue;
+      }
+      if (!(await sniffImageFile(f))) {
+        alert(`${IMAGE_TYPES_MESSAGE} ("${f.name}" isn't one.)`);
+        continue;
+      }
+      accepted.push({
+        uid: `${f.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        url: URL.createObjectURL(f),
+        file: f,
+      });
+    }
+    if (accepted.length < files.length)
+      alert(`You can attach at most ${MAX_PHOTOS} photos.`);
+    setPhotos((prev) => [...prev, ...accepted]);
+    e.target.value = "";
+  }
+
+  function dropPhoto(uid: string) {
+    setPhotos((prev) => {
+      const target = prev.find((p) => p.uid === uid);
+      if (target) URL.revokeObjectURL(target.url);
+      return prev.filter((p) => p.uid !== uid);
+    });
+  }
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    for (const p of photos) fd.append("photos", p.file);
+    startTransition(() => formAction(fd));
+  }
 
   const missing: string[] = [];
   if (!serviceType) missing.push("a service type");
@@ -254,10 +305,11 @@ export function RepairIntake({
     ["Device", deviceLabel],
     ["Model", model.trim() ? `${brand} ${model}`.trim() : "—"],
     ["Work", workTypes.length > 0 ? workTypes.join(", ") : "—"],
+    ["Photos", photos.length > 0 ? `${photos.length} attached` : "—"],
   ];
 
   return (
-    <form action={formAction} className="ri-layout">
+    <form action={formAction} onSubmit={onSubmit} className="ri-layout">
       <input type="hidden" name="serviceType" value={serviceType ?? ""} />
       <input type="hidden" name="deviceType" value={deviceType} />
       <input type="hidden" name="brand" value={brand} />
@@ -487,6 +539,44 @@ export function RepairIntake({
                   placeholder="Describe the job — what's happening, what you want achieved, history of the device…"
                   minLength={20}
                 />
+              </div>
+              <div className="form-row">
+                <label>Photos (optional)</label>
+                <p className="field-hint">
+                  Show us the damage, layout, or parts you want worked on.
+                </p>
+                <div className="wr-photo-grid">
+                  {photos.map((p) => (
+                    <div key={p.uid} className="wr-photo">
+                      <img src={p.url} alt="" width={120} height={90} />
+                      <button
+                        type="button"
+                        className="wr-photo-x"
+                        onClick={() => dropPhoto(p.uid)}
+                        aria-label="Remove photo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {photos.length < MAX_PHOTOS && (
+                    <label className="wr-photo-add">
+                      <input
+                        type="file"
+                        accept={IMAGE_ACCEPT.join(",")}
+                        multiple
+                        onChange={onFilesChange}
+                        className="sr-only"
+                      />
+                      <span className="wr-photo-add-icon">+</span>
+                      <span>Add Photos</span>
+                    </label>
+                  )}
+                </div>
+                <p className="field-hint">
+                  PNG / JPG / WebP / AVIF · Up to {MAX_PHOTOS} photos · Max 3
+                  MB each
+                </p>
               </div>
             </section>
 
