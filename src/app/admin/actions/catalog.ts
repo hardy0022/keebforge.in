@@ -191,60 +191,58 @@ async function syncOptionGroups(
   productId: string,
   groups: OptionConfigGroup[],
 ) {
-  await prisma.$transaction(async (tx) => {
-    await tx.productOptionGroup.deleteMany({
-      where: {
+  await prisma.productOptionGroup.deleteMany({
+    where: {
+      productId,
+      ...(groups.some((g) => g.id)
+        ? { id: { notIn: groups.map((g) => g.id!).filter(Boolean) } }
+        : {}),
+    },
+  });
+  for (const [gi, g] of groups.entries()) {
+    const group = await prisma.productOptionGroup.upsert({
+      where: { id: g.id ?? "__new__" },
+      update: {
+        name: g.name,
+        required: g.required,
+        sortOrder: gi,
+        enabled: true,
+      },
+      create: {
         productId,
-        ...(groups.some((g) => g.id)
-          ? { id: { notIn: groups.map((g) => g.id!).filter(Boolean) } }
+        name: g.name,
+        required: g.required,
+        sortOrder: gi,
+        enabled: true,
+      },
+    });
+    await prisma.productOption.deleteMany({
+      where: {
+        groupId: group.id,
+        ...(g.options.some((o) => o.id)
+          ? { id: { notIn: g.options.map((o) => o.id!).filter(Boolean) } }
           : {}),
       },
     });
-    for (const [gi, g] of groups.entries()) {
-      const group = await tx.productOptionGroup.upsert({
-        where: { id: g.id ?? "__new__" },
+    for (const [oi, o] of g.options.entries()) {
+      await prisma.productOption.upsert({
+        where: { id: o.id ?? "__new__" },
         update: {
-          name: g.name,
-          required: g.required,
-          sortOrder: gi,
+          name: o.name,
+          priceAddon: o.addon,
+          sortOrder: oi,
           enabled: true,
         },
         create: {
-          productId,
-          name: g.name,
-          required: g.required,
-          sortOrder: gi,
+          groupId: group.id,
+          name: o.name,
+          priceAddon: o.addon,
+          sortOrder: oi,
           enabled: true,
         },
       });
-      await tx.productOption.deleteMany({
-        where: {
-          groupId: group.id,
-          ...(g.options.some((o) => o.id)
-            ? { id: { notIn: g.options.map((o) => o.id!).filter(Boolean) } }
-            : {}),
-        },
-      });
-      for (const [oi, o] of g.options.entries()) {
-        await tx.productOption.upsert({
-          where: { id: o.id ?? "__new__" },
-          update: {
-            name: o.name,
-            priceAddon: o.addon,
-            sortOrder: oi,
-            enabled: true,
-          },
-          create: {
-            groupId: group.id,
-            name: o.name,
-            priceAddon: o.addon,
-            sortOrder: oi,
-            enabled: true,
-          },
-        });
-      }
     }
-  });
+  }
 }
 
 const productSchema = z.object({
