@@ -8,6 +8,7 @@ export const metadata: Metadata = buildMetadata({
   description:
     "Review your mods configuration, enter delivery details and pay securely via Razorpay.",
   path: "/mods/checkout",
+  noIndex: true,
 });
 
 export const dynamic = "force-dynamic";

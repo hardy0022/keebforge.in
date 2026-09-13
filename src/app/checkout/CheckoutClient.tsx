@@ -17,7 +17,8 @@ import {
   AddressPicker,
   type SavedAddressOption,
 } from "@/components/mods/AddressPicker";
-import { INDIAN_STATES } from "@/lib/config/indian-states";
+import { StateSelect } from "@/components/ui/StateSelect";
+import { PinCodeInput } from "@/components/ui/PinCodeInput";
 import {
   launchRazorpayPayment,
   type CreateOrderResponse,
@@ -607,21 +608,12 @@ export function ServiceCheckout({
                             label="State *"
                             error={showErrors ? fieldErrors.state : undefined}
                           >
-                            <select
+                            <StateSelect
                               className={`shop-select w-full${showErrors && fieldErrors.state ? " error" : ""}`}
                               value={form.state}
-                              onChange={(e) =>
-                                setForm({ ...form, state: e.target.value })
-                              }
+                              onChange={(v) => setForm({ ...form, state: v })}
                               autoComplete="address-level1"
-                            >
-                              <option value="">Select State</option>
-                              {INDIAN_STATES.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
+                            />
                           </Field>
                           <Field
                             label="PIN Code *"
@@ -629,19 +621,13 @@ export function ServiceCheckout({
                               showErrors ? fieldErrors.postalCode : undefined
                             }
                           >
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              maxLength={6}
+                            <PinCodeInput
                               className={fieldClass(
                                 !!(showErrors && fieldErrors.postalCode),
                               )}
                               value={form.postalCode}
-                              onChange={(e) =>
-                                setForm({
-                                  ...form,
-                                  postalCode: e.target.value.replace(/\D/g, ""),
-                                })
+                              onChange={(v) =>
+                                setForm({ ...form, postalCode: v })
                               }
                               placeholder="110001"
                               autoComplete="postal-code"
@@ -846,39 +832,24 @@ export function ServiceCheckout({
                         label="State *"
                         error={showErrors ? billingErrors.state : undefined}
                       >
-                        <select
+                        <StateSelect
                           className={`shop-select w-full${showErrors && billingErrors.state ? " error" : ""}`}
                           value={billing.state}
-                          onChange={(e) =>
-                            setBilling({ ...billing, state: e.target.value })
-                          }
+                          onChange={(v) => setBilling({ ...billing, state: v })}
                           autoComplete="billing address-level1"
-                        >
-                          <option value="">Select State</option>
-                          {INDIAN_STATES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </Field>
                       <Field
                         label="PIN Code *"
                         error={showErrors ? billingErrors.pinCode : undefined}
                       >
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={6}
+                        <PinCodeInput
                           className={fieldClass(
                             !!(showErrors && billingErrors.pinCode),
                           )}
                           value={billing.pinCode}
-                          onChange={(e) =>
-                            setBilling({
-                              ...billing,
-                              pinCode: e.target.value.replace(/\D/g, ""),
-                            })
+                          onChange={(v) =>
+                            setBilling({ ...billing, pinCode: v })
                           }
                           placeholder="110001"
                           autoComplete="billing postal-code"
@@ -1827,32 +1798,25 @@ export function ProductCheckout({
                       label="State *"
                       error={showErrors ? fieldErrors.state : undefined}
                     >
-                      <select
+                      <StateSelect
                         className={`shop-select w-full${showErrors && fieldErrors.state ? " error" : ""}`}
                         value={form.state}
-                        onChange={setField("state")}
+                        onChange={(v) => setForm((f) => ({ ...f, state: v }))}
                         autoComplete="address-level1"
-                      >
-                        <option value="">Select State</option>
-                        {INDIAN_STATES.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </Field>
                     <Field
                       label="PIN Code *"
                       error={showErrors ? fieldErrors.postalCode : undefined}
                     >
-                      <input
-                        inputMode="numeric"
-                        maxLength={6}
+                      <PinCodeInput
                         className={fieldClass(
                           showErrors && !!fieldErrors.postalCode,
                         )}
                         value={form.postalCode}
-                        onChange={setField("postalCode")}
+                        onChange={(v) =>
+                          setForm((f) => ({ ...f, postalCode: v }))
+                        }
                         autoComplete="postal-code"
                       />
                     </Field>
@@ -2038,33 +2002,27 @@ export function ProductCheckout({
                         label="State *"
                         error={showErrors ? billingErrors.state : undefined}
                       >
-                        <select
+                        <StateSelect
                           className={`shop-select w-full${showErrors && billingErrors.state ? " error" : ""}`}
                           value={billing.state}
-                          onChange={setBillingField("state")}
+                          onChange={(v) =>
+                            setBilling({ ...billing, state: v })
+                          }
                           autoComplete="billing address-level1"
-                        >
-                          <option value="">Select State</option>
-                          {INDIAN_STATES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </Field>
                       <Field
                         label="PIN Code *"
                         error={showErrors ? billingErrors.pinCode : undefined}
                       >
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={6}
+                        <PinCodeInput
                           className={fieldClass(
                             !!(showErrors && billingErrors.pinCode),
                           )}
                           value={billing.pinCode}
-                          onChange={setBillingField("pinCode")}
+                          onChange={(v) =>
+                            setBilling({ ...billing, pinCode: v })
+                          }
                           placeholder="110001"
                           autoComplete="billing postal-code"
                         />

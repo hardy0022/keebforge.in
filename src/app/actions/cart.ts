@@ -8,6 +8,7 @@ import {
   cartOwnerWhere,
   resolveCartOwner,
 } from "@/lib/cart";
+import { measured } from "@/lib/perf";
 import {
   configKey,
   configSnapshot,
@@ -109,6 +110,7 @@ export async function addToCart(
   _prev: CartActionState | null,
   formData: FormData,
 ): Promise<CartActionState> {
+  return measured("addToCart", async () => {
   const parsed = addSchema.safeParse({
     productId: formData.get("productId"),
     variantId: formData.get("variantId") || undefined,
@@ -124,46 +126,51 @@ export async function addToCart(
 
   // Single narrow load carries everything addToCart needs: active/status/type for
   // gating, product + variant stock for availability, and config options when set.
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: {
-      id: true,
-      active: true,
-      status: true,
-      productType: true,
-      price: true,
-      stock: true,
-      reservedQuantity: true,
-      variants: {
-        where: { active: true },
-        select: {
-          id: true,
-          active: true,
-          stock: true,
-          reservedQuantity: true,
+  const [product, cart] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        active: true,
+        status: true,
+        productType: true,
+        price: true,
+        stock: true,
+        reservedQuantity: true,
+        variants: {
+          where: { active: true },
+          select: {
+            id: true,
+            active: true,
+            stock: true,
+            reservedQuantity: true,
+          },
         },
-      },
-      optionGroups: {
-        where: { enabled: true },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        select: {
-          id: true,
-          name: true,
-          required: true,
-          enabled: true,
-          options: {
-            orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-            select: {
-              id: true,
-              name: true,
-              priceAddon: true,
-              enabled: true,
+        optionGroups: {
+          where: { enabled: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          select: {
+            id: true,
+            name: true,
+            required: true,
+            enabled: true,
+            options: {
+              orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+              select: {
+                id: true,
+                name: true,
+                priceAddon: true,
+                enabled: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    // Independent of the product read — resolve the cart in parallel instead
+    // of paying one extra DB round trip sequentially.
+    cartForCurrentUser(),
+  ]);
   if (!product || !product.active)
     return { error: "This product is no longer available." };
   const madeToOrder = product.productType === "CUSTOM";
@@ -186,8 +193,6 @@ export async function addToCart(
 
   const check = checkQuantity(product, variantId ?? null, qty);
   if (check) return { error: check };
-
-  const cart = await cartForCurrentUser();
 
   // Identical configurations merge into one line; different ones stay separate.
   // Made-to-order units never merge — each build is its own quantity-1 line.
@@ -231,12 +236,14 @@ export async function addToCart(
     _sum: { quantity: true },
   });
   return { ok: true, count: count._sum.quantity ?? 0 };
+  });
 }
 
 export async function updateCartItem(
   _prev: CartActionState | null,
   formData: FormData,
 ): Promise<CartActionState> {
+  return measured("updateCartItem", async () => {
   const parsed = qtySchema.safeParse({
     itemId: formData.get("itemId"),
     quantity: formData.get("quantity"),
@@ -285,11 +292,13 @@ export async function updateCartItem(
     data: { quantity },
   });
   return { ok: true, quantity, available: avail };
+  });
 }
 
 export async function removeCartItem(
   formData: FormData,
 ): Promise<{ ok?: boolean; error?: string }> {
+  return measured("removeCartItem", async () => {
   const itemId = formData.get("itemId");
   if (typeof itemId !== "string" || !itemId) return { ok: true };
 
@@ -301,4 +310,5 @@ export async function removeCartItem(
     where: { id: itemId, cart: cartOwnerWhere(owner) },
   });
   return { ok: true };
+  });
 }

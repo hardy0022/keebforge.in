@@ -12,6 +12,7 @@ export const metadata: Metadata = buildMetadata({
   title: "Your Cart | KeebForge",
   description: "Review your KeebForge cart before checkout.",
   path: "/shop/cart",
+  noIndex: true,
 });
 
 export default async function ShopCartPage() {

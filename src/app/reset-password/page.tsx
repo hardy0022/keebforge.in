@@ -2,7 +2,7 @@
 
 import { authClient } from "@/lib/auth/auth-client";
 import { PASSWORD_RULES } from "@/lib/utils/password";
-import { EyeIcon } from "@/components/auth/SignInForm";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
@@ -16,8 +16,6 @@ function ResetPasswordBody() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,31 +84,19 @@ function ResetPasswordBody() {
     <form onSubmit={onSubmit} className="auth-form">
       <div className="form-row">
         <label htmlFor="reset-password">New password</label>
-        <div className="password-wrapper">
-          <input
-            id="reset-password"
-            type={showPassword ? "text" : "password"}
-            required
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={busy}
-            placeholder="New password"
-            aria-describedby="pw-requirements"
-            aria-invalid={
-              password.length > 0 && !requirements.every((r) => r.met)
-            }
-          />
-          <button
-            type="button"
-            className="password-toggle"
-            onClick={() => setShowPassword((v) => !v)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            aria-pressed={showPassword}
-          >
-            <EyeIcon open={showPassword} />
-          </button>
-        </div>
+        <PasswordField
+          id="reset-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          required
+          disabled={busy}
+          placeholder="New password"
+          ariaDescribedBy="pw-requirements"
+          ariaInvalid={
+            password.length > 0 && !requirements.every((r) => r.met)
+          }
+        />
 
         <p className="req-title" id="pw-requirements-label">
           Password requirements
@@ -133,28 +119,16 @@ function ResetPasswordBody() {
 
       <div className="form-row">
         <label htmlFor="confirm-password">Confirm password</label>
-        <div className="password-wrapper">
-          <input
-            id="confirm-password"
-            type={showConfirm ? "text" : "password"}
-            required
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            disabled={busy}
-            placeholder="Confirm new password"
-            aria-invalid={confirm.length > 0 && password !== confirm}
-          />
-          <button
-            type="button"
-            className="password-toggle"
-            onClick={() => setShowConfirm((v) => !v)}
-            aria-label={showConfirm ? "Hide password" : "Show password"}
-            aria-pressed={showConfirm}
-          >
-            <EyeIcon open={showConfirm} />
-          </button>
-        </div>
+        <PasswordField
+          id="confirm-password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="new-password"
+          required
+          disabled={busy}
+          placeholder="Confirm new password"
+          ariaInvalid={confirm.length > 0 && password !== confirm}
+        />
         {confirm.length > 0 && password !== confirm && (
           <p className="field-note err">Passwords do not match.</p>
         )}

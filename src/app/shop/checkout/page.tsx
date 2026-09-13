@@ -9,6 +9,7 @@ export const metadata: Metadata = buildMetadata({
   description:
     "Review your cart, enter delivery details and pay securely via Razorpay.",
   path: "/shop/checkout",
+  noIndex: true,
 });
 
 export const dynamic = "force-dynamic";

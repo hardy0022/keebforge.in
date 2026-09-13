@@ -3,10 +3,17 @@ import type { Metadata } from "next";
 export const SITE_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+/** Absolute URLs regardless of whether the source is a full URL or a path. */
+export function toAbsUrl(u: string): string {
+  return /^https?:\/\//i.test(u) ? u : `${SITE_URL}${u}`;
+}
+
 type SEOInput = {
   title: string;
   description: string;
   path?: string;
+  /** Canonical override — defaults to SITE_URL + path. */
+  canonical?: string;
   image?: string;
   type?: "website" | "article";
   robots?: string;
@@ -18,16 +25,17 @@ export function buildMetadata({
   title,
   description,
   path = "",
+  canonical,
   image = "",
   type = "website",
   robots = "index, follow, max-image-preview:large",
   noIndex = false,
 }: SEOInput): Metadata {
-  const url = `${SITE_URL}${path}`;
+  const canonicalUrl = canonical ?? (path ? `${SITE_URL}${path}` : SITE_URL);
   const ogImages = image
     ? [
         {
-          url: `${SITE_URL}${image}`,
+          url: toAbsUrl(image),
           width: 1200,
           height: 630,
           alt: "KeebForge.in",
@@ -37,12 +45,12 @@ export function buildMetadata({
   return {
     title,
     description,
-    alternates: { canonical: path ? url : SITE_URL },
+    alternates: { canonical: canonicalUrl },
     robots: noIndex ? "noindex, nofollow" : robots,
     openGraph: {
       title,
       description,
-      url,
+      url: canonicalUrl,
       siteName: "KeebForge.in",
       locale: "en_IN",
       type,
@@ -52,7 +60,7 @@ export function buildMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: image ? [`${SITE_URL}${image}`] : undefined,
+      images: image ? [toAbsUrl(image)] : undefined,
     },
   };
 }

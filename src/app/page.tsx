@@ -13,6 +13,7 @@ export const metadata: Metadata = buildMetadata({
   title: "KeebForge — Mechanical Keyboard & Mouse Repair in India",
   description:
     "Mechanical keyboard and mouse repair, soldering, switch lubing, stabilizer tuning and custom builds. India-wide mail-in service.",
+  image: "/hero-background.webp",
 });
 
 export default async function HomePage() {

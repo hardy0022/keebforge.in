@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { WorkImageSlider } from "@/components/work/WorkImageSlider";
-import { buildMetadata } from "@/lib/seo";
+import { buildMetadata, JsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import { getWorkProjectBySlug } from "@/lib/catalog/data";
 
 type WorkImage = { url: string; alt?: string; publicId?: string };
@@ -124,6 +124,14 @@ export default async function WorkDetailPage({
           </div>
         </div>
       </section>
+
+      {/* ── Breadcrumb markup ────────────────────────────────────────────── */}
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Work", path: "/work" },
+          { name: project.title, path: `/work/${project.slug}` },
+        ])}
+      />
     </main>
   );
 }

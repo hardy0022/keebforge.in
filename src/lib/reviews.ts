@@ -4,9 +4,11 @@ import { prisma } from "@/lib/db/prisma";
 import { TAG, TTL, defineCached } from "@/lib/caching/cache";
 
 /** Review photos live in the generic Media table (entityType REVIEW). */
-export type ReviewWithImages = Prisma.ReviewGetPayload<{
-  include: { profile: true };
-}> & {
+export type ReviewWithImages = Omit<
+  Prisma.ReviewGetPayload<{ include: { profile: true } }>,
+  "profile"
+> & {
+  profile: { id: string; name: string | null; avatarUrl: string | null } | null;
   images: {
     id: string;
     url: string;
@@ -68,7 +70,9 @@ async function reviewsPage(
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: { profile: true },
+      // Only what ReviewCard renders (name + avatar) plus id for the
+      // verified-buyer lookup — a full Profile row is pointless payload.
+      include: { profile: { select: { id: true, name: true, avatarUrl: true } } },
     }),
   ]);
   const media = await prisma.media.findMany({
@@ -120,20 +124,26 @@ export const getPublicReviews = defineCached(
 /** Site-wide rating summary (5 → 1 distribution) for approved product+general reviews. */
 export const getSiteReviewSummary = defineCached(
   async () => {
-    const ratings = await prisma.review.findMany({
-      where: { status: "APPROVED", type: { in: ["PRODUCT", "GENERAL"] } },
-      select: { rating: true },
-    });
-    const count = ratings.length;
+    const [agg, rows] = await Promise.all([
+      prisma.review.aggregate({
+        where: { status: "APPROVED", type: { in: ["PRODUCT", "GENERAL"] } },
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
+      prisma.review.groupBy({
+        by: ["rating"],
+        where: { status: "APPROVED", type: { in: ["PRODUCT", "GENERAL"] } },
+        _count: { _all: true },
+      }),
+    ]);
     const distribution = [0, 0, 0, 0, 0]; // index 0 = 5★ … index 4 = 1★
-    let sum = 0;
-    for (const r of ratings) {
-      if (r.rating >= 1 && r.rating <= 5) {
-        distribution[5 - r.rating]++;
-        sum += r.rating;
-      }
-    }
-    return { count, average: count ? sum / count : null, distribution };
+    for (const r of rows)
+      if (r.rating >= 1 && r.rating <= 5) distribution[5 - r.rating] = r._count._all;
+    return {
+      count: agg._count._all,
+      average: agg._avg.rating ?? null,
+      distribution,
+    };
   },
   {
     tags: [TAG.reviews],

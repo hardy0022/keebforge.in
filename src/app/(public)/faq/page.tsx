@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
 import { FaqList } from "@/components/ui/FaqList";
 import { CtaSection } from "@/components/ui/CtaSection";
-import { buildMetadata } from "@/lib/seo";
+import { buildMetadata, JsonLd } from "@/lib/seo";
 import { GENERAL_FAQ } from "@/lib/faq";
 
 export const metadata: Metadata = buildMetadata({
@@ -26,6 +26,16 @@ export default function FaqPage() {
         ]}
       />
       <FaqList items={GENERAL_FAQ} />
+      <JsonLd
+        data={{
+          "@type": "FAQPage",
+          mainEntity: GENERAL_FAQ.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }}
+      />
       <CtaSection
         title={
           <>

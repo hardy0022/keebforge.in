@@ -1,78 +1,25 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useCallback } from "react";
+import { forwardRef, useImperativeHandle } from "react";
 import type { AnimatedIconHandle, AnimatedIconProps } from "./types";
-import { motion, useAnimate } from "motion/react";
 
+/**
+ * Animated "user +" icon. Hover animation is CSS-only (.icon-animated + parent
+ * :hover) so the app shell doesn't ship the motion/react runtime.
+ * `startAnimation`/`stopAnimation` are kept as no-ops for source compatibility.
+ */
 const UserPlusIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
   (
     { size = 24, color = "currentColor", strokeWidth = 2, className = "" },
     ref,
   ) => {
-    const [scope, animate] = useAnimate();
-
-    const start = useCallback(async () => {
-      // User bounces slightly
-      animate(
-        ".user-avatar",
-        {
-          scale: 1.05,
-          y: -1,
-        },
-        {
-          duration: 0.25,
-          ease: "easeOut",
-        },
-      );
-
-      // Plus sign expands and rotates
-      animate(
-        ".plus-sign",
-        {
-          scale: 1.15,
-          rotate: 90,
-        },
-        {
-          duration: 0.3,
-          ease: "easeOut",
-        },
-      );
-    }, [animate]);
-
-    const stop = useCallback(async () => {
-      animate(
-        ".user-avatar",
-        {
-          scale: 1,
-          y: 0,
-        },
-        {
-          duration: 0.2,
-          ease: "easeInOut",
-        },
-      );
-
-      animate(
-        ".plus-sign",
-        {
-          scale: 1,
-          rotate: 0,
-        },
-        {
-          duration: 0.25,
-          ease: "easeInOut",
-        },
-      );
-    }, [animate]);
-
     useImperativeHandle(ref, () => ({
-      startAnimation: start,
-      stopAnimation: stop,
+      startAnimation: () => {},
+      stopAnimation: () => {},
     }));
 
     return (
-      <motion.svg
-        ref={scope}
+      <svg
         xmlns="http://www.w3.org/2000/svg"
         width={size}
         height={size}
@@ -82,28 +29,22 @@ const UserPlusIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`cursor-pointer ${className}`}
+        className={`icon-animated cursor-pointer ${className}`}
       >
         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
 
         {/* User avatar */}
-        <motion.g
-          className="user-avatar"
-          style={{ transformOrigin: "50% 50%" }}
-        >
+        <g className="user-avatar">
           <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
           <path d="M6 21v-2a4 4 0 0 1 4 -4h4" />
-        </motion.g>
+        </g>
 
         {/* Plus sign */}
-        <motion.g
-          className="plus-sign"
-          style={{ transformOrigin: "19px 19px" }}
-        >
+        <g className="plus-sign">
           <path d="M16 19h6" />
           <path d="M19 16v6" />
-        </motion.g>
-      </motion.svg>
+        </g>
+      </svg>
     );
   },
 );

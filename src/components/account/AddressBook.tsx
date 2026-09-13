@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { INDIAN_STATES } from "@/lib/config/indian-states";
+import { StateSelect } from "@/components/ui/StateSelect";
+import { PinCodeInput } from "@/components/ui/PinCodeInput";
+import { AccountModal } from "@/components/ui/AccountModal";
 
 interface Address {
   id: string;
@@ -270,42 +272,12 @@ export function AddressBook() {
       )}
 
       {showModal && (
-        <div
-          className="account-modal-overlay"
-          onClick={closeModal}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="address-modal-title"
+        <AccountModal
+          title={editingAddress ? "Edit Address" : "Add Address"}
+          titleId="address-modal-title"
+          onClose={closeModal}
         >
-          <div className="account-modal" onClick={(e) => e.stopPropagation()}>
-            <header className="account-modal-header">
-              <h3 id="address-modal-title">
-                {editingAddress ? "Edit Address" : "Add Address"}
-              </h3>
-              <button
-                type="button"
-                className="account-modal-close"
-                onClick={closeModal}
-                aria-label="Close"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </header>
-
-            <form onSubmit={handleSubmit} className="account-form">
+          <form onSubmit={handleSubmit} className="account-form">
               <div className="form-row">
                 <label htmlFor="label">Label</label>
                 <input
@@ -406,34 +378,23 @@ export function AddressBook() {
               <div className="account-field-grid">
                 <div className="form-row">
                   <label htmlFor="state">State *</label>
-                  <select
+                  <StateSelect
                     id="state"
-                    required
                     value={formData.state}
-                    onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
-                    }
-                  >
-                    <option value="">Select State</option>
-                    {INDIAN_STATES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setFormData({ ...formData, state: v })}
+                    required
+                  />
                 </div>
 
                 <div className="form-row">
                   <label htmlFor="postalCode">PIN Code *</label>
-                  <input
+                  <PinCodeInput
                     id="postalCode"
-                    type="text"
                     required
-                    maxLength={6}
                     pattern="[0-9]{6}"
                     value={formData.postalCode}
-                    onChange={(e) =>
-                      setFormData({ ...formData, postalCode: e.target.value })
+                    onChange={(v) =>
+                      setFormData({ ...formData, postalCode: v })
                     }
                     placeholder="560001"
                   />
@@ -494,9 +455,8 @@ export function AddressBook() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
+          </AccountModal>
+        )}
+      </section>
+    );
+  }

@@ -1,19 +1,14 @@
-"use client";
-
-import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import type { ShopProduct } from "@/lib/catalog/data";
 import { formatINR } from "@/lib/utils/money";
 import { isPurchasable, CONDITION_LABELS, MAX_CARD_FEATURES } from "@/lib/catalog/shop";
 import { CardAddToCart } from "@/components/shop/CardAddToCart";
 import { CardIcon, type ProductCardFeature } from "@/components/ui/CardIcons";
-import { BlurFadeImage } from "@/components/ui/blur-fade-image";
+import { ImageCycler } from "@/components/shop/ImageCycler";
 
 export function ProductCard({ product }: { product: ShopProduct }) {
   const images = product.images;
   const count = images.length;
-  const [manual, setManual] = useState<number | null>(null);
   const compareAt = product.compareAtPrice;
   const buyable = isPurchasable(product);
   const feats = (
@@ -44,95 +39,17 @@ export function ProductCard({ product }: { product: ShopProduct }) {
           "Clearance"
         : null;
 
-  // Hover swap is pure CSS (no re-render → no flicker). Arrows only move a
-  // "manual" index that pins the image; leaving the card releases it.
-  const nextImage = () => setManual((m) => ((m ?? 0) + 1) % count);
-  const prevImage = () => setManual((m) => ((m ?? 0) - 1 + count) % count);
-
   return (
     <article
       className={`shop-card${buyable ? "" : " shop-card--unavailable"}`}
-      onMouseLeave={() => setManual(null)}
     >
-      <Link
-        href={`/product/${product.slug}`}
-        className="shop-card-media"
-        aria-label={product.name}
-      >
-        {count > 0 ? (
-          <>
-            <BlurFadeImage className="absolute inset-0">
-              {images.map((img, i) => (
-                <Image
-                  key={i}
-                  src={img.url}
-                  alt={img.alt ?? product.name}
-                  fill
-                  sizes="(min-width: 1200px) 25vw, (min-width: 850px) 33vw, (min-width: 600px) 50vw, 100vw"
-                  className="shop-card-img"
-                  style={
-                    manual !== null
-                      ? { opacity: i === manual ? 1 : 0 }
-                      : undefined
-                  }
-                />
-              ))}
-            </BlurFadeImage>
-            {count > 1 && (
-              <div className="shop-card-swap">
-                <button
-                  className="shop-card-swap-btn"
-                  aria-label="Previous image"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    prevImage();
-                  }}
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M15 18l-6-6 6-6" />
-                  </svg>
-                </button>
-                <button
-                  className="shop-card-swap-btn"
-                  aria-label="Next image"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    nextImage();
-                  }}
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <span className="shop-card-fallback" aria-hidden="true">
-            {product.name.charAt(0)}
-          </span>
-        )}
-      </Link>
+      {count > 0 ? (
+        <ImageCycler images={images} name={product.name} slug={product.slug} />
+      ) : (
+        <span className="shop-card-fallback" aria-hidden="true">
+          {product.name.charAt(0)}
+        </span>
+      )}
       <div className="shop-card-body">
         {kicker && (
           <span

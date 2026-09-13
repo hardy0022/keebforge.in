@@ -4,8 +4,16 @@ import { PageHero } from "@/components/ui/PageHero";
 import { WhyForge } from "@/components/home/WhyForge";
 import { ShopSortBar } from "@/components/shop/ShopSortBar";
 import { ShopGrid } from "@/components/shop/ShopGrid";
-import { buildMetadata } from "@/lib/seo";
-import { getCategoryBySlug, getShopProducts, type ShopSort } from "@/lib/catalog/data";
+import {
+  buildMetadata,
+  JsonLd,
+  breadcrumbJsonLd,
+} from "@/lib/seo";
+import {
+  getCategoryBySlug,
+  getShopProducts,
+  type ShopSort,
+} from "@/lib/catalog/data";
 
 const SORTS: ShopSort[] = [
   "newest",
@@ -40,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!cat) notFound();
   return buildMetadata({
     title: `${cat.name} — Shop | KeebForge`,
-    description: `Shop ${cat.name.toLowerCase()} at KeebForge.`,
+    description: `Shop ${cat.name.toLowerCase()} — keyboards, switches, keycaps and mods at KeebForge with India-wide shipping.`,
     path: `/shop/${cat.slug}`,
   });
 }
@@ -106,6 +114,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </div>
       </section>
       <WhyForge num="// Why Forge" />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Shop", path: "/shop" },
+          { name: cat.name, path: `/shop/${cat.slug}` },
+        ])}
+      />
     </main>
   );
 }

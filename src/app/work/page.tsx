@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Reveal } from "@/components/home/Reveal";
-import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { CtaSection } from "@/components/ui/CtaSection";
 import { buildMetadata } from "@/lib/seo";
@@ -50,25 +49,21 @@ export default async function WorkPage({
   return (
     <main className="work-page">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      {/* Above-the-fold hero is plain server markup: no Reveal (IntersectionObserver
+          gating), no DiaTextReveal (text hidden behind a JS-driven gradient sweep).
+          Both left the LCP + hero invisible for ~2.8s until hydration on mobile. */}
       <section className="work-hero">
         <div className="work-wrap">
-          <Reveal>
+          <div>
             <p className="hp-kicker work-eyebrow">
               <span className="hp-kicker-mark">{"//"}</span> Portfolio
             </p>
-            <h1 className="work-hero-title">
-              <DiaTextReveal
-                text="Sample Work"
-                textColor="var(--t1)"
-                colors={["#c9f31d", "#eaff6a", "#8ec900"]}
-                duration={1.4}
-              />
-            </h1>
+            <h1 className="work-hero-title">Sample Work</h1>
             <p className="work-hero-desc">
               A collection of keyboard builds, repairs, modifications and
               workshop projects completed by KeebForge.
             </p>
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -76,7 +71,7 @@ export default async function WorkPage({
       <section className="work-feat" aria-labelledby="work-featured">
         <div className="work-wrap">
           {featured ? (
-            <Reveal className="work-showcase-wrap">
+            <div className="work-showcase-wrap">
               <article className="work-showcase">
                 <div className="work-showcase-media">
                   {featuredImg?.[0] ? (
@@ -86,7 +81,8 @@ export default async function WorkPage({
                         alt={featuredImg[0].alt ?? featured.title}
                         fill
                         priority
-                        sizes="(min-width: 720px) 325px, 100vw"
+                        fetchPriority="high"
+                        sizes="(min-width: 720px) 325px, 88vw"
                       />
                       <span className="work-showcase-flag">Featured</span>
                     </>
@@ -127,7 +123,7 @@ export default async function WorkPage({
                   )}
                 </div>
               </article>
-            </Reveal>
+            </div>
           ) : (
             <Reveal>
               <div className="work-empty">
@@ -236,7 +232,7 @@ export default async function WorkPage({
       )}
 
       {/* ── Customer reviews ─────────────────────────────────────────────── */}
-      <ReviewSection scope={{ type: "site" }} page={page} titleReveal />
+      <ReviewSection scope={{ type: "site" }} page={page} />
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <CtaSection

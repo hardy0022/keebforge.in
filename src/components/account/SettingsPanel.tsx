@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
 import { PASSWORD_RULES } from "@/lib/utils/password";
 import { saveNewsletterOpt } from "@/app/account/settings/actions";
+import { AccountModal } from "@/components/ui/AccountModal";
 
 interface SettingsPanelProps {
   newsletter: boolean;
@@ -233,42 +234,12 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
       </section>
 
       {pwOpen && (
-        <div
-          className="account-modal-overlay"
-          onClick={() => setPwOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="pw-modal-title"
+        <AccountModal
+          title={hasPassword ? "Change Password" : "Set Password"}
+          titleId="pw-modal-title"
+          onClose={() => setPwOpen(false)}
         >
-          <div className="account-modal" onClick={(e) => e.stopPropagation()}>
-            <header className="account-modal-header">
-              <h3 id="pw-modal-title">
-                {hasPassword ? "Change Password" : "Set Password"}
-              </h3>
-              <button
-                type="button"
-                className="account-modal-close"
-                onClick={() => setPwOpen(false)}
-                aria-label="Close"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </header>
-
-            <form onSubmit={onChangePassword} className="account-form">
+          <form onSubmit={onChangePassword} className="account-form">
               {hasPassword && (
                 <div className="form-row">
                   <label htmlFor="pw-current">Current Password</label>
@@ -344,45 +315,16 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </AccountModal>
+        )}
 
       {connOpen && (
-        <div
-          className="account-modal-overlay"
-          onClick={() => setConnOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="conn-modal-title"
+        <AccountModal
+          title="Connected Accounts"
+          titleId="conn-modal-title"
+          onClose={() => setConnOpen(false)}
         >
-          <div className="account-modal" onClick={(e) => e.stopPropagation()}>
-            <header className="account-modal-header">
-              <h3 id="conn-modal-title">Connected Accounts</h3>
-              <button
-                type="button"
-                className="account-modal-close"
-                onClick={() => setConnOpen(false)}
-                aria-label="Close"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </header>
-
-            <div className="account-connections">
+          <div className="account-connections">
               {accounts === null ? (
                 <div className="account-loading">Loading…</div>
               ) : accounts.length === 0 ? (
@@ -425,46 +367,17 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
               >
                 Close
               </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </div>
+          </AccountModal>
+        )}
 
       {delOpen && (
-        <div
-          className="account-modal-overlay"
-          onClick={() => setDelOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="del-modal-title"
+        <AccountModal
+          title="Delete Account"
+          titleId="del-modal-title"
+          onClose={() => setDelOpen(false)}
         >
-          <div className="account-modal" onClick={(e) => e.stopPropagation()}>
-            <header className="account-modal-header">
-              <h3 id="del-modal-title">Delete Account</h3>
-              <button
-                type="button"
-                className="account-modal-close"
-                onClick={() => setDelOpen(false)}
-                aria-label="Close"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </header>
-
-            <form onSubmit={onDeleteAccount} className="account-form">
+          <form onSubmit={onDeleteAccount} className="account-form">
               <p className="account-password-hint">
                 This permanently deletes your account, orders, addresses, and
                 all associated data. This action cannot be undone.
@@ -520,9 +433,8 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </AccountModal>
+        )}
     </div>
   );
 }

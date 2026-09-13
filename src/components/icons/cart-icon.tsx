@@ -2,52 +2,26 @@
 
 import { forwardRef, useImperativeHandle } from "react";
 import type { AnimatedIconHandle, AnimatedIconProps } from "./types";
-import { motion, useAnimate } from "motion/react";
 
+/**
+ * Animated cart icon. The hover play/stop are driven entirely by CSS now
+ * (.icon-animated + .nav-icon:hover) — the motion/react runtime was being
+ * pulled into the app shell on every page just for a hover wriggle.
+ * `startAnimation`/`stopAnimation` are kept as no-ops so SiteHeader's ref
+ * calls stay source-compatible.
+ */
 const CartIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
   (
     { size = 24, color = "currentColor", strokeWidth = 2, className = "" },
     ref,
   ) => {
-    const [scope, animate] = useAnimate();
-
-    const start = () => {
-      animate(
-        ".cart-icon",
-        { x: [0, 6, 0] },
-        { duration: 0.35, ease: "easeInOut" },
-      );
-      animate(
-        ".cart-wheel-left",
-        { rotate: [0, 360] },
-        { duration: 0.35, ease: "easeInOut" },
-      );
-
-      animate(
-        ".cart-wheel-right",
-        { rotate: [0, 360] },
-        { duration: 0.35, ease: "easeInOut" },
-      );
-    };
-
-    const stop = () => {
-      animate(".cart-icon", { x: 0 }, { duration: 0.2 });
-      animate(".cart-wheel-left", { rotate: 0 }, { duration: 0.2 });
-      animate(".cart-wheel-right", { rotate: 0 }, { duration: 0.2 });
-    };
-
-    useImperativeHandle(ref, () => {
-      return {
-        startAnimation: start,
-        stopAnimation: stop,
-      };
-    });
+    useImperativeHandle(ref, () => ({
+      startAnimation: () => {},
+      stopAnimation: () => {},
+    }));
 
     return (
-      <motion.div
-        ref={scope}
-        className={`inline-flex cursor-pointer ${className}`}
-      >
+      <div className={`icon-animated inline-flex cursor-pointer ${className}`}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width={size}
@@ -62,23 +36,15 @@ const CartIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
         >
           <path stroke="none" d="M0 0h24v24H0z" fill="none" />
 
-          <motion.path
-            className="cart-wheel-left"
-            style={{ transformOrigin: "6px 19px" }}
-            d="M6 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"
-          />
+          <circle cx="6" cy="19" r="2" className="cart-wheel-left" />
 
-          <motion.path
-            className="cart-wheel-right"
-            style={{ transformOrigin: "17px 19px" }}
-            d="M17 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"
-          />
+          <circle cx="17" cy="19" r="2" className="cart-wheel-right" />
 
           <path d="M17 17h-11v-14h-2" />
 
           <path d="M6 5l14 1l-1 7h-13" />
         </svg>
-      </motion.div>
+      </div>
     );
   },
 );

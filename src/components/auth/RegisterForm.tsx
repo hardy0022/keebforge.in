@@ -3,7 +3,7 @@
 import { authClient } from "@/lib/auth/auth-client";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EyeIcon } from "./SignInForm";
+import { PasswordField } from "@/components/ui/PasswordField";
 import { usernameError } from "@/lib/utils/username";
 import { PASSWORD_RULES } from "@/lib/utils/password";
 
@@ -13,8 +13,6 @@ export function RegisterForm({ next }: { next?: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -161,28 +159,16 @@ export function RegisterForm({ next }: { next?: string }) {
 
       <div className="form-row">
         <label htmlFor="reg-password">Password</label>
-        <div className="password-wrapper">
-          <input
-            id="reg-password"
-            type={showPassword ? "text" : "password"}
-            required
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={busy}
-            placeholder="Create a password"
-            aria-describedby="pw-requirements"
-          />
-          <button
-            type="button"
-            className="password-toggle"
-            onClick={() => setShowPassword((v) => !v)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            aria-pressed={showPassword}
-          >
-            <EyeIcon open={showPassword} />
-          </button>
-        </div>
+        <PasswordField
+          id="reg-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          required
+          disabled={busy}
+          placeholder="Create a password"
+          ariaDescribedBy="pw-requirements"
+        />
 
         <p className="req-title" id="pw-requirements-label">
           Password requirements
@@ -205,28 +191,16 @@ export function RegisterForm({ next }: { next?: string }) {
 
       <div className="form-row">
         <label htmlFor="confirm-password">Confirm password</label>
-        <div className="password-wrapper">
-          <input
-            id="confirm-password"
-            type={showConfirm ? "text" : "password"}
-            required
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            disabled={busy}
-            placeholder="Confirm your password"
-            aria-invalid={confirm.length > 0 && password !== confirm}
-          />
-          <button
-            type="button"
-            className="password-toggle"
-            onClick={() => setShowConfirm((v) => !v)}
-            aria-label={showConfirm ? "Hide password" : "Show password"}
-            aria-pressed={showConfirm}
-          >
-            <EyeIcon open={showConfirm} />
-          </button>
-        </div>
+        <PasswordField
+          id="confirm-password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="new-password"
+          required
+          disabled={busy}
+          placeholder="Confirm your password"
+          ariaInvalid={confirm.length > 0 && password !== confirm}
+        />
         {confirm.length > 0 && password !== confirm && (
           <p className="field-note err">Passwords do not match.</p>
         )}

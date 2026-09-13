@@ -16,8 +16,12 @@ import {
 } from "@/lib/mods/pricing";
 import { PACKAGE_LIMITS } from "@/lib/shipping/package-limits";
 import { deriveLegs } from "@/lib/shipping/shipping-estimate";
-import { INDIAN_STATES } from "@/lib/config/indian-states";
 import { formatPaiseWhole } from "@/lib/utils/money";
+import { StateSelect } from "@/components/ui/StateSelect";
+import { PinCodeInput } from "@/components/ui/PinCodeInput";
+import { Field } from "@/components/ui/Field";
+import { Panel } from "@/components/ui/Panel";
+import { PillRadioGroup, PillRadio } from "@/components/ui/PillRadio";
 import {
   AddressPicker,
   type SavedAddressOption,
@@ -242,6 +246,7 @@ function QtyControl({
         <input
           className="qty-val"
           type="number"
+          aria-label={label}
           value={value}
           min={1}
           max={999}
@@ -1118,9 +1123,7 @@ export function ModConfigurator({
   return (
     <div className="order-wrap">
       <div className="main-config-stream">
-        <div className="panel">
-          <p className="panel-tag">Step 01</p>
-          <h2 className="panel-title">Device Details</h2>
+        <Panel tag="Step 01" title="Device Details" className="panel">
           <div className="device-tabs" role="tablist">
             {DEVICES.map((dev) => (
               <button
@@ -1146,8 +1149,7 @@ export function ModConfigurator({
               style={{ display: "block" }}
             >
               <div className="field-stack">
-                <div className="field-inline">
-                  <label htmlFor="kb-brand">Brand</label>
+                <Field label="Brand" htmlFor="kb-brand">
                   <input
                     id="kb-brand"
                     type="text"
@@ -1160,9 +1162,8 @@ export function ModConfigurator({
                     }
                     placeholder="e.g. Keychron, Mode, Akko…"
                   />
-                </div>
-                <div className="field-inline">
-                  <label htmlFor="kb-model">Keyboard Model / PCB Name</label>
+                </Field>
+                <Field label="Keyboard Model / PCB Name" htmlFor="kb-model">
                   <input
                     id="kb-model"
                     type="text"
@@ -1175,10 +1176,9 @@ export function ModConfigurator({
                     }
                     placeholder="e.g. Neo65, Keychron Q1, Mode Envoy…"
                   />
-                </div>
-                <div className="field-inline">
-                  <label>Keyboard Layout</label>
-                  <div className="pill-radio-group pill-radio-lg">
+                </Field>
+                <Field label="Keyboard Layout">
+                  <PillRadioGroup size="lg">
                     {[
                       "60%",
                       "65%",
@@ -1189,23 +1189,18 @@ export function ModConfigurator({
                       "Full Size",
                       "Custom",
                     ].map((l) => (
-                      <label
+                      <PillRadio
                         key={l}
-                        className={`pill-radio${layout === l ? " selected" : ""}`}
-                      >
-                        <input
-                          type="radio"
-                          name="layout"
-                          checked={layout === l}
-                          onChange={() => selectLayout(l)}
-                        />
-                        <span>{l}</span>
-                      </label>
+                        name="layout"
+                        value={l}
+                        label={l}
+                        checked={layout === l}
+                        onChange={() => selectLayout(l)}
+                      />
                     ))}
-                  </div>
-                </div>
-                <div className="field-inline">
-                  <label>Component Quantities</label>
+                  </PillRadioGroup>
+                </Field>
+                <Field label="Component Quantities">
                   <div className="qty-stack-row">
                     <QtyControl
                       label="Switches"
@@ -1222,9 +1217,8 @@ export function ModConfigurator({
                       onSetValue={setQtyVal}
                     />
                   </div>
-                </div>
-                <div className="field-inline">
-                  <label htmlFor="kb-switch-model">Switch Model</label>
+                </Field>
+                <Field label="Switch Model" htmlFor="kb-switch-model">
                   <input
                     id="kb-switch-model"
                     type="text"
@@ -1240,30 +1234,23 @@ export function ModConfigurator({
                     }
                     placeholder="e.g. Gateron Cream Soda, HMX Xinhai…"
                   />
-                </div>
-                <div className="field-inline">
-                  <label>Are Keycaps Included?</label>
-                  <div className="pill-radio-group pill-radio-lg">
+                </Field>
+                <Field label="Are Keycaps Included?">
+                  <PillRadioGroup size="lg">
                     {["Keycaps Included", "No Keycaps"].map((k) => (
-                      <label
+                      <PillRadio
                         key={k}
-                        className={`pill-radio${keycaps === k ? " selected" : ""}`}
-                      >
-                        <input
-                          type="radio"
-                          name="keycaps"
-                          checked={keycaps === k}
-                          onChange={() => setKeycaps(k)}
-                        />
-                        <span>
-                          {k === "Keycaps Included"
-                            ? "Included"
-                            : "Not Included"}
-                        </span>
-                      </label>
+                        name="keycaps"
+                        value={k}
+                        label={
+                          k === "Keycaps Included" ? "Included" : "Not Included"
+                        }
+                        checked={keycaps === k}
+                        onChange={() => setKeycaps(k)}
+                      />
                     ))}
-                  </div>
-                </div>
+                  </PillRadioGroup>
+                </Field>
               </div>
             </div>
           ) : (
@@ -1273,8 +1260,7 @@ export function ModConfigurator({
               style={{ display: "block" }}
             >
               <div className="field-stack">
-                <div className="field-inline">
-                  <label htmlFor="ms-brand">Brand</label>
+                <Field label="Brand" htmlFor="ms-brand">
                   <input
                     id="ms-brand"
                     type="text"
@@ -1287,9 +1273,8 @@ export function ModConfigurator({
                     }
                     placeholder="e.g. Logitech, Razer, VAXEE…"
                   />
-                </div>
-                <div className="field-inline">
-                  <label htmlFor="ms-model">Mouse Model</label>
+                </Field>
+                <Field label="Mouse Model" htmlFor="ms-model">
                   <input
                     id="ms-model"
                     type="text"
@@ -1302,9 +1287,8 @@ export function ModConfigurator({
                     }
                     placeholder="e.g. G Pro X Superlight 2, Razer Viper V3 Pro…"
                   />
-                </div>
-                <div className="field-inline">
-                  <label>Component Quantities</label>
+                </Field>
+                <Field label="Component Quantities">
                   <div className="qty-stack-row">
                     <QtyControl
                       label="Number of Switches"
@@ -1314,15 +1298,17 @@ export function ModConfigurator({
                       onSetValue={setQtyVal}
                     />
                   </div>
-                </div>
+                </Field>
               </div>
             </div>
           )}
-        </div>
+        </Panel>
 
-        <div className="panel">
-          <p className="panel-tag">Step 02</p>
-          <h2 className="panel-title">Available {DEVICE_LABEL[device]} Mods</h2>
+        <Panel
+          tag="Step 02"
+          title={`Available ${DEVICE_LABEL[device]} Mods`}
+          className="panel"
+        >
           <DevicePanel
             dev="KEYBOARD"
             active={device === "KEYBOARD"}
@@ -1337,15 +1323,12 @@ export function ModConfigurator({
             selected={selected}
             onToggle={toggle}
           />
-        </div>
+        </Panel>
 
-        <div className="panel">
-          <p className="panel-tag">Step 03</p>
-          <h2 className="panel-title">Your Details</h2>
-          <div className="field-stack" style={{ marginTop: 14 }}>
+        <Panel tag="Step 03" title="Your Details" className="panel">
+          <div className="field-stack">
             <div className="ri-field-row">
-              <div className="form-row">
-                <label htmlFor="ct-first-name">First Name</label>
+              <Field label="First Name" htmlFor="ct-first-name">
                 <input
                   id="ct-first-name"
                   type="text"
@@ -1356,9 +1339,8 @@ export function ModConfigurator({
                   }
                   placeholder="Your first name"
                 />
-              </div>
-              <div className="form-row">
-                <label htmlFor="ct-last-name">Last Name</label>
+              </Field>
+              <Field label="Last Name" htmlFor="ct-last-name">
                 <input
                   id="ct-last-name"
                   type="text"
@@ -1369,11 +1351,23 @@ export function ModConfigurator({
                   }
                   placeholder="Your last name"
                 />
-              </div>
+              </Field>
             </div>
             <div className="ri-field-row">
-              <div className="form-row">
-                <label htmlFor="ct-phone">WhatsApp / Phone</label>
+              <Field
+                label="WhatsApp / Phone"
+                htmlFor="ct-phone"
+                note={
+                  contact.phone !== "" && !phoneOk ? (
+                    <span
+                      className="inline-note"
+                      style={{ color: "var(--warn)" }}
+                    >
+                      Enter a valid WhatsApp / phone number.
+                    </span>
+                  ) : undefined
+                }
+              >
                 <input
                   id="ct-phone"
                   type="tel"
@@ -1390,17 +1384,21 @@ export function ModConfigurator({
                   placeholder="9998888000"
                   aria-invalid={contact.phone !== "" && !phoneOk}
                 />
-                {contact.phone !== "" && !phoneOk && (
-                  <span
-                    className="inline-note"
-                    style={{ color: "var(--warn)" }}
-                  >
-                    Enter a valid WhatsApp / phone number.
-                  </span>
-                )}
-              </div>
-              <div className="form-row">
-                <label htmlFor="ct-email">Email</label>
+              </Field>
+              <Field
+                label="Email"
+                htmlFor="ct-email"
+                note={
+                  contact.email !== "" && !emailOk ? (
+                    <span
+                      className="inline-note"
+                      style={{ color: "var(--warn)" }}
+                    >
+                      Enter a valid email address.
+                    </span>
+                  ) : undefined
+                }
+              >
                 <input
                   id="ct-email"
                   type="email"
@@ -1412,23 +1410,13 @@ export function ModConfigurator({
                   placeholder="your@email.com"
                   aria-invalid={contact.email !== "" && !emailOk}
                 />
-                {contact.email !== "" && !emailOk && (
-                  <span
-                    className="inline-note"
-                    style={{ color: "var(--warn)" }}
-                  >
-                    Enter a valid email address.
-                  </span>
-                )}
-              </div>
+              </Field>
             </div>
           </div>
-        </div>
+        </Panel>
 
-        <div className="panel">
-          <p className="panel-tag">Step 04</p>
-          <h2 className="panel-title">Shipping &amp; Packaging</h2>
-          <div className="field-stack" style={{ marginTop: 14 }}>
+        <Panel tag="Step 04" title="Shipping &amp; Packaging" className="panel">
+          <div className="field-stack">
             <label>Shipping / Pickup address</label>
             {savedAddresses.length > 0 ? (
               <AddressPicker
@@ -1449,8 +1437,10 @@ export function ModConfigurator({
             )}
             {(savedAddresses.length === 0 || useAddressId === "") && (
               <>
-                <div className="field-inline">
-                  <label htmlFor="ship-street">Street Address</label>
+                <Field
+                  label="Street Address"
+                  htmlFor="ship-street"
+                >
                   <input
                     id="ship-street"
                     type="text"
@@ -1464,9 +1454,11 @@ export function ModConfigurator({
                         : "Return destination — house, street…"
                     }
                   />
-                </div>
-                <div className="field-inline">
-                  <label htmlFor="ship-landmark">Landmark (Optional)</label>
+                </Field>
+                <Field
+                  label="Landmark (Optional)"
+                  htmlFor="ship-landmark"
+                >
                   <input
                     id="ship-landmark"
                     type="text"
@@ -1476,10 +1468,9 @@ export function ModConfigurator({
                     }
                     placeholder="Near metro station, opposite park…"
                   />
-                </div>
+                </Field>
                 <div className="addr-city-row">
-                  <div className="field-inline">
-                    <label htmlFor="ship-city">City</label>
+                  <Field label="City" htmlFor="ship-city">
                     <input
                       id="ship-city"
                       type="text"
@@ -1489,110 +1480,88 @@ export function ModConfigurator({
                       }
                       placeholder="City"
                     />
-                  </div>
-                  <div className="field-inline">
-                    <label htmlFor="ship-state">State</label>
-                    <select
+                  </Field>
+                  <Field label="State" htmlFor="ship-state">
+                    <StateSelect
                       id="ship-state"
                       value={addr.state}
-                      onChange={(e) =>
-                        setAddr((a) => ({ ...a, state: e.target.value }))
+                      onChange={(v) =>
+                        setAddr((a) => ({ ...a, state: v }))
                       }
                       autoComplete="address-level1"
-                    >
-                      <option value="">Select state…</option>
-                      {INDIAN_STATES.map((st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field-inline">
-                    <label htmlFor="ship-pincode">PIN Code</label>
-                    <input
+                      placeholder="Select state…"
+                    />
+                  </Field>
+                  <Field
+                    label="PIN Code"
+                    htmlFor="ship-pincode"
+                    note={
+                      addr.pincode !== "" && !pinOk ? (
+                        <span
+                          className="inline-note"
+                          style={{ color: "var(--warn)" }}
+                        >
+                          Please enter a valid 6-digit PIN code.
+                        </span>
+                      ) : undefined
+                    }
+                  >
+                    <PinCodeInput
                       id="ship-pincode"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
                       value={addr.pincode}
-                      onChange={(e) =>
-                        setAddr((a) => ({
-                          ...a,
-                          pincode: e.target.value.replace(/\D/g, ""),
-                        }))
+                      onChange={(v) =>
+                        setAddr((a) => ({ ...a, pincode: v }))
                       }
                       placeholder="6-digit PIN"
-                      aria-invalid={addr.pincode !== "" && !pinOk}
+                      ariaInvalid={addr.pincode !== "" && !pinOk}
                     />
-                    {addr.pincode !== "" && !pinOk && (
-                      <span
-                        className="inline-note"
-                        style={{ color: "var(--warn)" }}
-                      >
-                        Please enter a valid 6-digit PIN code.
-                      </span>
-                    )}
-                  </div>
+                  </Field>
                 </div>
               </>
             )}
           </div>
 
-          <div className="field-inline" style={{ marginTop: 16 }}>
-            <label>How will your device reach us?</label>
-            <div className="pill-radio-group pill-radio-lg">
+          <Field label="How will your device reach us?">
+            <PillRadioGroup size="lg">
               {(
                 [
                   ["customer_shipping", "I'll ship the device"],
                   ["pickup", "Need pickup"],
                 ] as [Exclude<ModsShippingMethod, "undecided">, string][]
               ).map(([m, label]) => (
-                <label
+                <PillRadio
                   key={m}
-                  className={`pill-radio${shipMethod === m ? " selected" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="ship-method"
-                    checked={shipMethod === m}
-                    onChange={() => setShipMethod(m)}
-                  />
-                  <span>{label}</span>
-                </label>
+                  name="ship-method"
+                  value={m}
+                  label={label}
+                  checked={shipMethod === m}
+                  onChange={() => setShipMethod(m)}
+                />
               ))}
-            </div>
-            <div
-              className="total-note"
-              style={{ textAlign: "left", marginTop: 8 }}
-            >
+            </PillRadioGroup>
+            <div className="total-note" style={{ textAlign: "left" }}>
               {shipMethod === "customer_shipping" &&
                 "You'll ship your device to us. We'll ship it back after the work is completed."}
               {shipMethod === "pickup" &&
                 "We'll arrange pickup from your address and ship the device back after the work is completed."}
             </div>
             {needsQuote && modes.length > 1 && (
-              <div className="field-inline" style={{ marginTop: 12 }}>
-                <label>Delivery Speed</label>
-                <div className="pill-radio-group pill-radio-lg">
+              <Field label="Delivery Speed">
+                <PillRadioGroup size="lg">
                   {modes.map((mode) => (
-                    <label
+                    <PillRadio
                       key={mode}
-                      className={`pill-radio${shipMode === mode ? " selected" : ""}`}
-                    >
-                      <input
-                        type="radio"
-                        name="ship-mode"
-                        checked={shipMode === mode}
-                        onChange={() => setShipMode(mode)}
-                      />
-                      <span>{mode === "surface" ? "Surface" : "Express"}</span>
-                    </label>
+                      name="ship-mode"
+                      value={mode}
+                      label={mode === "surface" ? "Surface" : "Express"}
+                      checked={shipMode === mode}
+                      onChange={() => setShipMode(mode)}
+                    />
                   ))}
-                </div>
-              </div>
+                </PillRadioGroup>
+              </Field>
             )}
-          </div>
+          </Field>
 
           <h3 className="panel-title" style={{ marginTop: 22 }}>
             Package Details
@@ -1605,8 +1574,25 @@ export function ModConfigurator({
             protective packaging.
           </div>
           <div className="field-stack">
-            <div className="field-inline">
-              <label>Packed Size (cm)</label>
+            <Field
+              label="Packed Size (cm)"
+              note={
+                needsQuote &&
+                !dimsOk &&
+                (pkg.L !== "" || pkg.W !== "" || pkg.H !== "") ? (
+                  <span
+                    className="inline-note"
+                    style={{
+                      color: "var(--warn)",
+                      display: "block",
+                      marginTop: 6,
+                    }}
+                  >
+                    Enter valid package dimensions.
+                  </span>
+                ) : undefined
+              }
+            >
               <div className="pkg-grid">
                 <div className="pkg-cell">
                   <span className="pkg-label">Length</span>
@@ -1660,23 +1646,21 @@ export function ModConfigurator({
                   />
                 </div>
               </div>
-              {needsQuote &&
-                !dimsOk &&
-                (pkg.L !== "" || pkg.W !== "" || pkg.H !== "") && (
+            </Field>
+            <Field
+              label="Weight (g)"
+              htmlFor="pkg-g"
+              note={
+                needsQuote && pkg.g !== "" && !weightOk ? (
                   <span
                     className="inline-note"
-                    style={{
-                      color: "var(--warn)",
-                      display: "block",
-                      marginTop: 6,
-                    }}
+                    style={{ color: "var(--warn)" }}
                   >
-                    Enter valid package dimensions.
+                    Enter a valid package weight.
                   </span>
-                )}
-            </div>
-            <div className="field-inline pkg-weight">
-              <label htmlFor="pkg-g">Weight (g)</label>
+                ) : undefined
+              }
+            >
               <input
                 id="pkg-g"
                 type="number"
@@ -1693,14 +1677,9 @@ export function ModConfigurator({
                 placeholder="e.g. 2500"
                 aria-invalid={pkg.g !== "" && !weightOk}
               />
-              {needsQuote && pkg.g !== "" && !weightOk && (
-                <span className="inline-note" style={{ color: "var(--warn)" }}>
-                  Enter a valid package weight.
-                </span>
-              )}
-            </div>
+            </Field>
             {needsQuote && (
-              <div style={{ marginTop: 14 }}>
+              <div>
                 <button
                   type="button"
                   className="btn-prime kf-checkout-btn"
@@ -1726,13 +1705,11 @@ export function ModConfigurator({
               </div>
             )}
           </div>
-        </div>
+        </Panel>
       </div>
 
       <div className="sticky-summary-hub">
-        <div className="panel">
-          <p className="panel-tag">Live Preview</p>
-          <h2 className="panel-title">Order Preview</h2>
+        <Panel tag="Live Preview" title="Order Preview" className="panel">
 
           <div className="summary-head">
             {preview.selectedCount > 0 ? (
@@ -2031,7 +2008,7 @@ export function ModConfigurator({
               </button>
             )}
           </div>
-        </div>
+        </Panel>
       </div>
     </div>
   );

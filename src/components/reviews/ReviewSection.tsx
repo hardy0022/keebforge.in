@@ -12,7 +12,6 @@ import {
 import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { ReviewPagination } from "@/components/reviews/ReviewPagination";
 import { ReviewSummary } from "@/components/reviews/ReviewSummary";
-import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 
 export type ReviewScope =
   | { type: "site" }
@@ -21,11 +20,9 @@ export type ReviewScope =
 export async function ReviewSection({
   scope,
   page,
-  titleReveal = false,
 }: {
   scope: ReviewScope;
   page: number;
-  titleReveal?: boolean;
 }) {
   const data =
     scope.type === "site"
@@ -42,16 +39,7 @@ export async function ReviewSection({
         <div className="product-reviews">
           <header className="product-reviews-head">
             <h2 id="reviews-heading" className="product-section-title">
-              {titleReveal ? (
-                <DiaTextReveal
-                  text="Customer Reviews"
-                  textColor="var(--t1)"
-                  colors={["#c9f31d", "#eaff6a", "#8ec900"]}
-                  duration={1.4}
-                />
-              ) : (
-                "Customer Reviews"
-              )}
+              Customer Reviews
             </h2>
             <Link href={data.writeHref} className="btn-prime review-write-btn">
               {data.writeLabel} →

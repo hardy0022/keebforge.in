@@ -42,7 +42,6 @@ export function BlurFade({
   direction = "down",
   inView = false,
   inViewMargin = "-50px",
-  blur = "6px",
   ...props
 }: BlurFadeProps) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -54,12 +53,10 @@ export function BlurFade({
       [direction === "left" || direction === "right" ? "x" : "y"]:
         direction === "right" || direction === "down" ? -offset : offset,
       opacity: 0,
-      filter: `blur(${blur})`,
     },
     visible: {
       [direction === "left" || direction === "right" ? "x" : "y"]: 0,
       opacity: 1,
-      filter: `blur(0px)`,
     },
   };
   const combinedVariants = variant ?? defaultVariants;

@@ -822,20 +822,21 @@ ul {
 /* ═══ Homapage 2026 — premium scroll-driven homepage (home-only) ═══════════ */
 /* Scroll-reveal primitive: JS toggles `.in`, CSS owns the transition, so
    reduced-motion/zero-JS collapses to a plain visible element. */
+/* Scroll-reveal primitive: JS toggles `.in`, CSS owns the transition, so
+   reduced-motion/zero-JS collapses to a plain visible element. Transform +
+   opacity only (no blur/filter) — filter animation is non-composited and was
+   flagged on mobile. The 16px rise keeps the reveal language. */
 .hp-reveal {
   opacity: 0;
   transform: translateY(16px);
-  filter: blur(3px);
   transition:
     opacity 0.65s var(--ease-out),
-    transform 0.65s var(--ease-out),
-    filter 0.65s var(--ease-out);
+    transform 0.65s var(--ease-out);
   transition-delay: var(--reveal-delay, 0ms);
 }
 .hp-reveal.in {
   opacity: 1;
   transform: none;
-  filter: none;
 }
 .hp-kicker {
   font-family: var(--ff-display);
@@ -3164,16 +3165,20 @@ ul {
 }
 
 /* ─── Forms ────────────────────────────────────────────────────────────────── */
+/* Legacy `.form-row` is the ONE canvas for the flows that pre-date the shared
+   Field component (auth, account, contact, admin). Workshop + /mods render
+   through `<Field>` (`kf-field`) instead. Inputs/selects/textareas share the
+   exact same box treatment so a form-row control never looks different. */
 
 .form-row {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 16px;
 }
 .form-row label {
   font-family: var(--ff-display);
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -3182,19 +3187,32 @@ ul {
 .form-row input,
 .form-row textarea,
 .form-row select {
-  background: var(--bg2);
+  background: #1a1924;
   border: 1px solid var(--bdr);
   border-radius: var(--r-sm);
   color: var(--t1);
   font-family: var(--ff-body);
-  font-size: 0.85rem;
-  padding: 11px 14px;
+  font-size: 1rem;
+  padding: 12px 16px;
   width: 100%;
   outline: none;
   transition:
     border-color 0.2s,
-    box-shadow 0.2s;
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+.form-row textarea {
+  min-height: 100px;
   resize: vertical;
+}
+.form-row select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23aeaebc' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: pointer;
 }
 .form-row input::placeholder,
 .form-row textarea::placeholder {
@@ -3203,11 +3221,16 @@ ul {
 .form-row input:focus,
 .form-row textarea:focus,
 .form-row select:focus {
-  border-color: rgba(212, 247, 0, 0.4);
-  box-shadow: 0 0 0 3px rgba(212, 247, 0, 0.07);
+  border-color: rgba(212, 247, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(212, 247, 0, 0.08);
+  background: #222131;
 }
-.form-row textarea {
-  min-height: 100px;
+.form-row input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.form-row input[aria-invalid="true"] {
+  border-color: rgba(255, 107, 107, 0.55);
 }
 .btn-form-submit {
   display: inline-flex;
@@ -6500,7 +6523,8 @@ a.shop-pager-num:hover {
 .main-config-stream {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  /* same step rhythm as /workshop's .ri-main */
+  gap: 20px;
   min-width: 0;
 }
 .sticky-summary-hub {
@@ -6521,10 +6545,6 @@ a.shop-pager-num:hover {
   padding: clamp(16px, 4vw, 32px);
   position: relative;
   contain: layout style;
-}
-/* Step cards sit directly on the page background — no black fill */
-.config-page .panel {
-  background: transparent;
 }
 .panel-tag {
   font-family: var(--ff-display);
@@ -6609,14 +6629,11 @@ a.shop-pager-num:hover {
 .field-stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
-.field-inline {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.field-inline label,
+/* Field micro-label typography: direct child labels only, so nested pill-radio
+   labels keep their own pill typography. */
+.kf-field > label,
 .field-stack > label {
   font-family: var(--ff-display);
   font-size: 0.75rem;
@@ -6630,7 +6647,7 @@ a.shop-pager-num:hover {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
 }
-/* Responsive City / State / PIN Code row — used in both mods and product checkout */
+/* Responsive City / State / PIN Code row — canonical in workshop, mods and product checkout */
 .addr-city-row {
   display: grid;
   grid-template-columns: 1.2fr 1fr 0.7fr;
@@ -7126,33 +7143,56 @@ a.shop-pager-num:hover {
 
 /* ─── Configurator product-detail fields (Step 01) ───────────────────────── */
 
-.field-inline input[type="text"],
-.field-inline input[type="number"],
-.field-inline input[type="email"],
-.field-inline input[type="tel"],
-.field-inline select {
+/* ─── Shared form system: Field component (workshop + mods) ────────────── */
+
+.kf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Selector uses exclusions, not a type list: a bare `<input>`
+   (no `type` attribute → defaults to text) does NOT match
+   `input[type="text"]` (attribute selectors see the attribute, not the
+   default), so those fields rendered as unstyled UA controls. This matches
+   every editable control without styling widget inputs
+   (radio/checkbox/hidden/file). */
+.kf-field input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not([type="file"]),
+.kf-field textarea,
+.kf-field select {
   background: #1a1924;
-  border: 1px solid var(--bdr);
+  /* resting border uses the visible --bdr-h token; plain --bdr (9% alpha) is
+     too faint to read as an input outline on this field background */
+  border: 1px solid var(--bdr-h);
   border-radius: var(--r-sm);
   color: var(--t1);
   font-family: var(--ff-body);
   font-size: 0.9rem;
   padding: 12px 16px;
-  outline: none;
   width: 100%;
+  min-width: 0;
+  outline: none;
   transition:
     border-color 0.2s var(--ease-out),
     background-color 0.2s var(--ease-out),
     box-shadow 0.2s var(--ease-out);
 }
-.field-inline input[type="text"]::placeholder,
-.field-inline input[type="number"]::placeholder,
-.field-inline input[type="email"]::placeholder,
-.field-inline input[type="tel"]::placeholder {
+.kf-field input:hover:not(:disabled),
+.kf-field textarea:hover:not(:disabled),
+.kf-field select:hover {
+  border-color: var(--t3);
+}
+.kf-field textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.kf-field input::placeholder,
+.kf-field textarea::placeholder {
   color: var(--t3);
 }
 /* dropdown keeps the identical box style; native arrow replaced with inset chevron */
-.field-inline select {
+.kf-field select {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 36px;
@@ -7161,17 +7201,22 @@ a.shop-pager-num:hover {
   background-position: right 14px center;
   cursor: pointer;
 }
-.field-inline select:has(option[value=""]:checked) {
+.kf-field select:has(option[value=""]:checked) {
   color: var(--t3); /* placeholder tint while no state chosen */
 }
-.field-inline input[type="text"]:focus,
-.field-inline input[type="number"]:focus,
-.field-inline input[type="email"]:focus,
-.field-inline input[type="tel"]:focus,
-.field-inline select:focus {
-  border-color: var(--bdr-h);
+.kf-field input:focus,
+.kf-field textarea:focus,
+.kf-field select:focus {
+  border-color: var(--acc);
   background: #222131;
-  box-shadow: 0 0 0 1px var(--bdr-h);
+  box-shadow: 0 0 0 3px var(--acc-dim);
+}
+.kf-field input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.kf-field input[aria-invalid="true"] {
+  border-color: rgba(255, 107, 107, 0.55);
 }
 
 /* ─── Mods Package Details grid (Step 04) ────────────────────────────────── */
@@ -7231,13 +7276,17 @@ a.shop-pager-num:hover {
 .pill-radio input {
   display: none;
 }
+.pill-radio:has(input:focus-visible) {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
 .pill-radio.selected {
   background: var(--acc-dim);
   color: var(--acc);
   border-color: var(--acc);
 }
-/* wider pills for the keycaps question on /services */
-.pill-radio-lg {
+/* wider pills (device type, shipping method, keycaps, delivery speed) */
+.pill-radio-group-lg {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
@@ -7263,23 +7312,11 @@ a.shop-pager-num:hover {
   border-color: var(--bdr);
 }
 
-/* ─── Configurator page: shop.keebforge.in black theme + wider layout ────── */
-
+/* ─── Configurator page: wider layout + header.
+   Theme tokens intentionally NOT overridden — /mods must render the SAME
+   design-system colors (bg1/bdr/t2/acc/…) as /workshop and /shop, so the
+   shared Panel/Field/PillRadio/address primitives look identical everywhere. */
 .config-page {
-  --bg: #060709;
-  --bg1: #0b0d11;
-  --bg2: #101318;
-  --bg3: #161a22;
-  --surf: rgba(255, 255, 255, 0.02);
-  --bdr: rgba(255, 255, 255, 0.045);
-  --bdr-h: rgba(255, 255, 255, 0.12);
-  --t2: #c3c8d2;
-  --t3: #9ba2ad;
-  --acc: #d4f700;
-  --acc-dim: rgba(212, 247, 0, 0.04);
-  --acc-glow: rgba(212, 247, 0, 0.08);
-  --max-w: 1280px;
-  /* no own background — the site-wide body radial (purple shade) shows through */
   min-height: 100vh;
 }
 
@@ -7498,52 +7535,6 @@ a.shop-pager-num:hover {
   background: var(--bdr);
 }
 
-.form-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-row label {
-  font-family: var(--ff-display);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-
-.form-row input {
-  background: #1a1924;
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-sm);
-  color: var(--t1);
-  font-family: var(--ff-body);
-  font-size: 1rem;
-  padding: 12px 16px;
-  width: 100%;
-  outline: none;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s,
-    background-color 0.2s;
-}
-
-.form-row input::placeholder {
-  color: var(--t3);
-}
-
-.form-row input:focus {
-  border-color: rgba(212, 247, 0, 0.5);
-  box-shadow: 0 0 0 3px rgba(212, 247, 0, 0.08);
-  background: #222131;
-}
-
-.form-row input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .password-wrapper {
   position: relative;
   display: flex;
@@ -7704,10 +7695,6 @@ a.shop-pager-num:hover {
 
 .field-note.err {
   color: var(--err);
-}
-
-.form-row input[aria-invalid="true"] {
-  border-color: rgba(255, 107, 107, 0.55);
 }
 
 /* Live password-requirements checklist (register). */
@@ -9551,10 +9538,6 @@ a.shop-pager-num:hover {
   gap: 20px;
   min-width: 0;
 }
-.ri-step .panel-title {
-  font-size: 1.15rem;
-  margin-bottom: 18px;
-}
 @media (min-width: 1024px) {
   .ri-side {
     position: sticky;
@@ -9572,32 +9555,10 @@ a.shop-pager-num:hover {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
-.ri-field-row-3 {
-  grid-template-columns: 1.4fr 1fr 1.8fr;
-}
-/* stretch the state dropdown to the same height as text inputs;
-   native arrow replaced (it ignores padding) with an inset SVG chevron */
-.ri-page .form-row select {
-  flex: 1;
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: 32px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23aeaebc' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-}
-/* wider device-type pills */
-.ri-page .pill-radio-group {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-.ri-field-row .form-row {
-  margin-bottom: 16px;
-}
 @media (max-width: 640px) {
-  .ri-field-row,
-  .ri-field-row-3 {
+  .ri-field-row {
     grid-template-columns: 1fr;
-    gap: 0;
+    gap: 14px;
   }
 }
 
@@ -9689,11 +9650,7 @@ a.shop-pager-num:hover {
   max-width: 520px;
 }
 
-/* Addresses */
-.ri-shipping-pills {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  margin-bottom: 6px;
-}
+/* Addresses. Pill sizing comes from the shared PillRadioGroup `size="lg"` variant. */
 .ri-address-list {
   display: flex;
   flex-direction: column;
@@ -9729,7 +9686,13 @@ a.shop-pager-num:hover {
 }
 .ri-address-manual {
   margin-top: 14px;
-  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* inside the saved-address list the flex gap already spaces it */
+.ri-address-list > .ri-address-manual {
+  margin-top: 0;
 }
 
 /* Summary side card */
@@ -11290,13 +11253,10 @@ a.reviews-page:hover {
   height: 100%;
   object-fit: cover;
   filter: brightness(0.95) saturate(0.95);
-  transition:
-    transform 0.8s var(--ease-out),
-    filter 0.6s;
+  transition: transform 0.8s var(--ease-out);
 }
 .work-showcase:hover .work-showcase-media img {
   transform: scale(1.02);
-  filter: brightness(1) saturate(1);
 }
 .work-media-empty {
   display: flex;
@@ -11457,14 +11417,11 @@ a.reviews-page:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition:
-    transform 0.6s var(--ease-out),
-    filter 0.5s;
+  transition: transform 0.6s var(--ease-out);
   filter: brightness(0.9) saturate(0.9);
 }
 .work-card:hover .work-card-media img {
   transform: scale(1.06);
-  filter: brightness(1) saturate(1);
 }
 .work-card-media::after {
   content: "";
@@ -11956,16 +11913,6 @@ a.reviews-page:hover {
   font-size: 0.76rem;
   color: var(--t3);
   margin: 4px 0 0;
-}
-
-/* ── Section title (reused .os-section-title) ──────────────────────────────── */
-.os-section-title {
-  font-family: var(--ff-display);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--t3);
 }
 
 /* ── Info grid ──────────────────────────────────────────────────────────────── */
@@ -12714,11 +12661,6 @@ a.reviews-page:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-.os-pay-id {
-  font-size: 0.78rem;
-  color: var(--t3);
-  overflow-wrap: anywhere;
 }
 .os-addr-block {
   display: flex;
@@ -13553,5 +13495,79 @@ a.reviews-page:hover {
 @media (prefers-reduced-motion: reduce) {
   .sk::after {
     animation: none;
+  }
+}
+
+/* ═══ Perf pass: nav icon hover + mobile touch targets ═══════════════════════ */
+/* Header icon hover micro-animations moved from motion/react to CSS so the
+   app shell no longer ships the motion runtime on every page. Only
+   compositor-friendly transforms are animated (no filter). The look matches
+   the previous motion behavior: cart nudges on hover, user avatar lifts, the
+   sign-in plus spins in. */
+.icon-animated .user-avatar {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transition: transform 0.25s ease-out;
+}
+.icon-animated .plus-sign {
+  transform-box: view-box;
+  transform-origin: 19px 19px;
+  transition: transform 0.3s ease-out;
+}
+.nav-cart:hover .cart-icon {
+  animation: kf-icon-nudge 0.35s var(--ease-out);
+}
+.nav-icon:hover .icon-animated .user-avatar,
+.nav-profile-trigger:hover .icon-animated .user-avatar {
+  transform: translateY(-1px) scale(1.05);
+}
+.nav-icon:hover .icon-animated .plus-sign,
+.nav-profile-trigger:hover .icon-animated .plus-sign {
+  transform: rotate(45deg) scale(1.15);
+}
+@keyframes kf-icon-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .icon-animated .user-avatar,
+  .icon-animated .plus-sign {
+    transform: none;
+    transition: none;
+  }
+  .nav-cart:hover .cart-icon {
+    animation: none;
+  }
+}
+
+/* Mobile touch targets: ≥44px hit areas for small controls, desktop keeps its
+   compact sizing. Sizing bumps are mobile-only so the desktop UI is unchanged. */
+@media (max-width: 767px) {
+  .qty-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .qty-val {
+    height: 44px;
+    width: 56px;
+  }
+  .cart-qty button {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (max-width: 900px) {
+  .nav-shop-arrow {
+    width: 44px;
+    height: 44px;
+  }
+  .nav-toggle {
+    width: 44px;
+    height: 44px;
   }
 }

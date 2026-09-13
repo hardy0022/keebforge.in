@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 const REDIRECTS: { source: string; destination: string; permanent: boolean }[] =
   [
     // IA rename (2026-08-24): /services → /mods, /repair → /workshop.
-    { source: "/services", destination: "/mods", permanent: false },
-    { source: "/repair", destination: "/workshop", permanent: false },
+    { source: "/services", destination: "/mods", permanent: true },
+    { source: "/repair", destination: "/workshop", permanent: true },
     // Auth pages moved under /auth/* (old paths kept working via redirects).
     { source: "/login", destination: "/auth/login", permanent: false },
     { source: "/register", destination: "/auth/register", permanent: false },
@@ -13,76 +13,76 @@ const REDIRECTS: { source: string; destination: string; permanent: boolean }[] =
       destination: "/auth/forgot-password",
       permanent: false,
     },
-    // Old static site → new routes
-    { source: "/keyboard-repair", destination: "/repair", permanent: true },
-    { source: "/mouse-repair", destination: "/repair", permanent: true },
-    { source: "/pricing", destination: "/services", permanent: true },
+    // Old static site → new routes (flattened, no intermediate hops).
+    { source: "/keyboard-repair", destination: "/workshop", permanent: true },
+    { source: "/mouse-repair", destination: "/workshop", permanent: true },
+    { source: "/pricing", destination: "/mods", permanent: true },
     { source: "/order", destination: "/checkout", permanent: true },
     { source: "/Terms&Conditions", destination: "/terms", permanent: true },
-    // Old service slugs → /services (D-022: per-service detail pages removed).
+    // Old service slugs → /mods (D-022: per-service detail pages removed).
     {
       source: "/keyboard-services/switch-lubing",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/switch-filming",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/stabilizer-tuning",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/soldering",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/desoldering",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/millmax-installation",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/hotswap-socket-repair",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/pcb-repair",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/firmware",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/keyboard-services/custom-keyboard-build",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/mouse-services/mouse-switch-replacement",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/mouse-services/mouse-encoder-replacement",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
     {
       source: "/mouse-services/mouse-diagnostics",
-      destination: "/services",
+      destination: "/mods",
       permanent: true,
     },
   ];

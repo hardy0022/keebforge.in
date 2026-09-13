@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
 import { ReviewBody } from "@/components/reviews/ReviewBody";
-import { BlurFadeImage } from "@/components/ui/blur-fade-image";
 
 /** Photos shown per review before the "+N more" tile takes over. */
 const PHOTOS_SHOWN = 4;
@@ -58,37 +57,36 @@ export function ReviewCard({
       </div>
       <ReviewBody review={review} />
       {shownPhotos.length > 0 && (
-        <BlurFadeImage>
-          <div className="review-photos">
-            {shownPhotos.map((img) => (
-              <a
-                key={img.id}
-                href={img.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="review-photo"
-              >
-                {isOptimizable(img.url) ? (
-                  <Image src={img.url} alt="" fill sizes="120px" />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={img.url} alt="" loading="lazy" />
-                )}
-              </a>
-            ))}
-            {morePhotos > 0 && (
-              <a
-                href={review.images[PHOTOS_SHOWN - 1].url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="review-photo review-photo-more"
-                aria-label={`View ${morePhotos} more photos`}
-              >
-                <span>+{morePhotos}</span>
-              </a>
-            )}
-          </div>
-        </BlurFadeImage>
+        <div className="review-photos">
+          {shownPhotos.map((img) => (
+            <a
+              key={img.id}
+              href={img.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="review-photo"
+              aria-label="View review photo"
+            >
+              {isOptimizable(img.url) ? (
+                <Image src={img.url} alt="" fill sizes="120px" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={img.url} alt="" loading="lazy" />
+              )}
+            </a>
+          ))}
+          {morePhotos > 0 && (
+            <a
+              href={review.images[PHOTOS_SHOWN - 1].url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="review-photo review-photo-more"
+              aria-label={`View ${morePhotos} more photos`}
+            >
+              <span>+{morePhotos}</span>
+            </a>
+          )}
+        </div>
       )}
       <footer className="review-footer">
         <div className="review-author">

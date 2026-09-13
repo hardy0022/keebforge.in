@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { BlurFadeImage } from "@/components/ui/blur-fade-image";
 
 type WorkSlide = { url: string; alt?: string | null };
 
@@ -25,73 +24,71 @@ export function WorkImageSlider({
   const next = () => setIndex((i) => (i === images.length - 1 ? 0 : i + 1));
 
   return (
-    <BlurFadeImage>
-      <div className="work-gallery product-gallery">
-        <div className="product-gallery-main">
-          {images.map((img, i) => (
-            <Image
-              key={i}
-              src={img.url}
-              alt={img.alt ?? projectName}
-              fill
-              priority={i === 0}
-              sizes="(min-width: 768px) 50vw, 100vw"
-              className="object-contain transition-opacity duration-300"
-              style={{ opacity: i === index ? 1 : 0 }}
-              aria-hidden={i !== index}
-            />
-          ))}
+    <div className="work-gallery product-gallery">
+      <div className="product-gallery-main">
+        {images.map((img, i) => (
+          <Image
+            key={i}
+            src={img.url}
+            alt={img.alt ?? projectName}
+            fill
+            priority={i === 0}
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="object-contain transition-opacity duration-300"
+            style={{ opacity: i === index ? 1 : 0 }}
+            aria-hidden={i !== index}
+          />
+        ))}
 
-          {images.length > 1 && (
-            <div className="product-gallery-nav">
-              <button
-                className="product-gallery-btn"
-                onClick={prev}
-                aria-label="Previous image"
+        {images.length > 1 && (
+          <div className="product-gallery-nav">
+            <button
+              className="product-gallery-btn"
+              onClick={prev}
+              aria-label="Previous image"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-              </button>
-              <button
-                className="product-gallery-btn"
-                onClick={next}
-                aria-label="Next image"
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              className="product-gallery-btn"
+              onClick={next}
+              aria-label="Next image"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </button>
-            </div>
-          )}
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+        )}
 
-          {images.length > 1 && (
-            <div className="product-gallery-counter" aria-hidden="true">
-              {index + 1} / {images.length}
-            </div>
-          )}
-        </div>
+        {images.length > 1 && (
+          <div className="product-gallery-counter" aria-hidden="true">
+            {index + 1} / {images.length}
+          </div>
+        )}
       </div>
-    </BlurFadeImage>
+    </div>
   );
 }

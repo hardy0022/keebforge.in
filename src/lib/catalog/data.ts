@@ -20,8 +20,30 @@ export const getModsCatalog = defineCached(
   { tags: [TAG.services], revalidate: TTL.stable, keys: ["mods-catalog"] },
 );
 
+// ─── Portfolio ───────────────────────────────────────────────────────────────
+
+/** Narrow select shared by /work and /work/[slug] — only the fields those
+ *  public pages render (no huge markdown bodies fetched for the grid). */
+const workListSelect = {
+  id: true,
+  title: true,
+  slug: true,
+  description: true,
+  category: true,
+  images: true,
+  sortOrder: true,
+  featured: true,
+  createdAt: true,
+  date: true,
+  workPerformed: true,
+} satisfies Prisma.WorkProjectSelect;
+
 export const getWorkProjectBySlug = defineCached(
-  (slug: string) => prisma.workProject.findUnique({ where: { slug } }),
+  (slug: string) =>
+    prisma.workProject.findUnique({
+      where: { slug },
+      select: { ...workListSelect },
+    }),
   { tags: [TAG.work], revalidate: TTL.stable, keys: ["work-project-by-slug"] },
 );
 
@@ -35,6 +57,7 @@ export const getWorkProjects = defineCached(
         { featured: "desc" },
         { createdAt: "desc" },
       ],
+      select: workListSelect,
     }),
   { tags: [TAG.work], revalidate: TTL.stable, keys: ["work-projects"] },
 );

@@ -49,7 +49,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // notFound() here (pre-render) so miss-status is 404 even though the route
   // has a loading.tsx that would otherwise commit a 200 shell first (G-003).
   if (!product) notFound();
-  const image = product.images[0];
+  // Admin-set OG image wins over the first gallery image when it's actually an
+  // image (a page URL in that field is stale data). Canonical override is only
+  // trusted when it points at this product's own page.
+  const ogImage =
+    product.ogImageUrl && !product.ogImageUrl.includes("/product/")
+      ? product.ogImageUrl
+      : undefined;
+  const image = ogImage ?? product.images[0]?.url;
+  const ownUrl = `${SITE_URL}/product/${product.slug}`;
+  const canonical =
+    product.canonicalUrl === ownUrl ||
+    product.canonicalUrl === `${ownUrl}/`
+      ? product.canonicalUrl
+      : undefined;
   return buildMetadata({
     title: product.seoTitle ?? `${product.name} | KeebForge Shop`,
     description:
@@ -57,7 +70,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       product.description ??
       `${product.name} at KeebForge.`,
     path: `/product/${product.slug}`,
-    image: image?.url,
+    canonical,
+    image,
   });
 }
 
@@ -143,7 +157,7 @@ export default async function ProductPage({
                 <p className="product-kicker-row">
                   {product.brand && (
                     <Link
-                      href={`/shop?brand=${product.brand.slug}`}
+                      href={`/shop/${product.category.slug}?brand=${product.brand.slug}`}
                       className="product-brand"
                     >
                       {product.brand.name}
@@ -395,6 +409,7 @@ export default async function ProductPage({
             name: product.name,
             description:
               product.seoDescription ?? product.description ?? undefined,
+            url,
             image: product.images.length
               ? product.images.map((i) => absUrl(i.url))
               : undefined,

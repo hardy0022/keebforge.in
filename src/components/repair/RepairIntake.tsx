@@ -6,7 +6,11 @@ import {
   submitRepairRequest,
   type RepairRequestState,
 } from "@/app/actions/repair-request";
-import { INDIAN_STATES } from "@/lib/config/indian-states";
+import { StateSelect } from "@/components/ui/StateSelect";
+import { PinCodeInput } from "@/components/ui/PinCodeInput";
+import { Field } from "@/components/ui/Field";
+import { Panel } from "@/components/ui/Panel";
+import { PillRadioGroup, PillRadio } from "@/components/ui/PillRadio";
 import {
   sniffImageFile,
   IMAGE_ACCEPT,
@@ -335,9 +339,11 @@ export function RepairIntake({
 
       <div className="ri-main">
         {phase === "review" ? (
-          <section className="panel ri-review">
-            <p className="panel-tag">Final Check</p>
-            <h2 className="panel-title">Review Your Request</h2>
+          <Panel
+            tag="Final Check"
+            title="Review Your Request"
+            className="panel"
+          >
             <dl className="ri-review-grid">
               <div>
                 <dt>Service type</dt>
@@ -416,13 +422,15 @@ export function RepairIntake({
                 Edit Request
               </button>
             </div>
-          </section>
+          </Panel>
         ) : (
           <>
             {/* 01 — SERVICE */}
-            <section className="panel ri-step">
-              <p className="panel-tag">01 — Service</p>
-              <h2 className="panel-title">What can we help you with?</h2>
+            <Panel
+              tag="01 — Service"
+              title="What can we help you with?"
+              className="panel"
+            >
               <div className="ri-service-grid">
                 {SERVICE_CARDS.map((s) => (
                   <button
@@ -439,59 +447,58 @@ export function RepairIntake({
                     <span className="ri-service-title">{s.title}</span>
                     <span className="ri-service-desc">{s.desc}</span>
                   </button>
-                ))}
-              </div>
-            </section>
+))}
+                  </div>
+                </Panel>
 
             {/* 02 — DEVICE */}
-            <section className="panel ri-step">
-              <p className="panel-tag">02 — Device</p>
-              <h2 className="panel-title">Project / Device Details</h2>
-              <div className="form-row">
-                <label>Device type</label>
-                <div className="pill-radio-group">
-                  {DEVICES.map((dv) => (
-                    <label
-                      key={dv.id}
-                      className={`pill-radio${deviceType === dv.id ? " selected" : ""}`}
-                    >
-                      <input
-                        type="radio"
+            <Panel
+              tag="02 — Device"
+              title="Project / Device Details"
+              className="panel"
+            >
+              <div className="field-stack">
+                <Field label="Device type">
+                  <PillRadioGroup size="lg">
+                    {DEVICES.map((dv) => (
+                      <PillRadio
+                        key={dv.id}
                         name="deviceTypeRadio"
+                        value={dv.id}
+                        label={dv.label}
                         checked={deviceType === dv.id}
                         onChange={() => setDeviceType(dv.id)}
                       />
-                      {dv.label}
-                    </label>
-                  ))}
+                    ))}
+                  </PillRadioGroup>
+                </Field>
+                <div className="ri-field-row">
+                  <Field label="Brand" htmlFor="ri-brand">
+                    <input
+                      id="ri-brand"
+                      value={brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                      placeholder="e.g. Keychron, Logitech…"
+                    />
+                  </Field>
+                  <Field label="Model / PCB" htmlFor="ri-model">
+                    <input
+                      id="ri-model"
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="e.g. K2, G Pro X, custom PCB rev…"
+                    />
+                  </Field>
                 </div>
               </div>
-              <div className="ri-field-row">
-                <div className="form-row">
-                  <label htmlFor="ri-brand">Brand</label>
-                  <input
-                    id="ri-brand"
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    placeholder="e.g. Keychron, Logitech…"
-                  />
-                </div>
-                <div className="form-row">
-                  <label htmlFor="ri-model">Model / PCB</label>
-                  <input
-                    id="ri-model"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    placeholder="e.g. K2, G Pro X, custom PCB rev…"
-                  />
-                </div>
-              </div>
-            </section>
+            </Panel>
 
             {/* 03 — WORK REQUIRED */}
-            <section className="panel ri-step">
-              <p className="panel-tag">03 — Work Required</p>
-              <h2 className="panel-title">What do you need done?</h2>
+            <Panel
+              tag="03 — Work Required"
+              title="What do you need done?"
+              className="panel"
+            >
               <div className="ri-chip-row">
                 {workOptions(serviceType ?? "unsure").map((w) => (
                   <button
@@ -505,33 +512,31 @@ export function RepairIntake({
                   </button>
                 ))}
               </div>
-              <div className="ri-field-row">
-                <div className="form-row">
-                  <label htmlFor="ri-condition">Current condition</label>
-                  <select
-                    id="ri-condition"
-                    value={condition}
-                    onChange={(e) => setCondition(e.target.value)}
-                  >
-                    {CONDITIONS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+              <div className="field-stack">
+                <div className="ri-field-row">
+                  <Field label="Current condition" htmlFor="ri-condition">
+                    <select
+                      id="ri-condition"
+                      value={condition}
+                      onChange={(e) => setCondition(e.target.value)}
+                    >
+                      {CONDITIONS.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Estimated budget (optional)" htmlFor="ri-budget">
+                    <input
+                      id="ri-budget"
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                      placeholder="e.g. ₹2,000–5,000"
+                    />
+                  </Field>
                 </div>
-                <div className="form-row">
-                  <label htmlFor="ri-budget">Estimated budget (optional)</label>
-                  <input
-                    id="ri-budget"
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="e.g. ₹2,000–5,000"
-                  />
-                </div>
-              </div>
-              <div className="form-row">
-                <label htmlFor="ri-desc">Description</label>
+              <Field label="Description" htmlFor="ri-desc">
                 <textarea
                   id="ri-desc"
                   value={description}
@@ -539,9 +544,8 @@ export function RepairIntake({
                   placeholder="Describe the job — what's happening, what you want achieved, history of the device…"
                   minLength={20}
                 />
-              </div>
-              <div className="form-row">
-                <label>Photos (optional)</label>
+              </Field>
+              <Field label="Photos (optional)">
                 <p className="field-hint">
                   Show us the damage, layout, or parts you want worked on.
                 </p>
@@ -577,98 +581,95 @@ export function RepairIntake({
                   PNG / JPG / WebP / AVIF · Up to {MAX_PHOTOS} photos · Max 3
                   MB each
                 </p>
+              </Field>
               </div>
-            </section>
+            </Panel>
 
             {/* 04 — YOUR DETAILS */}
-            <section className="panel ri-step">
-              <p className="panel-tag">04 — Your Details</p>
-              <h2 className="panel-title">Your Details</h2>
-              <div className="ri-field-row">
-                <div className="form-row">
-                  <label htmlFor="ri-first-name">First Name</label>
-                  <input
-                    id="ri-first-name"
-                    name="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    autoComplete="given-name"
-                    placeholder="Your first name"
-                  />
+            <Panel
+              tag="04 — Your Details"
+              title="Your Details"
+              className="panel"
+            >
+              <div className="field-stack">
+                <div className="ri-field-row">
+                  <Field label="First Name" htmlFor="ri-first-name">
+                    <input
+                      id="ri-first-name"
+                      name="firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      autoComplete="given-name"
+                      placeholder="Your first name"
+                    />
+                  </Field>
+                  <Field label="Last Name" htmlFor="ri-last-name">
+                    <input
+                      id="ri-last-name"
+                      name="lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      autoComplete="family-name"
+                      placeholder="Your last name"
+                    />
+                  </Field>
                 </div>
-                <div className="form-row">
-                  <label htmlFor="ri-last-name">Last Name</label>
-                  <input
-                    id="ri-last-name"
-                    name="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    autoComplete="family-name"
-                    placeholder="Your last name"
-                  />
+                <div className="ri-field-row">
+                  <Field label="WhatsApp / Phone" htmlFor="ri-phone">
+                    <input
+                      id="ri-phone"
+                      name="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      autoComplete="tel"
+                      placeholder="+91 9998888000"
+                    />
+                  </Field>
+                  <Field label="Email" htmlFor="ri-email">
+                    <input
+                      id="ri-email"
+                      name="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      placeholder="your@email.com"
+                    />
+                  </Field>
                 </div>
-              </div>
-              <div className="ri-field-row">
-                <div className="form-row">
-                  <label htmlFor="ri-phone">WhatsApp / Phone</label>
-                  <input
-                    id="ri-phone"
-                    name="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    autoComplete="tel"
-                    placeholder="+91 9998888000"
-                  />
-                </div>
-                <div className="form-row">
-                  <label htmlFor="ri-email">Email</label>
-                  <input
-                    id="ri-email"
-                    name="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                    placeholder="your@email.com"
-                  />
-                </div>
-              </div>
-              <div className="ri-field-row">
-                <div className="form-row">
-                  <label htmlFor="ri-notes">
-                    Additional contact info (optional)
-                  </label>
+                <Field
+                  label="Additional contact info (optional)"
+                  htmlFor="ri-notes"
+                >
                   <input
                     id="ri-notes"
                     value={contactNotes}
                     onChange={(e) => setContactNotes(e.target.value)}
                     placeholder="Discord, Telegram, alternate number…"
                   />
-                </div>
+                </Field>
               </div>
-            </section>
+            </Panel>
 
-            {/* 06 — SHIPPING */}
-            <section className="panel ri-step">
-              <p className="panel-tag">05 — Shipping</p>
-              <h2 className="panel-title">Shipping / Pickup</h2>
-              <div className="pill-radio-group ri-shipping-pills">
+            {/* 05 — SHIPPING */}
+            <Panel
+              tag="05 — Shipping"
+              title="Shipping / Pickup"
+              className="panel"
+            >
+              <PillRadioGroup size="lg">
                 {SHIPPING.map((sm) => (
-                  <label
+                  <PillRadio
                     key={sm.id}
-                    className={`pill-radio${shippingMethod === sm.id ? " selected" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="shippingRadio"
-                      checked={shippingMethod === sm.id}
-                      onChange={() => setShippingMethod(sm.id)}
-                    />
-                    {sm.label}
-                  </label>
+                    name="shippingRadio"
+                    value={sm.id}
+                    label={sm.label}
+                    checked={shippingMethod === sm.id}
+                    onChange={() => setShippingMethod(sm.id)}
+                  />
                 ))}
-              </div>
+              </PillRadioGroup>
               {(shippingMethod === "SHIP" || shippingMethod === "PICKUP") &&
                 (addressesLoading ? (
                   <div
@@ -721,8 +722,7 @@ export function RepairIntake({
                     )}
                     {useAddressId === "" && (
                       <div className="ri-address-manual">
-                        <div className="form-row">
-                          <label htmlFor="ri-street">Street address</label>
+                        <Field label="Street address" htmlFor="ri-street">
                           <input
                             id="ri-street"
                             value={street}
@@ -730,67 +730,48 @@ export function RepairIntake({
                             autoComplete="street-address"
                             placeholder="House, street…"
                           />
-                        </div>
-                        <div className="form-row">
-                          <label htmlFor="ri-landmark">
-                            Landmark (Optional)
-                          </label>
+                        </Field>
+                        <Field label="Landmark (Optional)" htmlFor="ri-landmark">
                           <input
                             id="ri-landmark"
                             value={landmark}
                             onChange={(e) => setLandmark(e.target.value)}
                             placeholder="Near metro station, opposite park…"
                           />
-                        </div>
-                        <div className="ri-field-row ri-field-row-3">
-                          <div className="form-row">
-                            <label htmlFor="ri-city">City</label>
+                        </Field>
+                        <div className="addr-city-row">
+                          <Field label="City" htmlFor="ri-city">
                             <input
                               id="ri-city"
                               value={city}
                               onChange={(e) => setCity(e.target.value)}
                               autoComplete="address-level2"
                             />
-                          </div>
-                          <div className="form-row">
-                            <label htmlFor="ri-pin">PIN code</label>
-                            <input
-                              id="ri-pin"
-                              value={postalCode}
-                              onChange={(e) =>
-                                setPostalCode(
-                                  e.target.value.replace(/\D/g, "").slice(0, 6),
-                                )
-                              }
-                              inputMode="numeric"
-                              maxLength={6}
-                              autoComplete="postal-code"
-                            />
-                          </div>
-                          <div className="form-row">
-                            <label htmlFor="ri-state-in">State</label>
-                            <select
+                          </Field>
+                          <Field label="State" htmlFor="ri-state-in">
+                            <StateSelect
                               id="ri-state-in"
                               value={state_}
-                              onChange={(e) => setState_(e.target.value)}
+                              onChange={(v) => setState_(v)}
                               autoComplete="address-level1"
-                            >
-                              <option value="">Select state…</option>
-                              {INDIAN_STATES.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                              placeholder="Select state…"
+                            />
+                          </Field>
+                          <Field label="PIN Code" htmlFor="ri-pin">
+                            <PinCodeInput
+                              id="ri-pin"
+                              value={postalCode}
+                              onChange={(v) => setPostalCode(v)}
+                              autoComplete="postal-code"
+                            />
+                          </Field>
                         </div>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="ri-address-manual">
-                    <div className="form-row">
-                      <label htmlFor="ri-street">Street address</label>
+                    <Field label="Street address" htmlFor="ri-street">
                       <input
                         id="ri-street"
                         value={street}
@@ -798,68 +779,51 @@ export function RepairIntake({
                         autoComplete="street-address"
                         placeholder="House, street…"
                       />
-                    </div>
-                    <div className="form-row">
-                      <label htmlFor="ri-landmark">Landmark (Optional)</label>
+                    </Field>
+                    <Field label="Landmark (Optional)" htmlFor="ri-landmark">
                       <input
                         id="ri-landmark"
                         value={landmark}
                         onChange={(e) => setLandmark(e.target.value)}
                         placeholder="Near metro station, opposite park…"
                       />
-                    </div>
-                    <div className="ri-field-row ri-field-row-3">
-                      <div className="form-row">
-                        <label htmlFor="ri-city">City</label>
+                    </Field>
+                    <div className="addr-city-row">
+                      <Field label="City" htmlFor="ri-city">
                         <input
                           id="ri-city"
                           value={city}
                           onChange={(e) => setCity(e.target.value)}
                           autoComplete="address-level2"
                         />
-                      </div>
-                      <div className="form-row">
-                        <label htmlFor="ri-pin">PIN code</label>
-                        <input
-                          id="ri-pin"
-                          value={postalCode}
-                          onChange={(e) =>
-                            setPostalCode(
-                              e.target.value.replace(/\D/g, "").slice(0, 6),
-                            )
-                          }
-                          inputMode="numeric"
-                          maxLength={6}
-                          autoComplete="postal-code"
-                        />
-                      </div>
-                      <div className="form-row">
-                        <label htmlFor="ri-state-in">State</label>
-                        <select
+                      </Field>
+                      <Field label="State" htmlFor="ri-state-in">
+                        <StateSelect
                           id="ri-state-in"
                           value={state_}
-                          onChange={(e) => setState_(e.target.value)}
+                          onChange={(v) => setState_(v)}
                           autoComplete="address-level1"
-                        >
-                          <option value="">Select state…</option>
-                          {INDIAN_STATES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                          placeholder="Select state…"
+                        />
+                      </Field>
+                      <Field label="PIN Code" htmlFor="ri-pin">
+                        <PinCodeInput
+                          id="ri-pin"
+                          value={postalCode}
+                          onChange={(v) => setPostalCode(v)}
+                          autoComplete="postal-code"
+                        />
+                      </Field>
                     </div>
                   </div>
                 ))}
-            </section>
+            </Panel>
           </>
         )}
       </div>
 
       <aside className="ri-side">
-        <div className="panel ri-summary">
-          <p className="panel-tag">Submit Request</p>
+        <Panel tag="Submit Request" className="panel">
           <dl className="ri-summary-list">
             {summaryRows.map(([k, v]) => (
               <div key={k}>
@@ -895,7 +859,7 @@ export function RepairIntake({
             </button>
           )}
           <p className="ri-side-hint">Mail-in service across India</p>
-        </div>
+        </Panel>
       </aside>
     </form>
   );
