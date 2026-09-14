@@ -18,7 +18,6 @@ export function CtaSection({
 }) {
   return (
     <section className="cta-section" aria-labelledby="cta-t">
-      <div className="cta-deco" aria-hidden="true" />
       <div className="cta-wrap">
         <span className="cta-tag">{tag}</span>
         <h2 className="cta-title" id="cta-t">

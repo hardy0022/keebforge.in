@@ -68,8 +68,6 @@ export function HomeHero() {
       className="hp-hero"
       aria-label="KeebForge — precision keyboard builds, tuning and repairs"
     >
-      <div className="hp-hero-glow" aria-hidden="true" />
-
       <div className="hp-hero-main">
         <div className="hp-hero-grid">
           <div className="hp-hero-text">

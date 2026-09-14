@@ -1,0 +1,285 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "KeebForge Runtime Architecture",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "keebforge.runtime.html",
+    "repository": {
+      "url": "https://github.com/hardy0022/keebforge.in",
+      "provider": "github",
+      "revision": "a495deb19642d7d6af0437a4beb21b31f6346063"
+    },
+    "views": [
+      {
+        "id": "page-load",
+        "label": "Page Load",
+        "focus": ["browser", "vercelEdge", "nextjs", "prisma", "postgres", "cloudinary"],
+        "note": "SSR page request: edge middleware, cached catalog reads, DB fallback, Cloudinary image URLs."
+      },
+      {
+        "id": "checkout",
+        "label": "Checkout & Payment",
+        "focus": ["browser", "nextjs", "prisma", "postgres", "razorpay", "delhivery"],
+        "note": "Cart to paid order: server-side price/shipping calc, Razorpay inline + webhook, idempotent verify."
+      },
+      {
+        "id": "auth-admin",
+        "label": "Auth & Admin",
+        "focus": ["browser", "nextjs", "betterAuth", "prisma", "postgres", "resend"],
+        "note": "Session management, role-based access, admin CRUD, transactional email."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [24, 44],
+    "cols": 7,
+    "cellW": 120,
+    "cellH": 52,
+    "gapX": 26,
+    "gapY": 90
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Browser",
+      "sublabel": "Customer / Admin",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "vercelEdge",
+      "type": "cloud",
+      "label": "Vercel Edge",
+      "sublabel": "proxy.ts middleware",
+      "row": 1,
+      "col": 2,
+      "sources": [{ "path": "src/proxy.ts", "line": 50, "label": "maintenance guard + case redirects" }]
+    },
+    {
+      "id": "nextjs",
+      "type": "backend",
+      "label": "Next.js 16",
+      "sublabel": "RSC · SSR · API",
+      "row": 1,
+      "col": 3,
+      "tag": "React Compiler",
+      "sources": [
+        { "path": "next.config.ts", "line": 90, "label": "config + redirects" },
+        { "path": "src/lib/caching/cache.ts", "line": 90, "label": "data cache wrapper" }
+      ]
+    },
+    {
+      "id": "prisma",
+      "type": "backend",
+      "label": "Prisma 6",
+      "sublabel": "ORM · PostgreSQL",
+      "row": 1,
+      "col": 5,
+      "sources": [
+        { "path": "src/lib/db/prisma.ts", "line": 12, "label": "lazy PrismaClient proxy" },
+        { "path": "prisma/schema.prisma", "line": 1, "label": "full schema" }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "Supabase",
+      "row": 1,
+      "col": 6,
+      "tag": "primary datastore",
+      "sources": [{ "path": "prisma/schema.prisma", "line": 1, "label": "provider = postgresql" }]
+    },
+    {
+      "id": "betterAuth",
+      "type": "security",
+      "label": "Better Auth",
+      "sublabel": "Session · OAuth · RBAC",
+      "row": 2,
+      "col": 3,
+      "sources": [
+        { "path": "src/lib/auth/better-auth.ts", "line": 17, "label": "auth config" },
+        { "path": "src/lib/auth/session.ts", "line": 26, "label": "getCurrentAuth" }
+      ]
+    },
+    {
+      "id": "cloudinary",
+      "type": "cloud",
+      "label": "Cloudinary",
+      "sublabel": "Image CDN",
+      "row": 0,
+      "col": 3,
+      "sources": [
+        { "path": "src/lib/images/cloudinary.ts", "line": 36, "label": "entity folders + uploads" },
+        { "path": "next.config.ts", "line": 108, "label": "custom image loader" }
+      ]
+    },
+    {
+      "id": "delhivery",
+      "type": "external",
+      "label": "Delhivery",
+      "sublabel": "Shipping carrier",
+      "row": 0,
+      "col": 4,
+      "sources": [
+        { "path": "src/lib/shipping/delhivery.ts", "line": 9, "label": "kinko v1 charges API" },
+        { "path": "src/app/api/shipping/calculate/route.ts", "label": "rate endpoint" }
+      ]
+    },
+    {
+      "id": "resend",
+      "type": "external",
+      "label": "Resend",
+      "sublabel": "Transactional email",
+      "row": 0,
+      "col": 5,
+      "sources": [
+        { "path": "src/lib/auth/better-auth.ts", "line": 30, "label": "password reset emails" },
+        { "path": "src/app/actions/inquiry.ts", "line": 11, "label": "inquiry + repair emails" }
+      ]
+    },
+    {
+      "id": "razorpay",
+      "type": "external",
+      "label": "Razorpay",
+      "sublabel": "Payment gateway",
+      "row": 0,
+      "col": 6,
+      "sources": [
+        { "path": "src/app/api/payments/create-order/route.ts", "line": 88, "label": "server SDK order create" },
+        { "path": "src/app/api/payments/webhook/route.ts", "line": 22, "label": "HMAC-verified webhook" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Vercel Deployment",
+      "wraps": ["vercelEdge", "nextjs", "betterAuth", "prisma"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-to-edge",
+      "from": "browser",
+      "to": "vercelEdge",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "edge-to-nextjs",
+      "from": "vercelEdge",
+      "to": "nextjs",
+      "label": "maintenance + redirects",
+      "labelDy": 54
+    },
+    {
+      "id": "nextjs-to-prisma",
+      "from": "nextjs",
+      "to": "prisma",
+      "label": "reads / writes",
+      "variant": "emphasis"
+    },
+    {
+      "id": "prisma-to-postgres",
+      "from": "prisma",
+      "to": "postgres",
+      "label": "SQL over TLS",
+      "labelDy": 54
+    },
+    {
+      "id": "nextjs-to-auth",
+      "from": "nextjs",
+      "to": "betterAuth",
+      "label": "session + OAuth",
+      "variant": "security",
+      "labelDy": 24
+    },
+    {
+      "id": "nextjs-to-cloudinary",
+      "from": "nextjs",
+      "to": "cloudinary",
+      "label": "upload + URLs",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "nextjs-to-razorpay",
+      "from": "nextjs",
+      "to": "razorpay",
+      "label": "orders + verify",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "razorpay-webhook",
+      "from": "razorpay",
+      "to": "nextjs",
+      "label": "webhook (HMAC)",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "nextjs-to-delhivery",
+      "from": "nextjs",
+      "to": "delhivery",
+      "label": "rates + tracking",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "nextjs-to-resend",
+      "from": "nextjs",
+      "to": "resend",
+      "label": "email dispatch",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [814, 164]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Platform",
+      "items": [
+        "Next.js 16.3.1 App Router on Vercel",
+        "Edge middleware: maintenance guard + case-variant redirects",
+        "React Server Components + React Compiler",
+        "Data cache: unstable_cache + React.cache with tag invalidation"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Data Layer",
+      "items": [
+        "Prisma 6 → PostgreSQL (Supabase) lazy singleton",
+        "Per-slice TTL: 3600s stable / 300s catalog / 60s settings",
+        "Admin mutations invalidate tags via updateTag"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Commerce",
+      "items": [
+        "Razorpay: inline checkout.js + HMAC verify + idempotent webhook",
+        "Delhivery: kinko v1 rates, waybill tracking, surface/express",
+        "Server-side price/shipping — client never supplies amounts"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Auth & Email",
+      "items": [
+        "Better Auth 1.7.1: email/password + Google/Discord OAuth",
+        "RBAC: ADMIN / STAFF / CUSTOMER with requireAdmin guard",
+        "Resend: password reset, repair inquiries, request confirmations"
+      ]
+    }
+  ]
+}

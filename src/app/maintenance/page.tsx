@@ -26,28 +26,6 @@ export default function MaintenancePage() {
           overflow: "hidden",
         }}
       >
-        {/* Subtle radial glow */}
-        <div
-          style={{
-            position: "absolute",
-            inset: "-40%",
-            background:
-              "radial-gradient(ellipse at center, rgba(201,243,29,0.04) 0%, transparent 65%)",
-            pointerEvents: "none",
-          }}
-        />
-        {/* Faint grid pattern */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
-            pointerEvents: "none",
-          }}
-        />
-
         <div
           style={{
             position: "relative",

@@ -4,7 +4,6 @@ import { Reveal } from "@/components/home/Reveal";
 export function FinalCta() {
   return (
     <section className="hp-final" aria-labelledby="final-cta">
-      <div className="hp-final-glow" aria-hidden="true" />
       <div className="hp-final-inner">
         <Reveal as="h2" id="final-cta" className="hp-final-title">
           Ready to build
