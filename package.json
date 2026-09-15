@@ -12,7 +12,6 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset",
     "check:coupons": "tsx src/lib/checkout/coupon-eval.ts",
     "check:environment": "tsx src/lib/environment.test.ts"

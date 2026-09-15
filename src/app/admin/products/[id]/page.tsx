@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/utils/money";
 import {
-  getAdminProduct,
+  getAdminProductOverview,
   PRODUCT_STATUS_LABELS,
   PRODUCT_TYPE_LABELS,
   availableStock,
@@ -29,7 +29,7 @@ export default async function AdminProductDetail({
 }) {
   await requirePermission("product", "view");
   const { id } = await params;
-  const product = await getAdminProduct(id);
+  const product = await getAdminProductOverview(id);
   if (!product) notFound();
 
   const specs =

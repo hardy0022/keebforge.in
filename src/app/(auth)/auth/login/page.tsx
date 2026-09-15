@@ -16,8 +16,11 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ next?: string }>;
 }) {
-  const { user } = await getCurrentAuth();
-  if (user) redirect((await getAdminContext()) ? "/admin" : "/");
+  const [authState, adminCtx] = await Promise.all([
+    getCurrentAuth(),
+    getAdminContext(),
+  ]);
+  if (authState.user) redirect(adminCtx ? "/admin" : "/");
 
   const sp = await searchParams;
   // Only allow internal redirects — never open redirects.

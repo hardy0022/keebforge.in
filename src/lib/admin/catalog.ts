@@ -241,6 +241,106 @@ export const getAdminProduct = cache((id: string) =>
   }),
 );
 
+/**
+ * Slim product read for the admin detail page only. Unlike getAdminProduct
+ * (which the Edit form feeds from and must stay full-width), this narrows to
+ * exactly the fields the detail page renders:
+ *  - reviews capped at 5 (the page only prints the latest handful; the full
+ *    query shipped every review the product ever had into the RSC payload),
+ *  - category/brand/inventoryMovements/images projected to used columns.
+ * ProductForm is never given this shape.
+ */
+export const getAdminProductOverview = cache((id: string) =>
+  prisma.product.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      sku: true,
+      barcode: true,
+      description: true,
+      type: true,
+      status: true,
+      featured: true,
+      popular: true,
+      isNew: true,
+      price: true,
+      compareAtPrice: true,
+      costPrice: true,
+      gstRate: true,
+      stock: true,
+      reservedQuantity: true,
+      lowStockThreshold: true,
+      allowBackorders: true,
+      inventoryTracking: true,
+      weight: true,
+      lengthCm: true,
+      widthCm: true,
+      heightCm: true,
+      shippingClass: true,
+      freeShipping: true,
+      shippingRestrictions: true,
+      features: true,
+      whatsIncluded: true,
+      specifications: true,
+      category: { select: { name: true } },
+      brand: { select: { name: true } },
+      variants: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          barcode: true,
+          price: true,
+          compareAtPrice: true,
+          stock: true,
+          reservedQuantity: true,
+          weight: true,
+          active: true,
+        },
+      },
+      images: {
+        where: { active: true },
+        orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
+        select: {
+          id: true,
+          url: true,
+          alt: true,
+          primary: true,
+          sortOrder: true,
+        },
+      },
+      inventoryMovements: {
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        select: {
+          id: true,
+          delta: true,
+          reason: true,
+          createdAt: true,
+          profile: { select: { name: true, email: true } },
+        },
+      },
+      reviews: { orderBy: { createdAt: "desc" }, take: 5 },
+      orderItems: {
+        select: {
+          id: true,
+          order: {
+            select: { orderNumber: true, createdAt: true, status: true },
+          },
+          quantity: true,
+          unitPrice: true,
+          lineTotal: true,
+          variantInfo: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
+    },
+  }),
+);
+
 export const getInventoryRows = cache(() =>
   prisma.product.findMany({
     where: { status: { not: "ARCHIVED" } },
