@@ -2,9 +2,9 @@ import Script from "next/script";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-// GTM is installed for Google Merchant Center site verification only — no
-// tags/events are configured inside the container.
-const GTM_ID = "GTM-XPTM2BF";
+// GTM container (GTM-PXPTM2BF). Also used for Google Merchant Center site
+// verification; analytics tags/events can be configured inside the container.
+const GTM_ID = "GTM-PXPTM2BF";
 
 export default function Analytics() {
   return (
