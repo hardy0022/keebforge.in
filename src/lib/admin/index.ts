@@ -21,8 +21,13 @@ import {
   daysAgoISTDayStart,
 } from "@/lib/utils/ist";
 
-/** Terminal / non-active order statuses (used for pipeline + "active" counts). */
-const TERMINAL: OrderStatus[] = ["DELIVERED", "ORDER_COMPLETED"];
+/** One day's PAID-order totals within a daily series. */
+export type DailyPaidBucket = {
+  date: string;
+  label: string;
+  total: number;
+  orders: number;
+};
 
 /** Revenue timestamp for a paid order: the actual capture, else order creation. */
 export const revenueTime = (o: {
@@ -79,7 +84,7 @@ export const getAdminStats = cache(async () => {
       where: {
         isDeleted: false,
         type: "REPAIR",
-        status: { notIn: [...TERMINAL, "COMPLETED"] },
+        status: { notIn: [...COMPLETED_STATUSES, "COMPLETED"] },
       },
     }),
   ]);
@@ -96,40 +101,51 @@ export const getAdminStats = cache(async () => {
   };
 });
 
-/** Daily revenue (PAID orders) for the trailing N days, oldest first. */
-export const getRevenueSeries = cache(async (days: number) => {
-  const from = daysAgoISTDayStart(days - 1);
-  const orders = await prisma.order.findMany({
-    where: {
-      isDeleted: false,
-      paymentStatus: "PAID",
-      createdAt: { gte: from },
-    },
-    select: {
-      createdAt: true,
-      total: true,
-      payments: {
-        where: { status: "PAID" },
-        select: { status: true, paidAt: true },
+/** Daily PAID-order bucketing (oldest first) — the canonical source for the
+ *  admin revenue and analytics series. */
+export const dailyPaidSeries = cache(
+  async (days: number): Promise<DailyPaidBucket[]> => {
+    const from = daysAgoISTDayStart(days - 1);
+    const orders = await prisma.order.findMany({
+      where: {
+        isDeleted: false,
+        paymentStatus: "PAID",
+        createdAt: { gte: from },
       },
-    },
-  });
-  const buckets: { date: string; label: string; total: number }[] = [];
-  for (let i = 0; i < days; i++) {
-    const d = daysAgoISTDayStart(days - 1 - i);
-    buckets.push({
-      date: istDayKey(d),
-      label: fmtIST(d, { day: "numeric", month: "short" }),
-      total: 0,
+      select: {
+        createdAt: true,
+        total: true,
+        payments: {
+          where: { status: "PAID" },
+          select: { status: true, paidAt: true },
+        },
+      },
     });
-  }
-  const bucketByKey = new Map(buckets.map((b) => [b.date, b]));
-  for (const o of orders) {
-    const key = istDayKey(revenueTime(o));
-    const b = bucketByKey.get(key);
-    if (b) b.total += o.total;
-  }
-  return buckets;
+    const buckets: DailyPaidBucket[] = [];
+    for (let i = 0; i < days; i++) {
+      const d = daysAgoISTDayStart(days - 1 - i);
+      buckets.push({
+        date: istDayKey(d),
+        label: fmtIST(d, { day: "numeric", month: "short" }),
+        total: 0,
+        orders: 0,
+      });
+    }
+    const bucketByKey = new Map(buckets.map((b) => [b.date, b]));
+    for (const o of orders) {
+      const b = bucketByKey.get(istDayKey(revenueTime(o)));
+      if (b) {
+        b.total += o.total;
+        b.orders += 1;
+      }
+    }
+    return buckets;
+  },
+);
+
+export const getRevenueSeries = cache(async (days: number) => {
+  const buckets = await dailyPaidSeries(days);
+  return buckets.map(({ date, label, total }) => ({ date, label, total }));
 });
 
 /** Repair pipeline counts per stage, from orders carrying repair records. */

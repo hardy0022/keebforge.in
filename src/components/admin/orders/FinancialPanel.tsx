@@ -6,7 +6,7 @@ import {
   recordManualPayment,
   type ActionState,
 } from "@/app/admin/actions/orders";
-import { Toast, Spinner } from "./ActionForm";
+import { Toast, Spinner } from "@/components/admin/ActionForm";
 
 const inr = (paise: number) => Math.round(paise / 100);
 
@@ -146,7 +146,7 @@ export function FinancialPanel({
 
       {open === "amounts" && (
         <div style={{ width: "100%", maxWidth: 560 }}>
-          <Toast state={amtState} okLabel="Amounts saved" />
+          <Toast state={amtState} label="Amounts saved" />
           <form action={submitAmounts}>
             <input type="hidden" name="orderId" value={orderId} />
             <div
@@ -193,7 +193,7 @@ export function FinancialPanel({
 
       {open === "payment" && (
         <div style={{ width: "100%", maxWidth: 560 }}>
-          <Toast state={payState} okLabel="Payment recorded" />
+          <Toast state={payState} label="Payment recorded" />
           <form
             action={submitPayment}
             style={{ display: "flex", flexDirection: "column", gap: 10 }}

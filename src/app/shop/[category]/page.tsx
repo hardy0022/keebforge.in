@@ -9,19 +9,13 @@ import {
   JsonLd,
   breadcrumbJsonLd,
 } from "@/lib/seo";
+import { SHOP_SORTS } from "@/lib/catalog/shop";
 import {
   getCategoryBySlug,
   getShopProducts,
   type ShopSort,
 } from "@/lib/catalog/data";
 
-const SORTS: ShopSort[] = [
-  "newest",
-  "price-asc",
-  "price-desc",
-  "name-asc",
-  "name-desc",
-];
 const toPaise = (v?: string) => {
   const n = parseInt(v ?? "", 10);
   return Number.isFinite(n) && n > 0 ? n * 100 : undefined;
@@ -61,7 +55,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const sp = await searchParams;
   const search = sp.q?.trim() || undefined;
   const brandSlug = sp.brand?.trim() || undefined;
-  const sort: ShopSort = SORTS.includes(sp.sort as ShopSort)
+  const sort: ShopSort = SHOP_SORTS.includes(sp.sort as ShopSort)
     ? (sp.sort as ShopSort)
     : "newest";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);

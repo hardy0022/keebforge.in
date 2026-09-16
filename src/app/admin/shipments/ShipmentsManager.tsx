@@ -10,7 +10,7 @@ import {
   nextPickup,
   slotLabel,
 } from "@/lib/shipping/pickup-slots";
-import { ActionForm, Spinner } from "@/components/admin/orders/ActionForm";
+import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 
 const SHIP_STATUSES: ShippingStatus[] = [
   "NOT_DISPATCHED",
@@ -92,7 +92,7 @@ export function ShipmentsManager({
             justifyContent: "space-between",
           }}
         >
-          <ActionForm action={bookWarehousePickup} okLabel="Pickup booked">
+          <ActionForm action={bookWarehousePickup} label="Pickup booked">
             {(pending) => (
               <div
                 style={{

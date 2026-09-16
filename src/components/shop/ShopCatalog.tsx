@@ -1,15 +1,8 @@
 import { ShopSortBar } from "@/components/shop/ShopSortBar";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import type { EmptyStateConfig } from "@/components/shop/ShopEmptyState";
+import { SHOP_SORTS } from "@/lib/catalog/shop";
 import { getShopProducts, type ShopSort } from "@/lib/catalog/data";
-
-const SORTS: ShopSort[] = [
-  "newest",
-  "price-asc",
-  "price-desc",
-  "name-asc",
-  "name-desc",
-];
 
 /* Bespoke empty states per listing — sections without one fall back to the generic state. */
 const EMPTY_STATES: Partial<
@@ -41,7 +34,7 @@ export async function ShopCatalog({
   section?: ShopSectionKey;
   searchParams: { sort?: string; page?: string };
 }) {
-  const sort: ShopSort = SORTS.includes(searchParams.sort as ShopSort)
+  const sort: ShopSort = SHOP_SORTS.includes(searchParams.sort as ShopSort)
     ? (searchParams.sort as ShopSort)
     : "newest";
   const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);

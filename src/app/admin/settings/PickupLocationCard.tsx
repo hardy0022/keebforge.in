@@ -50,7 +50,7 @@ export function PickupLocationCard({
         with Delhivery on save, so the &ldquo;Create shipment (Delhivery)&rdquo;
         action can use it. Return address defaults to this address.
       </p>
-      <ActionForm action={saveDelhiveryPickup} toastLabel="Pickup location">
+      <ActionForm action={saveDelhiveryPickup} label={(s) => s.message ?? "Pickup location saved"}>
         {(pending) => (
           <>
             <div

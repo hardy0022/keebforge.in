@@ -158,7 +158,7 @@ export function MaintenanceModeCard({
                 : "Controls the local development website only."}
             </p>
 
-            <ActionForm action={runAction} toastLabel="Maintenance mode">
+            <ActionForm action={runAction} label={(s) => s.message ?? "Maintenance mode saved"}>
               {(pending) => (
                 <>
                   <input type="hidden" name="environment" value={environment} />
@@ -245,7 +245,7 @@ export function MaintenanceModeCard({
               >
                 Cancel
               </button>
-              <ActionForm action={runAction} toastLabel="Maintenance mode">
+              <ActionForm action={runAction} label={(s) => s.message ?? "Maintenance mode saved"}>
                 {(pending) => (
                   <>
                     <input

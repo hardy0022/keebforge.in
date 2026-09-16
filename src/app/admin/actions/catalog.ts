@@ -12,6 +12,11 @@ import {
   invalidateProducts,
 } from "@/lib/caching/cache";
 import { slugify } from "@/lib/utils/slugify";
+import {
+  CARD_ICON_NAMES,
+  MAX_CARD_FEATURES,
+  type CardIconName,
+} from "@/lib/catalog/shop";
 
 export type CatalogActionState = {
   ok?: boolean;
@@ -45,22 +50,6 @@ function toSpecs(v: FormDataEntryValue | null): Record<string, string> {
   return out;
 }
 
-const CARD_ICON_NAMES = new Set([
-  "keyboard",
-  "mouse",
-  "switch",
-  "layers",
-  "box",
-  "cable",
-  "battery",
-  "cpu",
-  "zap",
-  "scale",
-  "droplet",
-  "shield",
-]);
-const MAX_CARD_FEATURES = 3;
-
 /** Parse the card-features editor payload: hard cap of 3 {icon,label,value} highlights. */
 function toCardFeatures(
   v: FormDataEntryValue | null,
@@ -82,7 +71,7 @@ function toCardFeatures(
     const value =
       typeof r.value === "string" ? r.value.trim().slice(0, 60) : "";
     const icon =
-      typeof r.icon === "string" && CARD_ICON_NAMES.has(r.icon)
+      typeof r.icon === "string" && CARD_ICON_NAMES.includes(r.icon as CardIconName)
         ? r.icon
         : "zap";
     if (!label || !value) continue;

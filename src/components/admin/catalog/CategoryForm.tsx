@@ -13,7 +13,7 @@ export function CategoryForm({ editing }: { editing: CategoryProp | null }) {
       <h3 style={{ marginBottom: 0 }}>
         {editing ? `Edit category: ${editing.name}` : "Add category"}
       </h3>
-      <ActionForm action={saveCategory} toastLabel="Category">
+      <ActionForm action={saveCategory} label="Category saved">
         {(pending) => (
           <div
             className="admin-grid cols-2"

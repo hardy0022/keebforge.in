@@ -1,10 +1,8 @@
 "use client";
 
-import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
-import type { AnimatedIconHandle } from "@/components/icons/types";
 import TravelBag from "@/components/icons/travel-bag";
 import SlidersHorizontalIcon from "@/components/icons/sliders-horizontal-icon";
 import CpuIcon from "@/components/icons/cpu-icon";
@@ -43,16 +41,11 @@ const SERVICES = [
 type Service = (typeof SERVICES)[number];
 
 function ServiceItem({ service }: { service: Service }) {
-  const iconRef = useRef<AnimatedIconHandle>(null);
   const Icon = service.icon;
   return (
-    <div
-      className="hp-feature-item"
-      onMouseEnter={() => iconRef.current?.startAnimation()}
-      onMouseLeave={() => iconRef.current?.stopAnimation()}
-    >
+    <div className="hp-feature-item">
       <span className="hp-feature-icon">
-        <Icon ref={iconRef} />
+        <Icon />
       </span>
       <div>
         <h3 className="hp-service-title">{service.title}</h3>

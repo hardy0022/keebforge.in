@@ -2,7 +2,7 @@
 
 import type { OrderStatus } from "@prisma/client";
 import { addTimelineEntry } from "@/app/admin/actions/orders";
-import { ActionForm, Spinner } from "./ActionForm";
+import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 
 export function OrderTimelineAdd({
   orderId,
@@ -12,7 +12,7 @@ export function OrderTimelineAdd({
   statuses: { value: OrderStatus; label: string }[];
 }) {
   return (
-    <ActionForm action={addTimelineEntry} okLabel="Timeline entry added">
+    <ActionForm action={addTimelineEntry} label="Timeline entry added">
       {(pending) => (
         <div className="admin-actions" style={{ alignItems: "stretch" }}>
           <input type="hidden" name="orderId" value={orderId} />

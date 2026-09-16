@@ -55,15 +55,6 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
   return null;
 });
 
-/** Permission test against the user's Profile.role. */
-export function checkAction(
-  role: Role,
-  resource: string,
-  action: string,
-): boolean {
-  return canAction(role, resource, action);
-}
-
 /** Page/action guard: unauthenticated → login; non-admin → /unauthorized. */
 export async function requireAdminContext(): Promise<AdminContext> {
   const ctx = await getAdminContext();

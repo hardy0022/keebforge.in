@@ -25,7 +25,7 @@ export function BrandForm({ editing }: { editing: BrandProp | null }) {
       <h3 style={{ marginBottom: 0 }}>
         {editing ? `Edit brand: ${editing.name}` : "Add brand"}
       </h3>
-      <ActionForm action={saveBrand} toastLabel="Brand">
+      <ActionForm action={saveBrand} label="Brand saved">
         {(pending) => (
           <div
             className="admin-grid cols-2"

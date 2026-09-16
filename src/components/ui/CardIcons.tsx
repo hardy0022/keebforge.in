@@ -1,18 +1,7 @@
 import type { ReactNode } from "react";
+import { CARD_ICON_NAMES, type CardIconName } from "@/lib/catalog/shop";
 
-export type CardIconName =
-  | "keyboard"
-  | "mouse"
-  | "switch"
-  | "layers"
-  | "box"
-  | "cable"
-  | "battery"
-  | "cpu"
-  | "zap"
-  | "scale"
-  | "droplet"
-  | "shield";
+export { CARD_ICON_NAMES };
 
 type CardIconDef = { label: string; path: ReactNode };
 
@@ -118,8 +107,6 @@ export const CARD_ICONS: Record<CardIconName, CardIconDef> = {
     ),
   },
 };
-
-export const CARD_ICON_NAMES = Object.keys(CARD_ICONS) as CardIconName[];
 
 /** Renders a registry icon by name; unknown names fall back to the first icon. */
 export function CardIcon({ name }: { name: string }) {

@@ -1,11 +1,11 @@
 "use client";
 
 import { addOrderNote } from "@/app/admin/actions/orders";
-import { ActionForm, Spinner } from "./ActionForm";
+import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 
 export function OrderNoteAdd({ orderId }: { orderId: string }) {
   return (
-    <ActionForm action={addOrderNote} okLabel="Note saved">
+    <ActionForm action={addOrderNote} label="Note saved">
       {(pending) => (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <input type="hidden" name="orderId" value={orderId} />

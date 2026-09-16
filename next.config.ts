@@ -13,11 +13,20 @@ const REDIRECTS: { source: string; destination: string; permanent: boolean }[] =
       destination: "/auth/forgot-password",
       permanent: false,
     },
+    // Short/legacy URLs → canonical (single hop).
+    { source: "/cart", destination: "/shop/cart", permanent: false },
+    { source: "/checkout", destination: "/shop/checkout", permanent: false },
+    { source: "/profile", destination: "/account/profile", permanent: false },
+    {
+      source: "/account/addresses",
+      destination: "/account/profile",
+      permanent: false,
+    },
     // Old static site → new routes (flattened, no intermediate hops).
     { source: "/keyboard-repair", destination: "/workshop", permanent: true },
     { source: "/mouse-repair", destination: "/workshop", permanent: true },
     { source: "/pricing", destination: "/mods", permanent: true },
-    { source: "/order", destination: "/checkout", permanent: true },
+    { source: "/order", destination: "/shop/checkout", permanent: true },
     { source: "/Terms&Conditions", destination: "/terms", permanent: true },
     // Old service slugs → /mods (D-022: per-service detail pages removed).
     {

@@ -1,14 +1,10 @@
 "use client";
 
-import type { ShopSort } from "@/lib/catalog/data";
+import { SHOP_SORTS, SHOP_SORT_LABELS, type ShopSort } from "@/lib/catalog/shop";
 
-const SORTS: { value: ShopSort; label: string }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
-  { value: "name-asc", label: "Name: A–Z" },
-  { value: "name-desc", label: "Name: Z–A" },
-];
+const SORTS: { value: ShopSort; label: string }[] = SHOP_SORTS.map(
+  (value) => ({ value, label: SHOP_SORT_LABELS[value] }),
+);
 
 export function ShopSortBar({
   total,

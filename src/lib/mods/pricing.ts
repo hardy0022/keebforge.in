@@ -27,11 +27,6 @@ export type ServiceConfig = {
   groupSlug: string;
 };
 
-export type ServicePricingInput = {
-  service: ServiceConfig;
-  quantity: number;
-};
-
 export type ServicePricingResult = {
   serviceId: string;
   serviceName: string;

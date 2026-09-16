@@ -1,13 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 export default function MaintenancePage() {
-  const router = useRouter();
-  const [checking, setChecking] = useState(false);
-
   return (
     <>
       <style>{`
@@ -171,42 +164,6 @@ export default function MaintenancePage() {
               Contact Us <span style={{ marginLeft: 2 }}>→</span>
             </Link>
           </div>
-
-          {/* Check Again */}
-          <button
-            onClick={() => {
-              setChecking(true);
-              router.refresh();
-            }}
-            disabled={checking}
-            style={{
-              fontFamily: "var(--ff-display, 'Space Grotesk', sans-serif)",
-              fontSize: "0.72rem",
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              padding: "8px 18px",
-              borderRadius: 8,
-              border: "1px solid var(--bdr, rgba(255,255,255,0.09))",
-              background: "transparent",
-              color: "var(--t3, #9494a6)",
-              cursor: checking ? "not-allowed" : "pointer",
-              transition: "border-color 0.2s, color 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              if (!checking) {
-                (e.target as HTMLElement).style.borderColor =
-                  "var(--bdr-h, rgba(255,255,255,0.18))";
-                (e.target as HTMLElement).style.color = "var(--t2, #aeaebc)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              (e.target as HTMLElement).style.borderColor =
-                "var(--bdr, rgba(255,255,255,0.09))";
-              (e.target as HTMLElement).style.color = "var(--t3, #9494a6)";
-            }}
-          >
-            {checking ? "Checking..." : "Check Again"}
-          </button>
         </div>
       </main>
     </>

@@ -45,7 +45,6 @@ const NAV_PERMISSIONS: Record<string, [resource: string, action: string]> = {
   "/admin/work": ["setting", "update"],
   "/admin/coupons": ["coupon", "view"],
   "/admin/analytics": ["order", "view"],
-  "/admin/activity": ["order", "view"],
   "/admin/settings": ["setting", "view"],
 };
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { OrderStatus } from "@prisma/client";
 import { updateOrderStatus } from "@/app/admin/actions/orders";
-import { ActionForm, Spinner } from "./ActionForm";
+import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 
 export function OrderHeaderActions({
   orderId,
@@ -51,7 +51,7 @@ export function OrderHeaderActions({
           className="admin-card"
           style={{ padding: 14, width: "min(560px, 100%)" }}
         >
-          <ActionForm action={updateOrderStatus} okLabel="Status updated">
+          <ActionForm action={updateOrderStatus} label="Status updated">
             {(pending) => (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <input type="hidden" name="orderId" value={orderId} />

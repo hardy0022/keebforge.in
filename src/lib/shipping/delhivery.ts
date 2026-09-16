@@ -186,21 +186,6 @@ export function isFreeShipping(opts: {
   return threshold !== null && opts.subtotalPaise >= threshold;
 }
 
-// ── Delhivery response types ─────────────────────────────────────────────────
-
-export interface DelhiveryChargeItem {
-  request_status?: string;
-  reason?: string;
-  status?: string; // serviceability verdict on shape-B objects — NOT a failure signal
-  zone?: string;
-  charge_weight?: string | number;
-  freight_charge?: string | number;
-  cod_charge?: string | number;
-  charge_DL?: string | number;
-  total_amount?: string | number;
-  [key: string]: unknown;
-}
-
 // ── Our internal quote ───────────────────────────────────────────────────────
 
 /**
@@ -399,97 +384,6 @@ export async function trackShipment(waybill: string): Promise<TrackingResult> {
 }
 
 // ── Bulk waybill fetch (admin) ──────────────────────────────────────────────
-// https://staging-express.delhivery.com/waybill/api/bulk/json/?count=N
-
-export type WaybillsResult =
-  | { ok: true; waybills: string[] }
-  | { ok: false; errorCode: ShippingErrorCode; message: string };
-
-function wbFail(errorCode: ShippingErrorCode): WaybillsResult {
-  return { ok: false, errorCode, message: SHIPPING_ERROR_MESSAGES[errorCode] };
-}
-
-/** Pure parser for the bulk waybill response: { waybills: ["...", ...] }. */
-export function parseBulkWaybills(
-  httpStatus: number,
-  bodyText: string,
-): WaybillsResult {
-  if (httpStatus < 200 || httpStatus >= 300) {
-    console.error(
-      `[waybill] delhivery error status=${httpStatus}`,
-      bodyText.slice(0, 300),
-    );
-    if (httpStatus === 401 || httpStatus === 403)
-      return wbFail("INVALID_CREDENTIALS");
-    if (httpStatus === 429) return wbFail("RATE_LIMITED");
-    return wbFail("UPSTREAM_ERROR");
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(bodyText);
-  } catch {
-    console.error("[waybill] non-JSON response:", bodyText.slice(0, 300));
-    return wbFail("UPSTREAM_ERROR");
-  }
-  const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
-  const waybills = arr((parsed as Record<string, unknown>)?.waybills)
-    .filter((w): w is string => typeof w === "string" && w.trim() !== "")
-    .map((w) => w.trim());
-  return waybills.length ? { ok: true, waybills } : wbFail("UPSTREAM_ERROR");
-}
-
-// ── Expected TAT (admin) ──────────────────────────────────────────────────────
-// Delhivery `mot`: E = Express, S = Surface (same code set as shipping `md`).
-
-export type ExpectedTatResult =
-  | { ok: true; mot: "E" | "S"; tat: string | null; days: number | null }
-  | { ok: false; errorCode: ShippingErrorCode; message: string };
-
-function tatFail(errorCode: ShippingErrorCode): ExpectedTatResult {
-  return { ok: false, errorCode, message: SHIPPING_ERROR_MESSAGES[errorCode] };
-}
-
-/** Pure parser for /api/dc/expected_tat — pulls the numeric day TAT when present. */
-export function parseExpectedTat(
-  httpStatus: number,
-  bodyText: string,
-  mot: "E" | "S",
-): ExpectedTatResult {
-  if (httpStatus < 200 || httpStatus >= 300) {
-    console.error(
-      `[tat] delhivery error status=${httpStatus}`,
-      bodyText.slice(0, 300),
-    );
-    if (httpStatus === 401 || httpStatus === 403)
-      return tatFail("INVALID_CREDENTIALS");
-    if (httpStatus === 429) return tatFail("RATE_LIMITED");
-    return tatFail("UPSTREAM_ERROR");
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(bodyText);
-  } catch {
-    console.error("[tat] non-JSON response:", bodyText.slice(0, 300));
-    return tatFail("UPSTREAM_ERROR");
-  }
-  const rec = (v: unknown): Record<string, unknown> =>
-    v && typeof v === "object" && !Array.isArray(v)
-      ? (v as Record<string, unknown>)
-      : {};
-  const o = rec(parsed);
-  const raw = o.tat ?? o.TAT ?? o.tat_d2d ?? o.D2D;
-  const days =
-    typeof raw === "number"
-      ? raw
-      : Number(String(raw ?? "").replace(/[^\d.]/g, ""));
-  return {
-    ok: true,
-    mot,
-    tat: typeof raw === "string" ? raw : raw != null ? String(raw) : null,
-    days: Number.isFinite(days) && days > 0 ? days : null,
-  };
-}
-
 interface CacheEntry {
   quote: ShippingQuote;
   expiresAt: number;
@@ -2176,44 +2070,6 @@ function runSelfCheck() {
   );
 
   // ── Bulk waybill fetch ────────────────────────────────────────────────────
-  {
-    const r = parseBulkWaybills(
-      200,
-      JSON.stringify({ waybills: ["49323510001061", "49323510001062"] }),
-    );
-    t(
-      r.ok && r.waybills.length === 2 && r.waybills[0] === "49323510001061",
-      "bulk waybills parsed",
-    );
-  }
-  t(
-    parseBulkWaybills(200, JSON.stringify({ waybills: [] })).ok === false,
-    "bulk: empty waybills → error",
-  );
-  t(
-    parseBulkWaybills(401, '{"detail":"Invalid token"}').ok === false,
-    "bulk: 401 → credentials",
-  );
-
-  // ── Expected TAT ───────────────────────────────────────────────────────────
-  {
-    const r = parseExpectedTat(200, '{"TAT":"2","D2D":"2"}', "E");
-    t(r.ok && r.mot === "E" && r.days === 2, "tat: numeric days extracted");
-  }
-  {
-    const r = parseExpectedTat(
-      200,
-      '{"tat_d2d":"3 Days","origin":"575002","destination":"575001"}',
-      "S",
-    );
-    t(r.ok && r.mot === "S" && r.days === 3, "tat: string '3 Days' → 3");
-  }
-  {
-    const r = parseExpectedTat(200, "{}", "E");
-    t(r.ok && r.days === null, "tat: missing field → null days, still ok");
-  }
-  t(parseExpectedTat(404, "{}", "E").ok === false, "tat: 404 → error");
-
   // ── Shipment edit / cancel (p/edit) ───────────────────────────────────────
   {
     const body = buildEditShipmentBody({

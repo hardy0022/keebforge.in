@@ -89,8 +89,8 @@ export const getCategoryBySlug = defineCached(
   },
 );
 
-export type ShopSort =
-  "newest" | "price-asc" | "price-desc" | "name-asc" | "name-desc";
+import type { ShopSort } from "./shop";
+export type { ShopSort };
 
 export type ShopParams = {
   categorySlug?: string;

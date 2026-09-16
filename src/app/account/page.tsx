@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { OrderStatus } from "@prisma/client";
 import { formatINR } from "@/lib/utils/money";
 import { ORDER_STATUS_CHIP, ORDER_STATUS_LABELS } from "@/lib/orders";
+import { COMPLETED_STATUSES } from "@/lib/admin";
 
 export const metadata: Metadata = {
   title: "My Account | KeebForge",
@@ -17,7 +18,6 @@ const EXCLUDED_STATUSES: OrderStatus[] = [
   "DELIVERED",
   "TESTING_WARRANTY_ACTIVE",
 ];
-const COMPLETED_STATUSES: OrderStatus[] = ["ORDER_COMPLETED", "DELIVERED"];
 
 async function getOrderStats(profileId: string) {
   const [totalOrders, pendingOrders, completedOrders] = await Promise.all([

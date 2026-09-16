@@ -129,7 +129,7 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
           <h3 style={{ marginBottom: 14 }}>
             {editId ? "Edit coupon" : "Create coupon"}
           </h3>
-          <ActionForm action={saveCoupon} toastLabel="Coupon">
+          <ActionForm action={saveCoupon} label={(s) => s.message ?? "Coupon saved"}>
             {(pending, state) => (
               <>
                 {state.error && !state.ok && (
@@ -444,7 +444,7 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
                     >
                       <ActionForm
                         action={toggleCoupon}
-                        toastLabel="Coupon status"
+                        label={(s) => s.message ?? "Coupon status saved"}
                       >
                         {(innerPending) => (
                           <>
@@ -472,7 +472,7 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
                       >
                         Edit
                       </button>
-                      <ActionForm action={deleteCoupon} toastLabel="Coupon">
+                      <ActionForm action={deleteCoupon} label={(s) => s.message ?? "Coupon saved"}>
                         {(innerPending) => (
                           <>
                             <input type="hidden" name="id" value={c.id} />

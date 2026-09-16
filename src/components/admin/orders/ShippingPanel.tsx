@@ -17,7 +17,7 @@ import {
   cancelShipmentDelivery,
   bookPickupDelivery,
 } from "@/app/admin/actions/orders";
-import { ActionForm, Spinner } from "./ActionForm";
+import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 
 const SHIP_STATUSES: ShippingStatus[] = [
   "NOT_DISPATCHED",
@@ -321,7 +321,7 @@ export function ShippingPanel({
         <div style={{ borderTop: "1px dashed var(--bdr)", paddingTop: 12 }}>
           <ActionForm
             action={createShipmentDelivery}
-            okLabel={(s) =>
+            label={(s) =>
               s.ok && s.message
                 ? `Shipment created — waybill ${s.message}`
                 : "Shipment created"
@@ -409,7 +409,7 @@ export function ShippingPanel({
         <div style={{ borderTop: "1px dashed var(--bdr)", paddingTop: 12 }}>
           <ActionForm
             action={updateShipmentDelivery}
-            okLabel="Shipment updated with Delhivery"
+            label="Shipment updated with Delhivery"
           >
             {(pending) => (
               <div
@@ -504,7 +504,7 @@ export function ShippingPanel({
 
       {isDelhivery && showPickup && (
         <div style={{ borderTop: "1px dashed var(--bdr)", paddingTop: 12 }}>
-          <ActionForm action={bookPickupDelivery} okLabel="Pickup booked">
+          <ActionForm action={bookPickupDelivery} label="Pickup booked">
             {(pending) => (
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 10 }}
@@ -570,7 +570,7 @@ export function ShippingPanel({
         <div style={{ borderTop: "1px dashed var(--bdr)", paddingTop: 12 }}>
           <ActionForm
             action={cancelShipmentDelivery}
-            okLabel="Shipment cancelled"
+            label="Shipment cancelled"
           >
             {(pending) => (
               <div
@@ -612,7 +612,7 @@ export function ShippingPanel({
 
       {showEdit && (
         <div style={{ borderTop: "1px dashed var(--bdr)", paddingTop: 12 }}>
-          <ActionForm action={updateShipping} okLabel="Shipping details saved">
+          <ActionForm action={updateShipping} label="Shipping details saved">
             {(pending) => (
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 10 }}

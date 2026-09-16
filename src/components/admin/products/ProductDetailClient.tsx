@@ -171,7 +171,7 @@ export function VariantsManager({
                     >
                       Edit
                     </button>
-                    <ActionForm action={deleteVariant} toastLabel="Variant">
+                    <ActionForm action={deleteVariant} label="Variant saved">
                       {(pending) => (
                         <>
                           <input type="hidden" name="id" value={v.id} />
@@ -217,7 +217,7 @@ export function VariantsManager({
         </h4>
         <ActionForm
           action={saveVariant}
-          toastLabel={editing ? "Variant change" : "Variant"}
+          label={editing ? "Variant change saved" : "Variant saved"}
         >
           {(pending) => (
             <div
@@ -358,7 +358,7 @@ export function InventoryForm({
       <h3 style={{ marginBottom: 0 }}>
         {variantLabel ? `Inventory — ${variantLabel}` : "Inventory"}
       </h3>
-      <ActionForm action={adjustInventory} toastLabel="Inventory change">
+      <ActionForm action={adjustInventory} label="Inventory change saved">
         {(pending) => (
           <div className="admin-actions" style={{ alignItems: "flex-end" }}>
             <input type="hidden" name="productId" value={productId} />

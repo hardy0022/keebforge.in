@@ -1,8 +1,8 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
-import { daysAgoISTDayStart, fmtIST, istDayKey } from "@/lib/utils/ist";
-import { revenueTime } from "@/lib/admin";
+import { daysAgoISTDayStart } from "@/lib/utils/ist";
+import { dailyPaidSeries } from "@/lib/admin";
 
 /** Human buckets mapping the 18-status pipeline to a compact analytics view. */
 export const ORDER_BUCKET_LABELS: Record<string, string> = {
@@ -123,46 +123,13 @@ export const getAnalyticsKPIs = cache(async (rangeDays: number) => {
 
 export const getAnalyticsSeries = cache(async (rangeDays: number) => {
   const days = rangeDays > 0 ? rangeDays : 365;
-  const from = daysAgoISTDayStart(days - 1);
-  const orders = await prisma.order.findMany({
-    where: {
-      isDeleted: false,
-      paymentStatus: "PAID",
-      createdAt: { gte: from },
-    },
-    select: {
-      createdAt: true,
-      total: true,
-      payments: {
-        where: { status: "PAID" },
-        select: { status: true, paidAt: true },
-      },
-    },
-  });
-  const series: {
-    date: string;
-    label: string;
-    revenue: number;
-    orders: number;
-  }[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = daysAgoISTDayStart(i);
-    series.push({
-      date: istDayKey(d),
-      label: fmtIST(d, { day: "numeric", month: "short" }),
-      revenue: 0,
-      orders: 0,
-    });
-  }
-  const bucketByKey = new Map(series.map((b) => [b.date, b]));
-  for (const o of orders) {
-    const b = bucketByKey.get(istDayKey(revenueTime(o)));
-    if (b) {
-      b.revenue += o.total;
-      b.orders += 1;
-    }
-  }
-  return series;
+  const buckets = await dailyPaidSeries(days);
+  return buckets.map(({ date, label, total, orders }) => ({
+    date,
+    label,
+    revenue: total,
+    orders,
+  }));
 });
 
 // ─── Order status breakdown ────────────────────────────────────────────────

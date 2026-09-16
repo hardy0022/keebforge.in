@@ -2,26 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { ServiceUnit } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { invalidateServices } from "@/lib/caching/cache";
 
 export type ModActionState = { ok?: boolean; error?: string; message?: string };
-
-const modSchema = z.object({
-  id: z.string().min(1, "Mod id missing."),
-  unit: z.nativeEnum(ServiceUnit),
-  price: z.string().optional(),
-  priceMin: z.string().optional(),
-  priceMax: z.string().optional(),
-  priceLabel: z.string().trim().optional(),
-  popular: z.string().optional(),
-  highlight: z.string().optional(),
-  combo: z.string().optional(),
-  active: z.string().optional(),
-  sortOrder: z.string().optional(),
-});
 
 /** "12.5" | "" → paise; blank → null. */
 function toPaise(v: string | undefined): number | null {
@@ -78,56 +63,4 @@ export async function updateModPrice(
   revalidatePath("/mods");
   invalidateServices();
   return { ok: true, message: "Price updated" };
-}
-
-export async function saveMod(
-  _prev: ModActionState,
-  formData: FormData,
-): Promise<ModActionState> {
-  await requirePermission("mod", "create");
-  const parsed = modSchema.safeParse({
-    id: formData.get("id") || undefined,
-    unit: formData.get("unit"),
-    price: formData.get("price") || undefined,
-    priceMin: formData.get("priceMin") || undefined,
-    priceMax: formData.get("priceMax") || undefined,
-    priceLabel: formData.get("priceLabel") || undefined,
-    popular: formData.get("popular") || undefined,
-    highlight: formData.get("highlight") || undefined,
-    combo: formData.get("combo") || undefined,
-    active: formData.get("active") || undefined,
-    sortOrder: formData.get("sortOrder") || undefined,
-  });
-  if (!parsed.success)
-    return { error: parsed.error.issues[0]?.message ?? "Invalid mod." };
-  const d = parsed.data;
-
-  const price = toPaise(d.price);
-  const priceMin = toPaise(d.priceMin);
-  const priceMax = toPaise(d.priceMax);
-
-  if (price == null && priceMin == null && d.unit !== ServiceUnit.QUOTE) {
-    return { error: "Set a price (or a price range), or set unit to Quote." };
-  }
-
-  await prisma.service.update({
-    where: { id: d.id },
-    data: {
-      unit: d.unit,
-      price,
-      priceMin,
-      priceMax,
-      priceLabel: d.priceLabel || null,
-      popular: d.popular === "on",
-      highlight: d.highlight === "on",
-      combo: d.combo === "on",
-      active: d.active === "on" || d.active === undefined,
-      sortOrder: d.sortOrder ? parseInt(d.sortOrder, 10) || 0 : 0,
-    },
-  });
-
-  revalidatePath("/admin/mods");
-  revalidatePath("/mods");
-  invalidateServices();
-  return { ok: true, message: "Mod saved" };
 }

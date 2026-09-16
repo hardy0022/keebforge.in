@@ -10,7 +10,7 @@ export function ImportForm() {
       style={{ display: "flex", flexDirection: "column", gap: 12 }}
     >
       <h3 style={{ marginBottom: 0 }}>CSV import</h3>
-      <ActionForm action={importProducts} toastLabel="Import">
+      <ActionForm action={importProducts} label={(s) => s.message ?? "Import saved"}>
         {(pending) => (
           <div
             className="admin-grid"

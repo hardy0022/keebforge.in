@@ -195,7 +195,7 @@ export function ServiceCheckout({
     [config],
   );
 
-  const fieldErrors = useMemo(() => validateForm(form), [form]);
+  const fieldErrors = useMemo(() => validateDelivery(form, true, /^\d{6}$/), [form]);
 
   // Display-only shipping for decided mods methods (server re-quotes on pay).
   const modShipPaise =
@@ -652,230 +652,17 @@ export function ServiceCheckout({
               </section>
 
               {/* ── 03 · Payment ── */}
-              <section className="card">
-                <p className="panel-tag">STEP 03</p>
-                <h2 className="panel-title" style={{ marginBottom: 12 }}>
-                  Payment
-                </h2>
-                <p className="text-sm text-[var(--t3)]">
-                  All transactions are secure and encrypted.
-                </p>
-                <label
-                  className="block rounded-lg border border-[var(--acc)] bg-[var(--bg2)] p-4 cursor-pointer"
-                  style={{
-                    boxShadow:
-                      "0 0 0 1px color-mix(in srgb, var(--acc) 35%, transparent)",
-                  }}
-                >
-                  <span className="flex items-start gap-3">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked
-                      readOnly
-                      className="mt-1 shrink-0"
-                      style={{ accentColor: "var(--acc)" }}
-                      aria-label="Razorpay payment gateway"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-3 flex-wrap">
-                        <span>
-                          <span className="font-display font-bold text-sm text-[var(--t1)] block">
-                            Razorpay Payment Gateway
-                          </span>
-                          <span className="text-xs text-[var(--t3)]">
-                            UPI, Cards, International Cards, Wallets
-                          </span>
-                        </span>
-                        <span
-                          className="flex items-center gap-1.5 flex-wrap"
-                          aria-hidden="true"
-                        >
-                          <span className="text-[0.65rem] font-bold tracking-wide px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t2)]">
-                            UPI
-                          </span>
-                          <span className="text-[0.65rem] font-bold italic tracking-wide px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t2)]">
-                            VISA
-                          </span>
-                          <span className="flex items-center px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)]">
-                            <span
-                              className="inline-block w-3 h-3 rounded-full opacity-90"
-                              style={{ background: "#EB001B" }}
-                            />
-                            <span
-                              className="inline-block w-3 h-3 rounded-full opacity-90 -ml-1.5"
-                              style={{ background: "#F79E1B" }}
-                            />
-                          </span>
-                          <span className="text-[0.65rem] font-medium px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t3)]">
-                            +more
-                          </span>
-                        </span>
-                      </span>
-                      <span className="block text-xs text-[var(--t3)] mt-2.5">
-                        You&apos;ll be redirected to Razorpay&apos;s secure
-                        checkout to complete your purchase.
-                      </span>
-                    </span>
-                  </span>
-                </label>
-              </section>
+              <PaymentMethodCard />
 
               {/* ── 04 · Billing Address ── */}
-              <section className="card">
-                <p className="panel-tag">STEP 04</p>
-                <h2 className="panel-title" style={{ marginBottom: 16 }}>
-                  Billing Address
-                </h2>
-                <div className="grid gap-2">
-                  {(
-                    [
-                      { same: true, label: "Same as shipping address" },
-                      { same: false, label: "Use a different billing address" },
-                    ] as const
-                  ).map((opt) => (
-                    <label
-                      key={opt.label}
-                      className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${billingSame === opt.same ? "border-[var(--acc)] bg-[var(--bg2)]" : "border-[var(--bdr)] hover:border-[var(--t3)]"}`}
-                    >
-                      <input
-                        type="radio"
-                        name="billingOption"
-                        checked={billingSame === opt.same}
-                        onChange={() => setBillingSame(opt.same)}
-                        className="shrink-0"
-                        style={{ accentColor: "var(--acc)" }}
-                      />
-                      <span
-                        className={`text-sm ${billingSame === opt.same ? "font-medium text-[var(--t1)]" : "text-[var(--t2)]"}`}
-                      >
-                        {opt.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                {!billingSame && (
-                  <div className="grid gap-3 mt-4">
-                    <Field
-                      label="Full Name *"
-                      error={showErrors ? billingErrors.fullName : undefined}
-                    >
-                      <input
-                        type="text"
-                        className={fieldClass(
-                          !!(showErrors && billingErrors.fullName),
-                        )}
-                        value={billing.fullName}
-                        onChange={(e) =>
-                          setBilling({ ...billing, fullName: e.target.value })
-                        }
-                        placeholder="Name on the bill"
-                        autoComplete="billing name"
-                      />
-                    </Field>
-                    <Field
-                      label="Address Line 1 *"
-                      error={
-                        showErrors ? billingErrors.addressLine1 : undefined
-                      }
-                    >
-                      <input
-                        type="text"
-                        className={fieldClass(
-                          !!(showErrors && billingErrors.addressLine1),
-                        )}
-                        value={billing.addressLine1}
-                        onChange={(e) =>
-                          setBilling({
-                            ...billing,
-                            addressLine1: e.target.value,
-                          })
-                        }
-                        placeholder="House/Flat/Building, Street, Area"
-                        autoComplete="billing address-line1"
-                      />
-                    </Field>
-                    <Field label="Address Line 2 (Optional)">
-                      <input
-                        type="text"
-                        className="shop-field w-full"
-                        value={billing.addressLine2}
-                        onChange={(e) =>
-                          setBilling({
-                            ...billing,
-                            addressLine2: e.target.value,
-                          })
-                        }
-                        placeholder="Landmark (optional)"
-                        autoComplete="billing address-line2"
-                      />
-                    </Field>
-                    <div className="addr-city-row">
-                      <Field
-                        label="City *"
-                        error={showErrors ? billingErrors.city : undefined}
-                      >
-                        <input
-                          type="text"
-                          className={fieldClass(
-                            !!(showErrors && billingErrors.city),
-                          )}
-                          value={billing.city}
-                          onChange={(e) =>
-                            setBilling({ ...billing, city: e.target.value })
-                          }
-                          placeholder="City"
-                          autoComplete="billing address-level2"
-                        />
-                      </Field>
-                      <Field
-                        label="State *"
-                        error={showErrors ? billingErrors.state : undefined}
-                      >
-                        <StateSelect
-                          className={`shop-select w-full${showErrors && billingErrors.state ? " error" : ""}`}
-                          value={billing.state}
-                          onChange={(v) => setBilling({ ...billing, state: v })}
-                          autoComplete="billing address-level1"
-                        />
-                      </Field>
-                      <Field
-                        label="PIN Code *"
-                        error={showErrors ? billingErrors.pinCode : undefined}
-                      >
-                        <PinCodeInput
-                          className={fieldClass(
-                            !!(showErrors && billingErrors.pinCode),
-                          )}
-                          value={billing.pinCode}
-                          onChange={(v) =>
-                            setBilling({ ...billing, pinCode: v })
-                          }
-                          placeholder="110001"
-                          autoComplete="billing postal-code"
-                        />
-                      </Field>
-                    </div>
-                    <Field
-                      label="Phone *"
-                      error={showErrors ? billingErrors.phone : undefined}
-                    >
-                      <input
-                        type="tel"
-                        className={fieldClass(
-                          !!(showErrors && billingErrors.phone),
-                        )}
-                        value={billing.phone}
-                        onChange={(e) =>
-                          setBilling({ ...billing, phone: e.target.value })
-                        }
-                        placeholder="+91 98765 43210"
-                        autoComplete="billing tel"
-                      />
-                    </Field>
-                  </div>
-                )}
-              </section>
+              <BillingSection
+                billing={billing}
+                billingSame={billingSame}
+                setBillingSame={setBillingSame}
+                setBilling={setBilling}
+                showErrors={showErrors}
+                billingErrors={billingErrors}
+              />
             </div>
 
             {/* ── Right column: sticky order summary ── */}
@@ -1182,11 +969,24 @@ type ShipState =
   | { status: "unavailable"; message: string }
   | { status: "error"; message: string };
 
+type DeliveryFields = Pick<
+  DeliveryForm,
+  | "firstName"
+  | "lastName"
+  | "email"
+  | "phone"
+  | "streetAddress"
+  | "city"
+  | "state"
+  | "postalCode"
+>;
+
 function validateDelivery(
-  f: DeliveryForm,
+  f: DeliveryFields,
   emailRequired: boolean,
-): Partial<Record<keyof DeliveryForm, string>> {
-  const e: Partial<Record<keyof DeliveryForm, string>> = {};
+  pinRe: RegExp = /^[1-9]\d{5}$/,
+): Partial<Record<keyof DeliveryFields, string>> {
+  const e: Partial<Record<keyof DeliveryFields, string>> = {};
   if (!f.firstName.trim()) e.firstName = "First name is required";
   if (!f.lastName.trim()) e.lastName = "Last name is required";
   if (emailRequired) {
@@ -1201,7 +1001,7 @@ function validateDelivery(
   if (!f.city.trim()) e.city = "City is required";
   if (!f.state.trim()) e.state = "State is required";
   if (!f.postalCode.trim()) e.postalCode = "PIN code is required";
-  else if (!/^[1-9]\d{5}$/.test(f.postalCode.trim()))
+  else if (!pinRe.test(f.postalCode.trim()))
     e.postalCode = "Enter a valid 6-digit PIN code";
   return e;
 }
@@ -1255,10 +1055,6 @@ export function ProductCheckout({
     (k: keyof DeliveryForm) =>
     (ev: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: ev.target.value }));
-  const setBillingField =
-    (k: keyof BillingAddress) =>
-    (ev: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setBilling((b) => ({ ...b, [k]: ev.target.value }));
 
   // Boot: server cart + account/saved addresses in parallel.
   useEffect(() => {
@@ -1836,216 +1632,17 @@ export function ProductCheckout({
               </section>
 
               {/* ── 03 · Payment ── */}
-              <section className="card">
-                <p className="panel-tag">STEP 03</p>
-                <h2 className="panel-title" style={{ marginBottom: 12 }}>
-                  Payment
-                </h2>
-                <p className="text-sm text-[var(--t3)]">
-                  All transactions are secure and encrypted.
-                </p>
-                <label
-                  className="block rounded-lg border border-[var(--acc)] bg-[var(--bg2)] p-4 cursor-pointer mt-3"
-                  style={{
-                    boxShadow:
-                      "0 0 0 1px color-mix(in srgb, var(--acc) 35%, transparent)",
-                  }}
-                >
-                  <span className="flex items-start gap-3">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked
-                      readOnly
-                      className="mt-1 shrink-0"
-                      style={{ accentColor: "var(--acc)" }}
-                      aria-label="Razorpay payment gateway"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-3 flex-wrap">
-                        <span>
-                          <span className="font-display font-bold text-sm text-[var(--t1)] block">
-                            Razorpay Payment Gateway
-                          </span>
-                          <span className="text-xs text-[var(--t3)]">
-                            UPI, Cards, International Cards, Wallets
-                          </span>
-                        </span>
-                        <span
-                          className="flex items-center gap-1.5 flex-wrap"
-                          aria-hidden="true"
-                        >
-                          <span className="text-[0.65rem] font-bold tracking-wide px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t2)]">
-                            UPI
-                          </span>
-                          <span className="text-[0.65rem] font-bold italic tracking-wide px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t2)]">
-                            VISA
-                          </span>
-                          <span className="flex items-center px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)]">
-                            <span
-                              className="inline-block w-3 h-3 rounded-full opacity-90"
-                              style={{ background: "#EB001B" }}
-                            />
-                            <span
-                              className="inline-block w-3 h-3 rounded-full opacity-90 -ml-1.5"
-                              style={{ background: "#F79E1B" }}
-                            />
-                          </span>
-                          <span className="text-[0.65rem] font-medium px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t3)]">
-                            +more
-                          </span>
-                        </span>
-                      </span>
-                      <span className="block text-xs text-[var(--t3)] mt-2.5">
-                        You&apos;ll be redirected to Razorpay&apos;s secure
-                        checkout to complete your purchase.
-                      </span>
-                    </span>
-                  </span>
-                </label>
-              </section>
+              <PaymentMethodCard className="mt-3" />
 
-              {/* ── 05 · Billing Address ── */}
-              <section className="card">
-                <p className="panel-tag">STEP 04</p>
-                <h2 className="panel-title" style={{ marginBottom: 16 }}>
-                  Billing Address
-                </h2>
-                <div className="grid gap-2">
-                  {(
-                    [
-                      { same: true, label: "Same as shipping address" },
-                      { same: false, label: "Use a different billing address" },
-                    ] as const
-                  ).map((opt) => (
-                    <label
-                      key={opt.label}
-                      className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${billingSame === opt.same ? "border-[var(--acc)] bg-[var(--bg2)]" : "border-[var(--bdr)] hover:border-[var(--t3)]"}`}
-                    >
-                      <input
-                        type="radio"
-                        name="billingOption"
-                        checked={billingSame === opt.same}
-                        onChange={() => setBillingSame(opt.same)}
-                        className="shrink-0"
-                        style={{ accentColor: "var(--acc)" }}
-                      />
-                      <span
-                        className={`text-sm ${billingSame === opt.same ? "font-medium text-[var(--t1)]" : "text-[var(--t2)]"}`}
-                      >
-                        {opt.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                {!billingSame && (
-                  <div className="grid gap-3 mt-4">
-                    <Field
-                      label="Full Name *"
-                      error={showErrors ? billingErrors.fullName : undefined}
-                    >
-                      <input
-                        type="text"
-                        className={fieldClass(
-                          !!(showErrors && billingErrors.fullName),
-                        )}
-                        value={billing.fullName}
-                        onChange={setBillingField("fullName")}
-                        placeholder="Name on the bill"
-                        autoComplete="billing name"
-                      />
-                    </Field>
-                    <Field
-                      label="Address Line 1 *"
-                      error={
-                        showErrors ? billingErrors.addressLine1 : undefined
-                      }
-                    >
-                      <input
-                        type="text"
-                        className={fieldClass(
-                          !!(showErrors && billingErrors.addressLine1),
-                        )}
-                        value={billing.addressLine1}
-                        onChange={setBillingField("addressLine1")}
-                        placeholder="House/Flat/Building, Street, Area"
-                        autoComplete="billing address-line1"
-                      />
-                    </Field>
-                    <Field label="Address Line 2 (Optional)">
-                      <input
-                        type="text"
-                        className="shop-field w-full"
-                        value={billing.addressLine2}
-                        onChange={setBillingField("addressLine2")}
-                        placeholder="Landmark (optional)"
-                        autoComplete="billing address-line2"
-                      />
-                    </Field>
-                    <div className="addr-city-row">
-                      <Field
-                        label="City *"
-                        error={showErrors ? billingErrors.city : undefined}
-                      >
-                        <input
-                          type="text"
-                          className={fieldClass(
-                            !!(showErrors && billingErrors.city),
-                          )}
-                          value={billing.city}
-                          onChange={setBillingField("city")}
-                          placeholder="City"
-                          autoComplete="billing address-level2"
-                        />
-                      </Field>
-                      <Field
-                        label="State *"
-                        error={showErrors ? billingErrors.state : undefined}
-                      >
-                        <StateSelect
-                          className={`shop-select w-full${showErrors && billingErrors.state ? " error" : ""}`}
-                          value={billing.state}
-                          onChange={(v) =>
-                            setBilling({ ...billing, state: v })
-                          }
-                          autoComplete="billing address-level1"
-                        />
-                      </Field>
-                      <Field
-                        label="PIN Code *"
-                        error={showErrors ? billingErrors.pinCode : undefined}
-                      >
-                        <PinCodeInput
-                          className={fieldClass(
-                            !!(showErrors && billingErrors.pinCode),
-                          )}
-                          value={billing.pinCode}
-                          onChange={(v) =>
-                            setBilling({ ...billing, pinCode: v })
-                          }
-                          placeholder="110001"
-                          autoComplete="billing postal-code"
-                        />
-                      </Field>
-                    </div>
-                    <Field
-                      label="Phone *"
-                      error={showErrors ? billingErrors.phone : undefined}
-                    >
-                      <input
-                        type="tel"
-                        className={fieldClass(
-                          !!(showErrors && billingErrors.phone),
-                        )}
-                        value={billing.phone}
-                        onChange={setBillingField("phone")}
-                        placeholder="+91 98765 43210"
-                        autoComplete="billing tel"
-                      />
-                    </Field>
-                  </div>
-                )}
-              </section>
+              {/* ── 04 · Billing Address ── */}
+              <BillingSection
+                billing={billing}
+                billingSame={billingSame}
+                setBillingSame={setBillingSame}
+                setBilling={setBilling}
+                showErrors={showErrors}
+                billingErrors={billingErrors}
+              />
             </div>
 
             {/* ── Right column: sticky summary ── */}
@@ -2181,6 +1778,226 @@ export function ProductCheckout({
 
 /* ─────────────────────────────── helpers ─────────────────────────────── */
 
+function PaymentMethodCard({ className = "" }: { className?: string }) {
+  return (
+    <section className="card">
+      <p className="panel-tag">STEP 03</p>
+      <h2 className="panel-title" style={{ marginBottom: 12 }}>
+        Payment
+      </h2>
+      <p className="text-sm text-[var(--t3)]">
+        All transactions are secure and encrypted.
+      </p>
+      <label
+        className={`block rounded-lg border border-[var(--acc)] bg-[var(--bg2)] p-4 cursor-pointer${className ? ` ${className}` : ""}`}
+        style={{
+          boxShadow:
+            "0 0 0 1px color-mix(in srgb, var(--acc) 35%, transparent)",
+        }}
+      >
+        <span className="flex items-start gap-3">
+          <input
+            type="radio"
+            name="paymentMethod"
+            checked
+            readOnly
+            className="mt-1 shrink-0"
+            style={{ accentColor: "var(--acc)" }}
+            aria-label="Razorpay payment gateway"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center justify-between gap-3 flex-wrap">
+              <span>
+                <span className="font-display font-bold text-sm text-[var(--t1)] block">
+                  Razorpay Payment Gateway
+                </span>
+                <span className="text-xs text-[var(--t3)]">
+                  UPI, Cards, International Cards, Wallets
+                </span>
+              </span>
+              <span
+                className="flex items-center gap-1.5 flex-wrap"
+                aria-hidden="true"
+              >
+                <span className="text-[0.65rem] font-bold tracking-wide px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t2)]">
+                  UPI
+                </span>
+                <span className="text-[0.65rem] font-bold italic tracking-wide px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t2)]">
+                  VISA
+                </span>
+                <span className="flex items-center px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)]">
+                  <span
+                    className="inline-block w-3 h-3 rounded-full opacity-90"
+                    style={{ background: "#EB001B" }}
+                  />
+                  <span
+                    className="inline-block w-3 h-3 rounded-full opacity-90 -ml-1.5"
+                    style={{ background: "#F79E1B" }}
+                  />
+                </span>
+                <span className="text-[0.65rem] font-medium px-2 py-1 rounded border border-[var(--bdr)] bg-[var(--bg1)] text-[var(--t3)]">
+                  +more
+                </span>
+              </span>
+            </span>
+            <span className="block text-xs text-[var(--t3)] mt-2.5">
+              You&apos;ll be redirected to Razorpay&apos;s secure checkout to
+              complete your purchase.
+            </span>
+          </span>
+        </span>
+      </label>
+    </section>
+  );
+}
+
+function BillingSection({
+  billing,
+  billingSame,
+  setBillingSame,
+  setBilling,
+  showErrors,
+  billingErrors,
+}: {
+  billing: BillingAddress;
+  billingSame: boolean;
+  setBillingSame: (v: boolean) => void;
+  setBilling: React.Dispatch<React.SetStateAction<BillingAddress>>;
+  showErrors: boolean;
+  billingErrors: Partial<Record<keyof BillingAddress, string>>;
+}) {
+  const set =
+    (k: keyof BillingAddress) =>
+    (ev: React.ChangeEvent<HTMLInputElement>) =>
+      setBilling((b) => ({ ...b, [k]: ev.target.value }));
+  return (
+    <section className="card">
+      <p className="panel-tag">STEP 04</p>
+      <h2 className="panel-title" style={{ marginBottom: 16 }}>
+        Billing Address
+      </h2>
+      <div className="grid gap-2">
+        {(
+          [
+            { same: true, label: "Same as shipping address" },
+            { same: false, label: "Use a different billing address" },
+          ] as const
+        ).map((opt) => (
+          <label
+            key={opt.label}
+            className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${billingSame === opt.same ? "border-[var(--acc)] bg-[var(--bg2)]" : "border-[var(--bdr)] hover:border-[var(--t3)]"}`}
+          >
+            <input
+              type="radio"
+              name="billingOption"
+              checked={billingSame === opt.same}
+              onChange={() => setBillingSame(opt.same)}
+              className="shrink-0"
+              style={{ accentColor: "var(--acc)" }}
+            />
+            <span
+              className={`text-sm ${billingSame === opt.same ? "font-medium text-[var(--t1)]" : "text-[var(--t2)]"}`}
+            >
+              {opt.label}
+            </span>
+          </label>
+        ))}
+      </div>
+      {!billingSame && (
+        <div className="grid gap-3 mt-4">
+          <Field
+            label="Full Name *"
+            error={showErrors ? billingErrors.fullName : undefined}
+          >
+            <input
+              type="text"
+              className={fieldClass(!!(showErrors && billingErrors.fullName))}
+              value={billing.fullName}
+              onChange={set("fullName")}
+              placeholder="Name on the bill"
+              autoComplete="billing name"
+            />
+          </Field>
+          <Field
+            label="Address Line 1 *"
+            error={showErrors ? billingErrors.addressLine1 : undefined}
+          >
+            <input
+              type="text"
+              className={fieldClass(!!(showErrors && billingErrors.addressLine1))}
+              value={billing.addressLine1}
+              onChange={set("addressLine1")}
+              placeholder="House/Flat/Building, Street, Area"
+              autoComplete="billing address-line1"
+            />
+          </Field>
+          <Field label="Address Line 2 (Optional)">
+            <input
+              type="text"
+              className="shop-field w-full"
+              value={billing.addressLine2}
+              onChange={set("addressLine2")}
+              placeholder="Landmark (optional)"
+              autoComplete="billing address-line2"
+            />
+          </Field>
+          <div className="addr-city-row">
+            <Field
+              label="City *"
+              error={showErrors ? billingErrors.city : undefined}
+            >
+              <input
+                type="text"
+                className={fieldClass(!!(showErrors && billingErrors.city))}
+                value={billing.city}
+                onChange={set("city")}
+                placeholder="City"
+                autoComplete="billing address-level2"
+              />
+            </Field>
+            <Field
+              label="State *"
+              error={showErrors ? billingErrors.state : undefined}
+            >
+              <StateSelect
+                className={`shop-select w-full${showErrors && billingErrors.state ? " error" : ""}`}
+                value={billing.state}
+                onChange={(v) => setBilling((b) => ({ ...b, state: v }))}
+                autoComplete="billing address-level1"
+              />
+            </Field>
+            <Field
+              label="PIN Code *"
+              error={showErrors ? billingErrors.pinCode : undefined}
+            >
+              <PinCodeInput
+                className={fieldClass(!!(showErrors && billingErrors.pinCode))}
+                value={billing.pinCode}
+                onChange={(v) => setBilling((b) => ({ ...b, pinCode: v }))}
+                placeholder="110001"
+                autoComplete="billing postal-code"
+              />
+            </Field>
+          </div>
+          <Field
+            label="Phone *"
+            error={showErrors ? billingErrors.phone : undefined}
+          >
+            <input
+              type="tel"
+              className={fieldClass(!!(showErrors && billingErrors.phone))}
+              value={billing.phone}
+              onChange={set("phone")}
+              placeholder="+91 98765 43210"
+              autoComplete="billing tel"
+            />
+          </Field>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Field({
   label,
   error,
@@ -2241,21 +2058,4 @@ function validateBilling(
   return errors;
 }
 
-function validateForm(f: FormData): Partial<Record<keyof FormData, string>> {
-  const errors: Partial<Record<keyof FormData, string>> = {};
-  if (!f.firstName.trim()) errors.firstName = "First name is required";
-  if (!f.lastName.trim()) errors.lastName = "Last name is required";
-  if (!f.email.trim()) errors.email = "Email is required";
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim()))
-    errors.email = "Enter a valid email";
-  if (!f.phone.trim()) errors.phone = "Phone number is required";
-  else if (!/^[+\d][\d\s-]{5,18}$/.test(f.phone.trim()))
-    errors.phone = "Enter a valid phone number";
-  if (!f.streetAddress.trim()) errors.streetAddress = "Address is required";
-  if (!f.city.trim()) errors.city = "City is required";
-  if (!f.state.trim()) errors.state = "State is required";
-  if (!f.postalCode.trim()) errors.postalCode = "PIN code is required";
-  else if (!/^\d{6}$/.test(f.postalCode.trim()))
-    errors.postalCode = "Enter a valid 6-digit PIN code";
-  return errors;
-}
+

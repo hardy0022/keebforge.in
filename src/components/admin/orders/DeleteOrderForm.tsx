@@ -1,7 +1,7 @@
 "use client";
 
 import { deleteOrder } from "@/app/admin/actions/orders";
-import { ActionForm, Spinner } from "./ActionForm";
+import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 
 export function DeleteOrderForm({
   orderId,
@@ -11,7 +11,7 @@ export function DeleteOrderForm({
   orderNumber: string;
 }) {
   return (
-    <ActionForm action={deleteOrder} okLabel="Order deleted">
+    <ActionForm action={deleteOrder} label="Order deleted">
       {(pending) => (
         <div className="admin-actions">
           <input type="hidden" name="orderId" value={orderId} />

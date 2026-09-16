@@ -46,7 +46,6 @@ const NAV_GROUPS: {
   {
     label: "System",
     items: [
-      { href: "/admin/activity", label: "Activity", icon: "🕘" },
       { href: "/admin/settings", label: "Settings", icon: "⚙️" },
     ],
   },
