@@ -636,6 +636,7 @@ model Order {
   @@index([status])
   @@index([createdAt])
   @@index([orderNumber, isDeleted])
+  @@index([customerEmail])
 }
 
 /// Shipping-address snapshot for an order (guest checkout has no Profile/Address).

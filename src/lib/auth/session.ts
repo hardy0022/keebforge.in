@@ -2,8 +2,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Profile } from "@prisma/client";
-import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth/better-auth";
+import { getOrCreateProfileFromUser } from "@/lib/auth/profile";
 import { requireAdminContext, type AdminContext } from "@/lib/auth/admin";
 
 /**
@@ -17,27 +17,7 @@ export const getCurrentAuth = cache(async () => {
   const user = session?.user ?? null;
   if (!user) return { user: null, profile: null };
 
-  let profile = await prisma.profile.findUnique({ where: { userId: user.id } });
-  if (!profile) {
-    // Claim-by-email: a profile seeded before this user existed is linked to
-    // the identity that controls that email. Only the email owner can claim it.
-    profile = await prisma.profile.findUnique({ where: { email: user.email } });
-    if (profile) {
-      profile = await prisma.profile.update({
-        where: { id: profile.id },
-        data: { userId: user.id, email: user.email },
-      });
-    } else {
-      profile = await prisma.profile.create({
-        data: {
-          userId: user.id,
-          email: user.email,
-          name: user.name ?? user.email?.split("@")[0] ?? null,
-          role: "CUSTOMER",
-        },
-      });
-    }
-  }
+  const profile = await getOrCreateProfileFromUser(user);
   return { user, profile };
 });
 

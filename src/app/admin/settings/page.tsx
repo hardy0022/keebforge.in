@@ -2,9 +2,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { getSiteSetting } from "@/lib/catalog/data";
-import { MAINTENANCE_KEY } from "@/lib/config/environment";
+import { MAINTENANCE_KEY, DEVELOPMENT_NOTICE_KEY } from "@/lib/config/environment";
 import { PICKUP_SETTING_KEY } from "@/lib/shipping/delhivery";
 import { MaintenanceModeCard } from "./MaintenanceModeCard";
+import { DevelopmentNoticeCard } from "./DevelopmentNoticeCard";
 import { PickupLocationCard } from "./PickupLocationCard";
 
 export const metadata: Metadata = {
@@ -15,11 +16,12 @@ export const metadata: Metadata = {
 export default async function AdminSettingsPage() {
   await requirePermission("setting", "view");
 
-  const [productionEnabled, developmentEnabled, pickupSetting] =
+  const [productionEnabled, developmentEnabled, pickupSetting, developmentNoticeEnabled] =
     await Promise.all([
       (await getSiteSetting(MAINTENANCE_KEY.production)) === true,
       (await getSiteSetting(MAINTENANCE_KEY.development)) === true,
       getSiteSetting(PICKUP_SETTING_KEY),
+      (await getSiteSetting(DEVELOPMENT_NOTICE_KEY)) === true,
     ]);
 
   const pickupInitial =
@@ -149,6 +151,22 @@ export default async function AdminSettingsPage() {
         confirmationBody="localhost:3000 will temporarily show the maintenance page."
         confirmationNote="This will NOT affect keebforge.in."
       />
+
+      <div>
+        <h2
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            marginBottom: 12,
+          }}
+        >
+          Development Notice
+        </h2>
+      </div>
+
+      <DevelopmentNoticeCard enabled={developmentNoticeEnabled} />
 
       <div>
         <h2

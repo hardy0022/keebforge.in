@@ -75,6 +75,7 @@ export function RegisterForm({ next }: { next?: string }) {
       name: username.trim(),
       email,
       password,
+      callbackURL: "/account",
     });
 
     if (res.error) {

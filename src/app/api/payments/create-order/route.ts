@@ -65,7 +65,7 @@ const billingSchema = z.object({
 
 const bodySchema = z.object({
   shippingAddress: addressSchema,
-  email: z.string().trim().email("Enter a valid email address.").optional(),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address.").optional(),
   saveAddress: z.boolean().optional(),
   mode: z.string().optional(),
   couponCode: z.string().trim().max(40).optional(),

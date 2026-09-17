@@ -12410,3 +12410,45 @@ a.reviews-page:hover {
     height: 44px;
   }
 }
+
+/* ─── Site-wide development notice ─────────────────────────────────────────── */
+:root {
+  --notice-h: 40px;
+}
+.kf-dev-notice {
+  position: fixed;
+  top: var(--nav-h);
+  left: 0;
+  right: 0;
+  z-index: 495;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--notice-h);
+  padding: 6px clamp(16px, 4vw, 48px);
+  background: var(--warn);
+  color: #0a0a0a;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+}
+.kf-dev-notice a {
+  color: #0a0a0a;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* Reserve space under the fixed navbar so the notice never covers content. */
+body:has(.kf-dev-notice) {
+  padding-top: var(--notice-h);
+}
+@media (max-width: 640px) {
+  :root {
+    --notice-h: 62px;
+  }
+  .kf-dev-notice {
+    font-size: 0.74rem;
+  }
+}

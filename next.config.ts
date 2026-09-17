@@ -107,6 +107,21 @@ const nextConfig: NextConfig = {
   // @better-auth/infra dynamic-imports @better-auth/sso for SAML SSO, which we
   // don't use; externalize so Next doesn't try to bundle a missing module.
   serverExternalPackages: ["@better-auth/sso"],
+  // Prisma's classic `prisma-client-js` generator ships embedded-WASM engine /
+  // query-compiler packs for every SQL dialect (@prisma/client/runtime/*.wasm-base64.*).
+  // On the Node.js runtime (all our server routes/middleware are `runtime = "nodejs"`),
+  // Prisma loads the native query engine (libquery_engine-*.so.node) and the generated
+  // client sets `engineWasm`/`compilerWasm` to undefined, so these WASM packs are never
+  // loaded. Turbopack still traces them into every server function (≈53 MB each).
+  // Exclude only the embedded WASM packs; keep the native engine and all runtime JS.
+  outputFileTracingExcludes: {
+    "/*": [
+      "node_modules/@prisma/client/runtime/query_engine_bg.*.wasm-base64.js",
+      "node_modules/@prisma/client/runtime/query_engine_bg.*.wasm-base64.mjs",
+      "node_modules/@prisma/client/runtime/query_compiler_bg.*.wasm-base64.js",
+      "node_modules/@prisma/client/runtime/query_compiler_bg.*.wasm-base64.mjs",
+    ],
+  },
   images: {
     // Cloudinary transforms + caches every application-uploaded image and
     // delivers it straight to the browser (custom loader, see

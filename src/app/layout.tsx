@@ -3,6 +3,8 @@ import { Space_Grotesk, Inter } from "next/font/google";
 import { buildMetadata, JsonLd, SITE_URL } from "@/lib/seo";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { SiteFooter } from "@/components/layout/Footer";
+import { ShowOnSite } from "@/components/layout/ShowOnSite";
+import { UnderDevelopmentNotice } from "@/components/layout/UnderDevelopmentNotice";
 import Analytics from "@/components/Analytics";
 import "./globals.css";
 
@@ -72,6 +74,9 @@ export default function RootLayout({
       <body className="antialiased page-layout">
         <JsonLd data={SITE_JSONLD} />
         <SiteChrome footer={<SiteFooter />}>{children}</SiteChrome>
+        <ShowOnSite exclude={["/maintenance"]}>
+          <UnderDevelopmentNotice />
+        </ShowOnSite>
         <Analytics />
       </body>
     </html>

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import type { ActionState } from "@/components/admin/ActionForm";
-import { MAINTENANCE_KEY, type Environment } from "@/lib/config/environment";
+import { MAINTENANCE_KEY, DEVELOPMENT_NOTICE_KEY, type Environment } from "@/lib/config/environment";
 import {
   PICKUP_SETTING_KEY,
   createDelhiveryWarehouse,
@@ -44,6 +44,30 @@ export async function toggleMaintenanceMode(
   return {
     ok: true,
     message: `${label} maintenance mode ${next ? "enabled" : "disabled"}.`,
+  };
+}
+
+export async function toggleDevelopmentNotice(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requirePermission("setting", "update");
+
+  const enabled = formData.get("enabled") === "true";
+  const key = DEVELOPMENT_NOTICE_KEY;
+
+  await prisma.siteSetting.upsert({
+    where: { key },
+    update: { value: enabled as Prisma.InputJsonValue },
+    create: { key, value: enabled as Prisma.InputJsonValue },
+  });
+
+  revalidatePath("/admin/settings");
+  invalidateSiteSettings();
+
+  return {
+    ok: true,
+    message: `Development notice ${enabled ? "enabled" : "disabled"}.`,
   };
 }
 

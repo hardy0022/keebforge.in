@@ -1,7 +1,9 @@
 import "server-only";
+import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
+import { emitTrackingChanged } from "@/lib/realtime/track-notify";
 
 /**
  * Rebuilds the PII-free Tracking cache row for an order. Called by every
@@ -91,4 +93,13 @@ export async function syncTrackingCache(orderId: string): Promise<void> {
     update: data,
     create: data,
   });
+
+  // Cache commit succeeded → best-effort live-refresh signal for any customer
+  // whose /track-order page is open. Non-blocking: a Realtime failure is a
+  // logged no-op and never affects the mutation already committed above.
+  try {
+    after(() => void emitTrackingChanged(data.orderNumber));
+  } catch {
+    void emitTrackingChanged(data.orderNumber);
+  }
 }

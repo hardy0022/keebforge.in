@@ -5,6 +5,9 @@ export const MAINTENANCE_KEY: Record<Environment, string> = {
   development: "maintenanceMode.development",
 };
 
+/** Site-wide "still under development" notice. One key, every environment. */
+export const DEVELOPMENT_NOTICE_KEY = "developmentNotice.enabled";
+
 export function detectEnvironment(host: string): Environment {
   const isDevelopment =
     host === "" ||

@@ -6,6 +6,8 @@ import { dash, sentinel } from "@better-auth/infra";
 import { Resend } from "resend";
 import { prisma } from "@/lib/db/prisma";
 import { isStrongPassword } from "@/lib/utils/password";
+import { getOrCreateProfileFromUser } from "@/lib/auth/profile";
+import { claimGuestOrdersForVerifiedProfile } from "@/lib/orders/claim-guest-orders";
 
 /**
  * KeebForge authentication — Better Auth (sole auth authority).
@@ -28,7 +30,7 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
-        await resend.emails.send({
+        const { data, error } = await resend.emails.send({
           from: "KeebForge <no-reply@keebforge.in>",
           to: user.email,
           subject: "Reset your KeebForge password",
@@ -39,9 +41,65 @@ export const auth = betterAuth({
             `<p style="margin:24px 0"><a href="${url}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;border-radius:10px;text-decoration:none;font-weight:600">Reset password</a></p>` +
             `<p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`,
         });
+        if (error) {
+          // API-level rejection (rate limit, sender policy, invalid recipient)
+          // — does NOT throw, so log it or it stays invisible.
+          console.error("Resend error (password reset):", error);
+          return;
+        }
+        console.log(`[auth] reset email sent to ${user.email} (id=${data?.id})`);
       } catch (e) {
         // Must never fail the request (and leak that the email didn't send).
         console.error("Resend error (password reset):", e);
+      }
+    },
+  },
+  // Email ownership proof. `sendOnSignUp` mails a verification link on account
+  // creation; clicking it flips emailVerified and fires the claim hook below.
+  // Deliberately NOT `requireEmailVerification` — existing unverified accounts
+  // must keep signing in.
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const { data, error } = await resend.emails.send({
+          from: "KeebForge <no-reply@keebforge.in>",
+          to: user.email,
+          subject: "Verify your KeebForge email",
+          html:
+            `<h2>Verify your email — KeebForge.in</h2>` +
+            `<p>Hi ${user.name.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!)},</p>` +
+            `<p>Confirm your email to secure your account and link any past guest orders to it.</p>` +
+            `<p style="margin:24px 0"><a href="${url}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;border-radius:10px;text-decoration:none;font-weight:600">Verify email</a></p>` +
+            `<p>This link expires in 1 hour. If you didn't create an account, you can ignore this email.</p>`,
+        });
+        if (error) {
+          console.error("Resend error (email verification):", error);
+          return;
+        }
+        console.log(`[auth] verification email sent to ${user.email} (id=${data?.id})`);
+      } catch (e) {
+        // Must never fail sign-up (and leak that the email didn't send).
+        console.error("Resend error (email verification):", e);
+      }
+    },
+    // Runs after `emailVerified: true` is persisted, before auto-sign-in. It is
+    // awaited by the endpoint, so a failure here is caught and logged rather
+    // than aborting an already-successful verification.
+    afterEmailVerification: async (user) => {
+      try {
+        const profile = await getOrCreateProfileFromUser(user);
+        const claimed = await claimGuestOrdersForVerifiedProfile(
+          profile.id,
+          user.email,
+        );
+        if (claimed > 0) {
+          console.log(`[auth] linked ${claimed} guest order(s) to ${user.email}`);
+        }
+      } catch (e) {
+        console.error("Failed to link guest orders after verification:", e);
       }
     },
   },

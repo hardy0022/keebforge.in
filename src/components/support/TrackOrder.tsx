@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import type { OrderStatus } from "@prisma/client";
 import {
   trackOrder,
@@ -10,6 +10,7 @@ import {
   type TrackState,
   type ShipmentScanState,
 } from "@/app/actions/track-order";
+import { subscribeTrackingChanged } from "@/lib/realtime/track-sub";
 import {
   ORDER_PHASE_LABELS,
   orderPhaseFor,
@@ -85,6 +86,31 @@ export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
     fd.set("orderNumber", orderNumber);
     startTransition(() => formAction(fd));
   }
+
+  // Live refresh: an admin tracking change broadcasts on `tracking:<order>` and
+  // re-runs the existing server action. Bursts within 500ms coalesce into one
+  // reTrack. Realtime unavailable → no subscription, page works as before.
+  const displayOrder = state.ok ? state.data.orderNumber : null;
+  const refreshTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!displayOrder) return;
+    const sub = subscribeTrackingChanged(displayOrder, () => {
+      if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
+      refreshTimer.current = window.setTimeout(() => {
+        refreshTimer.current = null;
+        reTrack(displayOrder);
+      }, 500);
+    });
+    return () => {
+      sub?.unsubscribe();
+      if (refreshTimer.current) {
+        window.clearTimeout(refreshTimer.current);
+        refreshTimer.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayOrder]);
 
   useEffect(() => {
     if (initialOrder) reTrack(initialOrder);
