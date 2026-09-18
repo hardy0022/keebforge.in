@@ -1702,6 +1702,64 @@ export function ModConfigurator({
                     Shipping details changed — recalculate shipping to continue.
                   </span>
                 )}
+                {legs && (
+                  <div
+                    className="total-note"
+                    role="status"
+                    style={{
+                      textAlign: "left",
+                      marginTop: 14,
+                      padding: "12px 14px",
+                      border: "1px solid var(--bdr)",
+                      borderRadius: "var(--r-sm, 8px)",
+                    }}
+                  >
+                    <strong style={{ display: "block", marginBottom: 6 }}>
+                      Shipping Summary
+                    </strong>
+                    {shipMethod === "pickup" && (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <span>Pickup shipping</span>
+                        <span className="summary-line-amt">
+                          ₹{formatPaiseWhole(legs.pickupPaise)}
+                        </span>
+                      </div>
+                    )}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <span>Return shipping</span>
+                      <span className="summary-line-amt">
+                        ₹{formatPaiseWhole(legs.returnPaise)}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        borderTop: "1px dashed var(--bdr)",
+                        marginTop: 6,
+                        paddingTop: 6,
+                      }}
+                    >
+                      <strong>Total shipping</strong>
+                      <strong className="summary-line-amt">
+                        ₹{formatPaiseWhole(legs.totalPaise)}
+                      </strong>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
