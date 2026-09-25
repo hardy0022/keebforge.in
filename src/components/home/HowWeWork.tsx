@@ -8,6 +8,10 @@ import {
   useTransform,
 } from "motion/react";
 import { cn } from "@/lib/utils/cn";
+import type { AnimatedIconHandle } from "@/components/icons/types";
+import TruckElectricIcon from "@/components/icons/truck-electric-icon";
+import CpuIcon from "@/components/icons/cpu-icon";
+import ShieldCheck from "@/components/icons/shield-check";
 
 type Props = {
   progressTargetRef: RefObject<HTMLElement | null>;
@@ -42,6 +46,9 @@ export function HowWeWork({ progressTargetRef }: Props) {
   const lastV = useRef(0);
   const [active, setActive] = useState(0);
   const [dir, setDir] = useState(1);
+  const truckRef = useRef<AnimatedIconHandle>(null);
+  const truckBackRef = useRef<AnimatedIconHandle>(null);
+  const shieldRef = useRef<AnimatedIconHandle>(null);
 
   const { scrollYProgress } = useScroll({
     target: progressTargetRef,
@@ -107,32 +114,54 @@ export function HowWeWork({ progressTargetRef }: Props) {
                 <h3>{step.title}</h3>
                 <p>{step.desc}</p>
                 {i === 0 && (
-                  <img
-                    src="/Blue Truck.svg"
-                    alt=""
-                    className="hp-how-step-img"
-                  />
+                  <div
+                    className="hp-how-step-ico"
+                    aria-hidden="true"
+                    onMouseEnter={() => truckRef.current?.startAnimation()}
+                    onMouseLeave={() => truckRef.current?.stopAnimation()}
+                  >
+                    <TruckElectricIcon
+                      ref={truckRef}
+                      size={132}
+                      strokeWidth={1.3}
+                      color="var(--purple)"
+                    />
+                  </div>
                 )}
                 {i === 1 && (
-                  <img
-                    src="/robot process automation.svg"
-                    alt=""
-                    className="hp-how-step-img"
-                  />
+                  <div className="hp-how-step-ico" aria-hidden="true">
+                    <CpuIcon size={132} strokeWidth={1.3} color="var(--purple)" />
+                  </div>
                 )}
                 {i === 2 && (
-                  <img
-                    src="/Testing  Checking animation.svg"
-                    alt=""
-                    className="hp-how-step-img"
-                  />
+                  <div
+                    className="hp-how-step-ico"
+                    aria-hidden="true"
+                    onMouseEnter={() => shieldRef.current?.startAnimation()}
+                    onMouseLeave={() => shieldRef.current?.stopAnimation()}
+                  >
+                    <ShieldCheck
+                      ref={shieldRef}
+                      size={132}
+                      strokeWidth={1.3}
+                      color="var(--purple)"
+                    />
+                  </div>
                 )}
                 {i === 3 && (
-                  <img
-                    src="/Blue Truck.svg"
-                    alt=""
-                    className="hp-how-step-img hp-how-step-img-flip"
-                  />
+                  <div
+                    className="hp-how-step-ico hp-how-step-img-flip"
+                    aria-hidden="true"
+                    onMouseEnter={() => truckBackRef.current?.startAnimation()}
+                    onMouseLeave={() => truckBackRef.current?.stopAnimation()}
+                  >
+                    <TruckElectricIcon
+                      ref={truckBackRef}
+                      size={132}
+                      strokeWidth={1.3}
+                      color="var(--purple)"
+                    />
+                  </div>
                 )}
               </div>
             </article>

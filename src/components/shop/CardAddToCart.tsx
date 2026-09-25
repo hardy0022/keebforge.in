@@ -16,7 +16,14 @@ export function CardAddToCart({
   const cartIconRef = useRef<AnimatedIconHandle>(null);
 
   useEffect(() => {
-    if (state?.ok) window.dispatchEvent(new Event("kf-cart-changed"));
+    if (state?.ok) {
+      window.dispatchEvent(new Event("kf-cart-changed"));
+      window.dispatchEvent(
+        new CustomEvent("kf-cart-added", {
+          detail: { count: state.count ?? 0 },
+        }),
+      );
+    }
   }, [state]);
 
   return (

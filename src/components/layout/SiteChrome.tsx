@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { ShowOnSite } from "@/components/layout/ShowOnSite";
+import { CartToaster } from "@/components/ui/CartToaster";
+import { RouteProgress } from "@/components/ui/RouteProgress";
 
 /** Site chrome (header + footer) that skips /auth routes.
  *  Auth pages have their own layout with just the header.
@@ -22,6 +24,7 @@ export function SiteChrome({
 
   return (
     <>
+      <RouteProgress />
       <ShowOnSite>
         <SiteHeader />
       </ShowOnSite>
@@ -31,6 +34,7 @@ export function SiteChrome({
           {footer}
         </div>
       </ShowOnSite>
+      <CartToaster />
     </>
   );
 }

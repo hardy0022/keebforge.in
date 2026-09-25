@@ -1,4 +1,4 @@
-import { ShopSortBar } from "@/components/shop/ShopSortBar";
+import { ShopControlBar } from "@/components/shop/ShopControlBar";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import type { EmptyStateConfig } from "@/components/shop/ShopEmptyState";
 import { SHOP_SORTS } from "@/lib/catalog/shop";
@@ -47,7 +47,7 @@ export async function ShopCatalog({
 
   return (
     <>
-      <ShopSortBar
+      <ShopControlBar
         total={result.total}
         page={page}
         pages={result.pages}

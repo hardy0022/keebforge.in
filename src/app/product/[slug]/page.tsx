@@ -209,6 +209,7 @@ export default async function ProductPage({
                   groups={optionGroups}
                   basePrice={product.price}
                   baseAvailable={available}
+                  madeToOrder={custom}
                 />
               ) : (
                 <AddToCart
@@ -225,6 +226,7 @@ export default async function ProductPage({
                       : null) as Record<string, string> | null,
                   }))}
                   baseAvailable={available}
+                  madeToOrder={custom}
                 />
               )}
 

@@ -17,22 +17,34 @@ export function ProductGallery({
 }: ProductGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // The initial (LCP) image renders at full opacity with no transition so it
+  // can paint immediately; gallery transitions only begin after the customer
+  // actually switches images, and even then they are short (150ms).
+  const [interacted, setInteracted] = useState(false);
 
   const allImages = variantImages?.length ? variantImages : images;
   const currentImage = allImages[selectedIndex];
+
+  const select = useCallback(
+    (i: number) => {
+      setSelectedIndex(((i % allImages.length) + allImages.length) % allImages.length);
+      setInteracted(true);
+    },
+    [allImages.length],
+  );
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (!isFullscreen) return;
       if (e.key === "ArrowLeft") {
-        setSelectedIndex((i) => (i === 0 ? allImages.length - 1 : i - 1));
+        select(selectedIndex - 1);
       } else if (e.key === "ArrowRight") {
-        setSelectedIndex((i) => (i === allImages.length - 1 ? 0 : i + 1));
+        select(selectedIndex + 1);
       } else if (e.key === "Escape") {
         setIsFullscreen(false);
       }
     },
-    [allImages.length, isFullscreen],
+    [isFullscreen, select, selectedIndex],
   );
 
   useEffect(() => {
@@ -46,13 +58,8 @@ export function ProductGallery({
     };
   }, [isFullscreen, handleKeyDown]);
 
-  const nextImage = () => {
-    setSelectedIndex((i) => (i === allImages.length - 1 ? 0 : i + 1));
-  };
-
-  const prevImage = () => {
-    setSelectedIndex((i) => (i === 0 ? allImages.length - 1 : i - 1));
-  };
+  const nextImage = () => select(selectedIndex + 1);
+  const prevImage = () => select(selectedIndex - 1);
 
   if (allImages.length === 0) {
     return (
@@ -67,6 +74,8 @@ export function ProductGallery({
       </div>
     );
   }
+
+  const fadeCls = interacted ? "transition-opacity duration-150" : "";
 
   return (
     <div className="product-gallery">
@@ -91,7 +100,7 @@ export function ProductGallery({
             fill
             priority={i === 0}
             sizes="(min-width: 1024px) 50vw, 100vw"
-            className="object-cover transition-opacity duration-300"
+            className={`object-cover ${fadeCls}`}
             style={{ opacity: i === selectedIndex ? 1 : 0 }}
             aria-hidden={i !== selectedIndex}
           />
@@ -150,6 +159,31 @@ export function ProductGallery({
           </div>
         )}
       </div>
+
+      {allImages.length > 1 && (
+        <div className="product-gallery-thumbs" aria-label="Product images">
+          {allImages.map((img, i) => (
+            <button
+              key={i}
+              type="button"
+              className={`product-gallery-thumb${i === selectedIndex ? " selected" : ""}`}
+              aria-label={`Show image ${i + 1} of ${allImages.length}`}
+              aria-current={i === selectedIndex ? "true" : undefined}
+              onClick={() => select(i)}
+            >
+              <Image
+                src={img.url}
+                alt=""
+                fill
+                sizes="96px"
+                loading="lazy"
+                className="object-cover"
+                aria-hidden="true"
+              />
+            </button>
+          ))}
+        </div>
+      )}
 
       {isFullscreen && (
         <div

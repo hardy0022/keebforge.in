@@ -50,10 +50,12 @@ export function AddToCart({
   productId,
   variants,
   baseAvailable,
+  madeToOrder = false,
 }: {
   productId: string;
   variants: VariantProp[];
   baseAvailable: number;
+  madeToOrder?: boolean;
 }) {
   const router = useRouter();
   const groups = useMemo(() => buildGroups(variants), [variants]);
@@ -65,9 +67,15 @@ export function AddToCart({
   const [buyNow, setBuyNow] = useState(false);
   const [state, action, pending] = useActionState(addToCart, null);
   const prevPendingRef = useRef(pending);
+  const added = state?.ok === true && !pending;
   useEffect(() => {
     if (prevPendingRef.current && !pending && state?.ok) {
       window.dispatchEvent(new Event("kf-cart-changed"));
+      window.dispatchEvent(
+        new CustomEvent("kf-cart-added", {
+          detail: { count: state.count ?? 0 },
+        }),
+      );
     }
     prevPendingRef.current = pending;
   }, [pending, state]);
@@ -88,6 +96,13 @@ export function AddToCart({
     ? Math.max(0, selected.stock - selected.reservedQuantity)
     : baseAvailable;
   const out = available <= 0;
+
+  const makeAvailabilityText = () => {
+    if (out) return "Out of stock";
+    if (madeToOrder) return "Made to order — we build it after you order.";
+    if (available <= 3) return `Only ${available} left in stock — order soon.`;
+    return "In stock";
+  };
 
   useEffect(() => {
     if (state?.ok && buyNow) router.push("/shop/checkout");
@@ -182,14 +197,22 @@ export function AddToCart({
       <div className="product-buy-actions">
         <button
           type="submit"
-          className="btn-prime btn-prime-lg product-buy-btn"
-          disabled={pending || out || (groups.length > 0 && !complete)}
+          className={`btn-prime btn-prime-lg product-buy-btn${added && !buyNow ? " product-buy-btn-added" : ""}`}
+          disabled={pending || out || (groups.length > 0 && !complete) || (added && !buyNow)}
           onClick={() => setBuyNow(false)}
           onMouseEnter={() => cartIconRef.current?.startAnimation()}
           onMouseLeave={() => cartIconRef.current?.stopAnimation()}
         >
-          {!out && <CartIcon ref={cartIconRef} size={16} strokeWidth={1.8} />}
-          {out ? "Out of Stock" : pending ? "Adding…" : "Add to Cart"}
+          {!(added && !buyNow) && !out && (
+            <CartIcon ref={cartIconRef} size={16} strokeWidth={1.8} />
+          )}
+          {out
+            ? "Out of Stock"
+            : added && !buyNow
+              ? "✓ Added"
+              : pending
+                ? "Adding…"
+                : "Add to Cart"}
         </button>
         {!out && (
           <button
@@ -203,16 +226,17 @@ export function AddToCart({
         )}
       </div>
 
+      <p className="product-availability" role="note">
+        <span
+          className={`product-availability-dot${out ? " out" : ""}`}
+          aria-hidden="true"
+        />
+        {makeAvailabilityText()}
+      </p>
+
       {state?.error && (
-        <p className="text-sm text-[var(--err)]">{state.error}</p>
-      )}
-      {state?.ok && !buyNow && (
-        <p className="text-sm text-[var(--ok)]">
-          Added to cart
-          {state.count != null
-            ? ` — ${state.count} item${state.count === 1 ? "" : "s"} in cart`
-            : ""}
-          .
+        <p className="text-sm text-[var(--err)]" role="alert">
+          {state.error}
         </p>
       )}
     </form>
