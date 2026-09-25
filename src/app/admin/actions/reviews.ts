@@ -14,7 +14,7 @@ export async function moderateReview(
   reviewId: string,
   status: ReviewStatus,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePermission("product", "view");
+  await requirePermission("review", "moderate");
   const review = await prisma.review.findUnique({ where: { id: reviewId } });
   if (!review) return { ok: false, error: "Review not found." };
   await prisma.review.update({ where: { id: reviewId }, data: { status } });
@@ -28,7 +28,7 @@ export async function moderateReview(
 
 /** Admin hard-deletes a review (with its photos). */
 export async function deleteReviewAsAdmin(reviewId: string) {
-  await requirePermission("product", "view");
+  await requirePermission("review", "delete");
   const review = await prisma.review.findUnique({ where: { id: reviewId } });
   if (!review) return;
   const media = await prisma.media.findMany({

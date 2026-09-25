@@ -15,6 +15,7 @@ const STAFF_PERMISSIONS: Record<string, string[]> = {
   customer: ["view"],
   setting: ["view"],
   coupon: ["view", "update"],
+  review: ["view", "moderate", "delete"],
 };
 
 /** Permission check against the user's Profile.role. */
@@ -41,7 +42,7 @@ const NAV_PERMISSIONS: Record<string, [resource: string, action: string]> = {
   "/admin/customers": ["customer", "view"],
   "/admin/payments": ["order", "view"],
   "/admin/shipments": ["order", "view"],
-  "/admin/reviews": ["product", "view"],
+  "/admin/reviews": ["review", "view"],
   "/admin/work": ["setting", "update"],
   "/admin/coupons": ["coupon", "view"],
   "/admin/analytics": ["order", "view"],

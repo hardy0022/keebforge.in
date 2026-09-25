@@ -12,6 +12,7 @@ import {
   invalidateProducts,
 } from "@/lib/caching/cache";
 import { slugify } from "@/lib/utils/slugify";
+import { csvInt, csvPaise } from "@/lib/admin/pricing";
 import {
   CARD_ICON_NAMES,
   MAX_CARD_FEATURES,
@@ -1131,7 +1132,12 @@ export async function importProducts(
     const brandId = row[idx("brand")]?.trim()
       ? (brandBySlug.get(row[idx("brand")].trim()) ?? null)
       : null;
-    const price = Math.round(parseFloat(row[idx("price")] ?? "0") * 100);
+    const priceRaw = row[idx("price")]?.trim();
+    const price = priceRaw ? csvPaise(priceRaw) : 0;
+    if (price == null) {
+      skipped++;
+      continue;
+    }
     const type = row[idx("type")]?.trim().toUpperCase() || "ACCESSORY";
     const status = row[idx("status")]?.trim().toUpperCase() || "DRAFT";
 
@@ -1154,16 +1160,11 @@ export async function importProducts(
         sku: row[idx("sku")]?.trim() || null,
         barcode: row[idx("barcode")]?.trim() || null,
         price,
-        compareAtPrice: row[idx("compareatprice")]
-          ? Math.round(parseFloat(row[idx("compareatprice")]) * 100)
-          : null,
-        costPrice: row[idx("costprice")]
-          ? Math.round(parseFloat(row[idx("costprice")]) * 100)
-          : null,
-        stock: parseInt(row[idx("stock")] ?? "0", 10) || 0,
-        lowStockThreshold:
-          parseInt(row[idx("lowstockthreshold")] ?? "5", 10) || 5,
-        gstRate: parseInt(row[idx("gstrate")] ?? "0", 10) || 0,
+        compareAtPrice: csvPaise(row[idx("compareatprice")]),
+        costPrice: csvPaise(row[idx("costprice")]),
+        stock: csvInt(row[idx("stock")], 0),
+        lowStockThreshold: csvInt(row[idx("lowstockthreshold")], 5),
+        gstRate: Math.min(csvInt(row[idx("gstrate")], 0), 100),
         featured: row[idx("featured")] === "1",
         active: status === "ACTIVE",
         seoTitle: `${name} | KeebForge Shop`,

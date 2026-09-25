@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import type { Profile, Role, User } from "@prisma/client";
+import type { Prisma, Profile, Role, User } from "@prisma/client";
 import { auth } from "@/lib/auth/better-auth";
 import { canAction } from "@/lib/auth/roles";
 import { prisma } from "@/lib/db/prisma";
@@ -17,11 +17,28 @@ export type AdminContext = {
 
 const PROFILE_ADMIN_ROLES: Role[] = ["ADMIN", "STAFF", "DEVELOPER"];
 
-const ORG_ADMIN_ROLES = ["owner", "developer"];
+export const ORG_ADMIN_ROLES = ["owner", "developer"];
+
+// Only this organization's owners/developers count as site admins. The org
+// plugin lets any signed-in user create their own org (becoming "owner"), so
+// trusting membership in any org would let anyone self-elevate to admin.
+export const STAFF_ORG_SLUG = "developer";
+
+/** Where-clause narrowing admin elevation to the designated staff org. */
+export function staffOrgMemberWhere(
+  userId: string,
+  orgSlug: string = STAFF_ORG_SLUG,
+): Prisma.MemberWhereInput {
+  return {
+    userId,
+    role: { in: ORG_ADMIN_ROLES },
+    organization: { slug: orgSlug },
+  };
+}
 
 async function hasOrgAdminRole(userId: string): Promise<boolean> {
   const member = await prisma.member.findFirst({
-    where: { userId, role: { in: ORG_ADMIN_ROLES } },
+    where: staffOrgMemberWhere(userId),
     select: { id: true },
   });
   return !!member;

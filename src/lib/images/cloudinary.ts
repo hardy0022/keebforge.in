@@ -1,5 +1,6 @@
 import "server-only";
 import { v2 as cloudinary } from "cloudinary";
+import { IMAGE_ROOT, isAppAsset } from "./asset-root";
 
 const configured = Boolean(
   process.env.CLOUDINARY_CLOUD_NAME &&
@@ -20,7 +21,7 @@ if (configured) {
 }
 
 /** Top-level app folder in Cloudinary — everything we upload lives under it. */
-const ROOT = "keebforge";
+const ROOT = IMAGE_ROOT;
 
 // ponytail: repair/order/customer assets are uploaded public but unlisted —
 // access is "know the opaque id" (cuid / order number), matching the current
@@ -93,8 +94,17 @@ export function uploadBuffer(
 /**
  * Delete a Cloudinary asset by public id. Never throws — returns whether the
  * asset was actually destroyed so callers can log orphans instead of lying.
+ * Refuses anything outside the app's own `keebforge/` root: public ids cross
+ * trust boundaries (upload drafts, admin query strings), so a caller-supplied
+ * id must never be able to destroy an unrelated asset.
  */
 export async function deleteImage(publicId: string): Promise<boolean> {
+  if (!isAppAsset(publicId)) {
+    console.error(
+      `[cloudinary] refusing to delete asset outside ${ROOT}/: ${publicId}`,
+    );
+    return false;
+  }
   try {
     const res = await cloudinary.uploader.destroy(publicId, {
       resource_type: "image",

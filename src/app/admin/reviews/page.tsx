@@ -48,7 +48,7 @@ export default async function AdminReviewsPage({
     page?: string;
   }>;
 }) {
-  await requirePermission("product", "view");
+  await requirePermission("review", "view");
   const sp = await searchParams;
   const result = await getAdminReviews({
     status: STATUSES.includes(sp.status as never)
