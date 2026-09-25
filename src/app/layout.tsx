@@ -30,6 +30,7 @@ export const metadata: Metadata = {
     path: "/",
   }),
   metadataBase: new URL(SITE_URL),
+  icons: { icon: "/favicon.png" },
 };
 
 export const viewport: Viewport = {
@@ -41,6 +42,7 @@ export const viewport: Viewport = {
 const SITE_JSONLD = [
   {
     "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: "KeebForge.in",
     url: SITE_URL,
     email: "contact@keebforge.in",

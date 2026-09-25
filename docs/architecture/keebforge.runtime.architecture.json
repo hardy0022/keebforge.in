@@ -2,245 +2,437 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "KeebForge Runtime Architecture",
+    "title": "KeebForge Platform Architecture",
     "locale": "en",
     "quality_profile": "showcase",
     "output": "keebforge.runtime.html",
-    "repository": {
-      "url": "https://github.com/hardy0022/keebforge.in",
-      "provider": "github",
-      "revision": "a495deb19642d7d6af0437a4beb21b31f6346063"
-    },
     "views": [
       {
-        "id": "page-load",
-        "label": "Page Load",
-        "focus": ["browser", "vercelEdge", "nextjs", "prisma", "postgres", "cloudinary"],
-        "note": "SSR page request: edge middleware, cached catalog reads, DB fallback, Cloudinary image URLs."
+        "id": "overview",
+        "label": "Overview",
+        "focus": [
+          "browser",
+          "vercel-edge",
+          "nextjs",
+          "api",
+          "postgres",
+          "catalog"
+        ],
+        "note": "How traffic moves from the browser to durable state and partners."
       },
       {
-        "id": "checkout",
-        "label": "Checkout & Payment",
-        "focus": ["browser", "nextjs", "prisma", "postgres", "razorpay", "delhivery"],
-        "note": "Cart to paid order: server-side price/shipping calc, Razorpay inline + webhook, idempotent verify."
+        "id": "checkout-payments",
+        "label": "Checkout & Payments",
+        "focus": [
+          "browser",
+          "nextjs",
+          "payments",
+          "razorpay",
+          "order",
+          "postgres"
+        ],
+        "note": "Razorpay inline checkout, HMAC-verified webhook, idempotent verification."
       },
       {
-        "id": "auth-admin",
-        "label": "Auth & Admin",
-        "focus": ["browser", "nextjs", "betterAuth", "prisma", "postgres", "resend"],
-        "note": "Session management, role-based access, admin CRUD, transactional email."
+        "id": "tracking",
+        "label": "Live Order Tracking",
+        "focus": [
+          "order",
+          "realtime",
+          "postgres",
+          "browser"
+        ],
+        "note": "PII-free tracking cache broadcast over Supabase Realtime, public page subscribes."
+      },
+      {
+        "id": "security",
+        "label": "Security & Auth",
+        "focus": [
+          "auth",
+          "nextjs",
+          "vercel-edge",
+          "images",
+          "google-discord"
+        ],
+        "note": "Better Auth RBAC, admin gate, upload sniffing, edge scrubbing of /auth/error."
       }
     ]
   },
   "layout": {
     "mode": "grid",
-    "origin": [24, 44],
-    "cols": 7,
+    "origin": [
+      40,
+      180
+    ],
+    "cols": 6,
     "cellW": 120,
     "cellH": 52,
-    "gapX": 26,
-    "gapY": 90
+    "gapX": 24,
+    "gapY": 110
   },
   "components": [
     {
       "id": "browser",
-      "type": "external",
-      "label": "Browser",
-      "sublabel": "Customer / Admin",
+      "type": "frontend",
+      "label": "Visitors",
       "row": 1,
-      "col": 0
+      "col": 0,
+      "sublabel": "Browser / Mobile"
     },
     {
-      "id": "vercelEdge",
+      "id": "vercel-edge",
       "type": "cloud",
-      "label": "Vercel Edge",
-      "sublabel": "proxy.ts middleware",
+      "label": "Vercel Edge proxy",
       "row": 1,
-      "col": 2,
-      "sources": [{ "path": "src/proxy.ts", "line": 50, "label": "maintenance guard + case redirects" }]
+      "col": 1,
+      "sublabel": "maintenance · redirects",
+      "tag": "30s memoized toggle"
     },
     {
       "id": "nextjs",
       "type": "backend",
-      "label": "Next.js 16",
-      "sublabel": "RSC · SSR · API",
-      "row": 1,
-      "col": 3,
-      "tag": "React Compiler",
-      "sources": [
-        { "path": "next.config.ts", "line": 90, "label": "config + redirects" },
-        { "path": "src/lib/caching/cache.ts", "line": 90, "label": "data cache wrapper" }
-      ]
+      "label": "App Router",
+      "row": 2,
+      "col": 0,
+      "sublabel": "React 19 Server Components"
     },
     {
-      "id": "prisma",
+      "id": "server-actions",
       "type": "backend",
-      "label": "Prisma 6",
-      "sublabel": "ORM · PostgreSQL",
-      "row": 1,
+      "label": "Server Actions",
+      "row": 2,
+      "col": 1,
+      "sublabel": "cart · checkout · admin"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Route Handlers",
+      "row": 2,
+      "col": 2,
+      "sublabel": "payments · shipping · uploads"
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Better Auth",
+      "row": 2,
       "col": 5,
-      "sources": [
-        { "path": "src/lib/db/prisma.ts", "line": 12, "label": "lazy PrismaClient proxy" },
-        { "path": "prisma/schema.prisma", "line": 1, "label": "full schema" }
-      ]
+      "sublabel": "OAuth · RBAC"
+    },
+    {
+      "id": "catalog",
+      "type": "backend",
+      "label": "Catalog & Caching",
+      "row": 3,
+      "col": 0,
+      "sublabel": "cache 5 min · invalidate"
+    },
+    {
+      "id": "order",
+      "type": "backend",
+      "label": "Orders & Tracking",
+      "row": 3,
+      "col": 1,
+      "sublabel": "orders · PII-free tracking"
+    },
+    {
+      "id": "payments",
+      "type": "backend",
+      "label": "Payments",
+      "row": 3,
+      "col": 2,
+      "sublabel": "inline · webhook"
+    },
+    {
+      "id": "images",
+      "type": "backend",
+      "label": "Image / Upload API",
+      "row": 3,
+      "col": 3,
+      "sublabel": "uploads · sniffed"
+    },
+    {
+      "id": "shipping",
+      "type": "backend",
+      "label": "Shipping",
+      "row": 3,
+      "col": 4,
+      "sublabel": "Kinko rates · quotes"
     },
     {
       "id": "postgres",
       "type": "database",
       "label": "PostgreSQL",
-      "sublabel": "Supabase",
-      "row": 1,
-      "col": 6,
-      "tag": "primary datastore",
-      "sources": [{ "path": "prisma/schema.prisma", "line": 1, "label": "provider = postgresql" }]
+      "row": 4,
+      "col": 0,
+      "sublabel": "Supabase hosted · Prisma"
     },
     {
-      "id": "betterAuth",
-      "type": "security",
-      "label": "Better Auth",
-      "sublabel": "Session · OAuth · RBAC",
-      "row": 2,
-      "col": 3,
-      "sources": [
-        { "path": "src/lib/auth/better-auth.ts", "line": 17, "label": "auth config" },
-        { "path": "src/lib/auth/session.ts", "line": 26, "label": "getCurrentAuth" }
-      ]
+      "id": "realtime",
+      "type": "messagebus",
+      "label": "Supabase Realtime",
+      "row": 4,
+      "col": 1,
+      "sublabel": "order status pushes"
     },
     {
-      "id": "cloudinary",
-      "type": "cloud",
-      "label": "Cloudinary",
-      "sublabel": "Image CDN",
-      "row": 0,
-      "col": 3,
-      "sources": [
-        { "path": "src/lib/images/cloudinary.ts", "line": 36, "label": "entity folders + uploads" },
-        { "path": "next.config.ts", "line": 108, "label": "custom image loader" }
-      ]
-    },
-    {
-      "id": "delhivery",
+      "id": "supabase",
       "type": "external",
-      "label": "Delhivery",
-      "sublabel": "Shipping carrier",
-      "row": 0,
-      "col": 4,
-      "sources": [
-        { "path": "src/lib/shipping/delhivery.ts", "line": 9, "label": "kinko v1 charges API" },
-        { "path": "src/app/api/shipping/calculate/route.ts", "label": "rate endpoint" }
-      ]
+      "label": "Supabase",
+      "row": 5,
+      "col": 0,
+      "sublabel": "hosted Postgres + RT"
     },
     {
       "id": "resend",
       "type": "external",
       "label": "Resend",
-      "sublabel": "Transactional email",
-      "row": 0,
-      "col": 5,
-      "sources": [
-        { "path": "src/lib/auth/better-auth.ts", "line": 30, "label": "password reset emails" },
-        { "path": "src/app/actions/inquiry.ts", "line": 11, "label": "inquiry + repair emails" }
-      ]
+      "row": 5,
+      "col": 1,
+      "sublabel": "transactional email"
     },
     {
       "id": "razorpay",
       "type": "external",
       "label": "Razorpay",
-      "sublabel": "Payment gateway",
-      "row": 0,
-      "col": 6,
-      "sources": [
-        { "path": "src/app/api/payments/create-order/route.ts", "line": 88, "label": "server SDK order create" },
-        { "path": "src/app/api/payments/webhook/route.ts", "line": 22, "label": "HMAC-verified webhook" }
-      ]
+      "row": 5,
+      "col": 2,
+      "sublabel": "payments"
+    },
+    {
+      "id": "cloudinary",
+      "type": "external",
+      "label": "Cloudinary",
+      "row": 5,
+      "col": 3,
+      "sublabel": "image CDN + transforms"
+    },
+    {
+      "id": "delhivery",
+      "type": "external",
+      "label": "Delhivery",
+      "row": 5,
+      "col": 4,
+      "sublabel": "courier · labels"
+    },
+    {
+      "id": "google-discord",
+      "type": "external",
+      "label": "Google / Discord",
+      "row": 5,
+      "col": 5,
+      "sublabel": "OAuth providers"
     }
   ],
   "boundaries": [
     {
       "kind": "region",
-      "label": "Vercel Deployment",
-      "wraps": ["vercelEdge", "nextjs", "betterAuth", "prisma"]
+      "label": "Access & Edge",
+      "wraps": [
+        "browser",
+        "vercel-edge"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Application (Next.js)",
+      "wraps": [
+        "nextjs",
+        "server-actions",
+        "api",
+        "auth"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Commerce & Services",
+      "wraps": [
+        "catalog",
+        "order",
+        "payments",
+        "images",
+        "shipping"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Data & Realtime",
+      "wraps": [
+        "postgres",
+        "realtime"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "External Services",
+      "wraps": [
+        "supabase",
+        "resend",
+        "razorpay",
+        "cloudinary",
+        "delhivery",
+        "google-discord"
+      ]
     }
   ],
   "connections": [
     {
-      "id": "browser-to-edge",
+      "id": "browser-edge",
       "from": "browser",
-      "to": "vercelEdge",
+      "to": "vercel-edge",
       "label": "HTTPS",
-      "variant": "emphasis"
+      "variant": "emphasis",
+      "labelAt": [
+        166,
+        324
+      ]
     },
     {
-      "id": "edge-to-nextjs",
-      "from": "vercelEdge",
-      "to": "nextjs",
-      "label": "maintenance + redirects",
-      "labelDy": 54
+      "id": "edge-app",
+      "from": "vercel-edge",
+      "to": "nextjs"
     },
     {
-      "id": "nextjs-to-prisma",
+      "id": "app-actions",
       "from": "nextjs",
-      "to": "prisma",
-      "label": "reads / writes",
-      "variant": "emphasis"
+      "to": "server-actions",
+      "route": "straight"
     },
     {
-      "id": "prisma-to-postgres",
-      "from": "prisma",
+      "id": "actions-catalog",
+      "from": "server-actions",
+      "to": "catalog"
+    },
+    {
+      "id": "catalog-db",
+      "from": "catalog",
       "to": "postgres",
-      "label": "SQL over TLS",
-      "labelDy": 54
+      "via": [
+        [
+          100,
+          760
+        ],
+        [
+          100,
+          794
+        ]
+      ]
     },
     {
-      "id": "nextjs-to-auth",
-      "from": "nextjs",
-      "to": "betterAuth",
-      "label": "session + OAuth",
+      "id": "order-db",
+      "from": "order",
+      "to": "postgres"
+    },
+    {
+      "id": "order-realtime",
+      "from": "order",
+      "to": "realtime",
+      "via": [
+        [
+          244,
+          760
+        ],
+        [
+          244,
+          794
+        ]
+      ]
+    },
+    {
+      "id": "api-payments",
+      "from": "api",
+      "to": "payments",
+      "via": [
+        [
+          388,
+          598
+        ],
+        [
+          388,
+          632
+        ]
+      ]
+    },
+    {
+      "id": "provider-oauth",
+      "from": "auth",
+      "to": "google-discord",
       "variant": "security",
-      "labelDy": 24
-    },
-    {
-      "id": "nextjs-to-cloudinary",
-      "from": "nextjs",
-      "to": "cloudinary",
-      "label": "upload + URLs",
-      "fromSide": "top",
-      "toSide": "bottom"
-    },
-    {
-      "id": "nextjs-to-razorpay",
-      "from": "nextjs",
-      "to": "razorpay",
-      "label": "orders + verify",
-      "fromSide": "top",
-      "toSide": "bottom"
-    },
-    {
-      "id": "razorpay-webhook",
-      "from": "razorpay",
-      "to": "nextjs",
-      "label": "webhook (HMAC)",
-      "variant": "dashed",
       "fromSide": "bottom",
-      "toSide": "top"
+      "toSide": "top",
+      "via": [
+        [
+          820,
+          706
+        ],
+        [
+          820,
+          848
+        ]
+      ]
     },
     {
-      "id": "nextjs-to-delhivery",
-      "from": "nextjs",
+      "id": "pay-create",
+      "from": "payments",
+      "to": "razorpay",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          388,
+          814
+        ],
+        [
+          388,
+          902
+        ]
+      ]
+    },
+    {
+      "id": "ship-quote",
+      "from": "shipping",
       "to": "delhivery",
-      "label": "rates + tracking",
-      "fromSide": "top",
-      "toSide": "bottom"
+      "via": [
+        [
+          676,
+          814
+        ],
+        [
+          676,
+          902
+        ]
+      ]
     },
     {
-      "id": "nextjs-to-resend",
-      "from": "nextjs",
-      "to": "resend",
-      "label": "email dispatch",
-      "variant": "dashed",
-      "fromSide": "top",
-      "toSide": "bottom",
-      "labelAt": [814, 164]
+      "id": "img-up",
+      "from": "images",
+      "to": "cloudinary",
+      "via": [
+        [
+          532,
+          814
+        ],
+        [
+          532,
+          902
+        ]
+      ]
+    },
+    {
+      "id": "db-provider",
+      "from": "postgres",
+      "to": "supabase",
+      "via": [
+        [
+          100,
+          922
+        ],
+        [
+          100,
+          956
+        ]
+      ]
     }
   ],
   "cards": [
@@ -248,37 +440,38 @@
       "dot": "cyan",
       "title": "Platform",
       "items": [
-        "Next.js 16.3.1 App Router on Vercel",
-        "Edge middleware: maintenance guard + case-variant redirects",
-        "React Server Components + React Compiler",
-        "Data cache: unstable_cache + React.cache with tag invalidation"
-      ]
-    },
-    {
-      "dot": "emerald",
-      "title": "Data Layer",
-      "items": [
-        "Prisma 6 → PostgreSQL (Supabase) lazy singleton",
-        "Per-slice TTL: 3600s stable / 300s catalog / 60s settings",
-        "Admin mutations invalidate tags via updateTag"
+        "Next.js 16 App Router on Vercel (bom1 · Mumbai)",
+        "PostgreSQL via Supabase + Prisma ORM",
+        "Env-gated maintenance mode (30s memoized, bypass /admin /auth /maintenance)"
       ]
     },
     {
       "dot": "violet",
       "title": "Commerce",
       "items": [
-        "Razorpay: inline checkout.js + HMAC verify + idempotent webhook",
-        "Delhivery: kinko v1 rates, waybill tracking, surface/express",
-        "Server-side price/shipping — client never supplies amounts"
+        "DB-persisted cart with guest claim",
+        "Server-authoritative coupons & prices (never trust client math)",
+        "Razorpay inline checkout, HMAC-verified idempotent webhooks",
+        "Delhivery Kinko shipping quotes"
       ]
     },
     {
-      "dot": "rose",
-      "title": "Auth & Email",
+      "dot": "emerald",
+      "title": "Data & Realtime",
       "items": [
-        "Better Auth 1.7.1: email/password + Google/Discord OAuth",
-        "RBAC: ADMIN / STAFF / CUSTOMER with requireAdmin guard",
-        "Resend: password reset, repair inquiries, request confirmations"
+        "defineCached stamps (catalog 5 min, stable 1 h, per-tag invalidation)",
+        "PII-free public tracking cache (orders armed only from admin writes)",
+        "Supabase Realtime push for live order status"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Security & Auth",
+      "items": [
+        "Better Auth: email/password + Google/Discord, organization RBAC",
+        "Admin gates via requireAdminContext",
+        "MIME-sniffed uploads, server-chosen media folders",
+        "Draft/removed products excluded from structured data & OG"
       ]
     }
   ]

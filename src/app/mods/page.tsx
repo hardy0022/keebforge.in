@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { buildMetadata } from "@/lib/seo";
+import { buildMetadata, JsonLd, SITE_URL } from "@/lib/seo";
 import { getModsCatalog } from "@/lib/catalog/data";
 import { DEFAULT_SHIPPING_MODE, enabledShippingModes } from "@/lib/shipping/delhivery";
 import {
@@ -14,6 +14,23 @@ export const metadata: Metadata = buildMetadata({
     "Keyboard and mouse modifications to improve performance, feel, sound, and functionality — switch lubing, stabilizer work, soldering, tape mods and mouse switch swaps. Live estimate as you select.",
   path: "/mods",
 });
+
+// Factual mods Service markup (name, URL, India coverage only — no invented
+// pricing/ratings; the interactive configurator owns live price estimates).
+const MODS_SERVICE_JSONLD = {
+  "@type": "Service",
+  "@id": `${SITE_URL}/mods#service`,
+  serviceType: "Keyboard and mouse modification and tuning services",
+  name: "KeebForge Keyboard & Mouse Mods",
+  description:
+    "Keyboard and mouse modifications to improve performance, feel, sound, and functionality — switch lubing, stabilizer work, soldering, tape mods and mouse switch swaps.",
+  url: `${SITE_URL}/mods`,
+  provider: {
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
+  },
+  areaServed: { "@type": "Country", name: "India" },
+};
 
 /** Items hidden from the configurator (custom-build / PCB work is quoted offline). */
 const HIDDEN_GROUP_SLUGS = new Set(["custom-pcb-design"]);
@@ -69,6 +86,7 @@ export default async function ModsPage() {
 
   return (
     <main className="config-page">
+      <JsonLd data={MODS_SERVICE_JSONLD} />
       <header className="ri-hero">
         <p className="sec-num sv-kicker">{"// Keyboard & Mouse Mods"}</p>
         <h1 className="ri-hero-title">

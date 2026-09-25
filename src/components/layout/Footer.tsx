@@ -77,6 +77,7 @@ const SUPPORT: { href: string; label: string }[] = [
   { href: "/returns-refunds", label: "Returns & Refunds" },
   { href: "/contact", label: "Contact" },
   { href: "/write-review", label: "Write a Review" },
+  { href: "/architecture.html", label: "Architecture" },
 ];
 
 function SocialButton({ label }: { label: (typeof SOCIALS)[number]["label"] }) {

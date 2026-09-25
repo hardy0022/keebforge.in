@@ -22,7 +22,6 @@ export default function robots(): MetadataRoute.Robots {
         "/maintenance",
         "/unauthorized",
         "/api/",
-        "/track",
       ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,

@@ -8,6 +8,10 @@ export function toAbsUrl(u: string): string {
   return /^https?:\/\//i.test(u) ? u : `${SITE_URL}${u}`;
 }
 
+/** Default 1200x630 brand OG image (public/og-default.webp) used when a
+ *  page has no specific image. Pages pass `image` to override. */
+export const DEFAULT_OG_IMAGE = "/og-default.webp";
+
 type SEOInput = {
   title: string;
   description: string;
@@ -32,16 +36,15 @@ export function buildMetadata({
   noIndex = false,
 }: SEOInput): Metadata {
   const canonicalUrl = canonical ?? (path ? `${SITE_URL}${path}` : SITE_URL);
-  const ogImages = image
-    ? [
-        {
-          url: toAbsUrl(image),
-          width: 1200,
-          height: 630,
-          alt: "KeebForge.in",
-        },
-      ]
-    : undefined;
+  const ogImage = image || DEFAULT_OG_IMAGE;
+  const ogImages = [
+    {
+      url: toAbsUrl(ogImage),
+      width: 1200,
+      height: 630,
+      alt: "KeebForge.in",
+    },
+  ];
   return {
     title,
     description,
@@ -60,7 +63,7 @@ export function buildMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: image ? [toAbsUrl(image)] : undefined,
+      images: [toAbsUrl(ogImage)],
     },
   };
 }

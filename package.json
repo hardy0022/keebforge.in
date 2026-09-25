@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
     "check:coupons": "tsx src/lib/checkout/coupons.ts",
-    "check:environment": "tsx src/lib/environment.test.ts"
+    "check:environment": "tsx src/lib/environment.test.ts",
+    "architecture:map": "node scripts/architecture-map.mjs"
   },
   "dependencies": {
     "@better-auth/infra": "^0.4.2",
@@ -46,6 +47,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
+    "js-yaml": "^5.4.2",
     "prisma": "^6.19.3",
     "shadcn": "^4.19.0",
     "tailwindcss": "^4",

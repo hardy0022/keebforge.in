@@ -29,6 +29,15 @@ function absUrl(u: string) {
   return u.startsWith("http") ? u : `${SITE_URL}${u}`;
 }
 
+/** Cloudinary draft-asset detection — drafts live under
+ *  keebforge/products/drafts/ and must never surface in OG/Product schema. */
+function isDraftImage(img: { url: string; publicId?: string | null }) {
+  return (
+    img.url.includes("/products/drafts/") ||
+    (img.publicId ?? "").includes("/products/drafts/")
+  );
+}
+
 function getJsonList(value: unknown): string[] {
   if (
     value &&
@@ -49,20 +58,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // notFound() here (pre-render) so miss-status is 404 even though the route
   // has a loading.tsx that would otherwise commit a 200 shell first (G-003).
   if (!product) notFound();
-  // Admin-set OG image wins over the first gallery image when it's actually an
-  // image (a page URL in that field is stale data). Canonical override is only
-  // trusted when it points at this product's own page.
+  // Non-draft gallery image first, legitimate admin OG image second (P2:
+  // draft assets leaked into Product/OG schema). Admin OG image is only used
+  // when it's an actual image (a page URL in that field is stale data).
+  // Canonical override is only trusted when it points at this product's own
+  // page.
+  const galleryImage = product.images.find((i) => !isDraftImage(i))?.url;
   const ogImage =
-    product.ogImageUrl && !product.ogImageUrl.includes("/product/")
+    product.ogImageUrl &&
+    !product.ogImageUrl.includes("/product/") &&
+    !product.ogImageUrl.includes("/products/drafts/")
       ? product.ogImageUrl
       : undefined;
-  const image = ogImage ?? product.images[0]?.url;
+
+  const image = galleryImage ?? ogImage;
   const ownUrl = `${SITE_URL}/product/${product.slug}`;
   const canonical =
     product.canonicalUrl === ownUrl ||
     product.canonicalUrl === `${ownUrl}/`
       ? product.canonicalUrl
       : undefined;
+
   return buildMetadata({
     title: product.seoTitle ?? `${product.name} | KeebForge Shop`,
     description:
@@ -102,6 +118,9 @@ export default async function ProductPage({
   const included = getJsonList(product.whatsIncluded);
 
   const url = `${SITE_URL}/product/${product.slug}`;
+
+  // Product structured-data images: drafts excluded.
+  const schemaImages = product.images.filter((i) => !isDraftImage(i));
 
   const variantPrices = product.variants.map((v) => v.price ?? product.price);
   const minPrice = Math.min(product.price, ...variantPrices);
@@ -412,8 +431,8 @@ export default async function ProductPage({
             description:
               product.seoDescription ?? product.description ?? undefined,
             url,
-            image: product.images.length
-              ? product.images.map((i) => absUrl(i.url))
+            image: schemaImages.length
+              ? schemaImages.map((i) => absUrl(i.url))
               : undefined,
             sku: product.sku ?? undefined,
             ...(product.brand

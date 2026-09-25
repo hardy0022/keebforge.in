@@ -1,4 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+// Explicit 404 metadata: strict noindex, neutral title, and NO canonical
+// (Next's not-found already emits a 404 status; without this the root layout
+// metadata bleeds the homepage title + homepage canonical onto 404 pages).
+export const metadata: Metadata = {
+  title: "Page not found | KeebForge.in",
+  description: "The page you're looking for doesn't exist or has moved.",
+  robots: { index: false, follow: false },
+  alternates: { canonical: null },
+};
 
 export default function NotFound() {
   return (
