@@ -24,6 +24,4 @@ KeebForge is built as a modern full-stack web platform using Next.js and
 Vercel, with PostgreSQL for data and integrated services for authentication,
 payments, shipping, media, email, and realtime order tracking.
 
-![KeebForge Platform Architecture](./public/architecture-share-card.png)
-
-[View the interactive architecture map →](https://keebforge.in/architecture.html)
+[![KeebForge Platform Architecture](https://keebforge.in/architecture-share-card.png)](https://keebforge.in/architecture.html)
