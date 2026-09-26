@@ -1,0 +1,418 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "KeebForge Platform Architecture",
+    "subtitle": "Next.js commerce runtime on Vercel, PostgreSQL, and verified server-side services",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "visual_preset": "signal-flow",
+    "animation": "trace",
+    "output": "keebforge.runtime.html",
+    "repository": {
+      "url": "https://github.com/hardy0022/keebforge.in",
+      "provider": "github",
+      "revision": "4f205ddc3048e13057035b362fcd71110be816cd"
+    },
+    "views": [
+      {
+        "id": "platform-request",
+        "label": "Platform / Request Flow",
+        "focus": ["browser", "vercelEdge", "nextjs", "prisma", "postgres", "cloudinary"],
+        "note": "Requests cross proxy.ts, render in Next.js, read through Prisma, and serve Cloudinary URLs."
+      },
+      {
+        "id": "checkout-payments",
+        "label": "Checkout & Payments",
+        "focus": ["browser", "nextjs", "prisma", "postgres", "razorpay", "delhivery"],
+        "note": "Server-authoritative checkout uses Delhivery rates and Razorpay order creation, verification, and HMAC webhooks."
+      },
+      {
+        "id": "live-order-tracking",
+        "label": "Live Order Tracking",
+        "focus": ["nextjs", "realtime", "browser", "postgres"],
+        "note": "Next.js synchronizes PII-free tracking state, broadcasts updates, and the customer UI subscribes."
+      },
+      {
+        "id": "security-authentication",
+        "label": "Security & Authentication",
+        "focus": ["browser", "vercelEdge", "nextjs", "betterAuth", "resend"],
+        "note": "Better Auth manages sessions, OAuth, and RBAC; protected server actions and Resend complete sensitive flows."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [24, 44],
+    "cols": 7,
+    "cellW": 120,
+    "cellH": 52,
+    "gapX": 26,
+    "gapY": 90
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "frontend",
+      "label": "Browser",
+      "sublabel": "Customer / Admin",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "vercelEdge",
+      "type": "cloud",
+      "label": "Vercel Edge",
+      "sublabel": "proxy.ts · maintenance",
+      "row": 1,
+      "col": 2,
+      "sources": [
+        {
+          "path": "src/proxy.ts",
+          "line": 44,
+          "end_line": 102,
+          "label": "maintenance and redirect proxy"
+        }
+      ]
+    },
+    {
+      "id": "nextjs",
+      "type": "backend",
+      "label": "Next.js 16.3.1",
+      "sublabel": "RSC · SSR · API",
+      "tag": "React Compiler",
+      "row": 1,
+      "col": 3,
+      "sources": [
+        {
+          "path": "next.config.ts",
+          "line": 90,
+          "end_line": 115,
+          "label": "Next.js configuration"
+        },
+        {
+          "path": "src/lib/caching/cache.ts",
+          "line": 90,
+          "label": "server cache integration"
+        }
+      ]
+    },
+    {
+      "id": "prisma",
+      "type": "backend",
+      "label": "Prisma 6.19.3",
+      "sublabel": "ORM · PostgreSQL",
+      "row": 1,
+      "col": 5,
+      "sources": [
+        {
+          "path": "src/lib/db/prisma.ts",
+          "line": 12,
+          "end_line": 27,
+          "label": "lazy Prisma client"
+        },
+        {
+          "path": "prisma/schema.prisma",
+          "line": 1,
+          "end_line": 12,
+          "label": "PostgreSQL schema"
+        }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "Supabase hosted",
+      "tag": "primary datastore",
+      "row": 1,
+      "col": 6,
+      "sources": [
+        {
+          "path": "prisma/schema.prisma",
+          "line": 4,
+          "end_line": 12,
+          "label": "PostgreSQL datasource"
+        }
+      ]
+    },
+    {
+      "id": "betterAuth",
+      "type": "security",
+      "label": "Better Auth",
+      "sublabel": "Sessions · OAuth · RBAC",
+      "row": 2,
+      "col": 3,
+      "sources": [
+        {
+          "path": "src/lib/auth/better-auth.ts",
+          "line": 17,
+          "end_line": 169,
+          "label": "auth configuration"
+        },
+        {
+          "path": "src/app/api/auth/[...all]/route.ts",
+          "line": 1,
+          "end_line": 4,
+          "label": "auth API route"
+        }
+      ]
+    },
+    {
+      "id": "realtime",
+      "type": "messagebus",
+      "label": "Supabase Realtime",
+      "sublabel": "PII-free order updates",
+      "row": 0,
+      "col": 1,
+      "sources": [
+        {
+          "path": "src/lib/realtime/track-notify.ts",
+          "line": 18,
+          "end_line": 38,
+          "label": "server tracking broadcast"
+        },
+        {
+          "path": "src/lib/realtime/track-sub.ts",
+          "line": 26,
+          "end_line": 43,
+          "label": "browser tracking subscription"
+        }
+      ]
+    },
+    {
+      "id": "cloudinary",
+      "type": "cloud",
+      "label": "Cloudinary",
+      "sublabel": "Images · transforms",
+      "tag": "media CDN",
+      "row": 0,
+      "col": 3,
+      "sources": [
+        {
+          "path": "src/lib/images/cloudinary.ts",
+          "line": 36,
+          "end_line": 125,
+          "label": "uploads and transformations"
+        },
+        {
+          "path": "src/app/api/uploads/route.ts",
+          "line": 17,
+          "end_line": 45,
+          "label": "authenticated upload route"
+        }
+      ]
+    },
+    {
+      "id": "delhivery",
+      "type": "external",
+      "label": "Delhivery",
+      "sublabel": "Shipping · rates · tracking",
+      "row": 0,
+      "col": 4,
+      "sources": [
+        {
+          "path": "src/lib/shipping/delhivery.ts",
+          "line": 650,
+          "end_line": 715,
+          "label": "shipping rate requests"
+        },
+        {
+          "path": "src/app/api/shipping/calculate/route.ts",
+          "line": 24,
+          "end_line": 126,
+          "label": "shipping quote endpoint"
+        }
+      ]
+    },
+    {
+      "id": "resend",
+      "type": "external",
+      "label": "Resend",
+      "sublabel": "Transactional email",
+      "row": 0,
+      "col": 5,
+      "sources": [
+        {
+          "path": "src/lib/auth/better-auth.ts",
+          "line": 30,
+          "end_line": 86,
+          "label": "verification and reset email"
+        },
+        {
+          "path": "src/app/actions/inquiry.ts",
+          "line": 107,
+          "end_line": 141,
+          "label": "inquiry email"
+        },
+        {
+          "path": "src/app/actions/repair-request.ts",
+          "line": 307,
+          "end_line": 351,
+          "label": "repair email"
+        }
+      ]
+    },
+    {
+      "id": "razorpay",
+      "type": "external",
+      "label": "Razorpay",
+      "sublabel": "Payments · webhooks",
+      "row": 0,
+      "col": 6,
+      "sources": [
+        {
+          "path": "src/app/api/payments/create-order/route.ts",
+          "line": 88,
+          "end_line": 562,
+          "label": "server order creation"
+        },
+        {
+          "path": "src/app/api/payments/webhook/route.ts",
+          "line": 8,
+          "end_line": 50,
+          "label": "HMAC webhook verification"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Vercel Deployment",
+      "wraps": ["vercelEdge", "nextjs", "betterAuth", "prisma"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-to-edge",
+      "from": "browser",
+      "to": "vercelEdge",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "edge-to-nextjs",
+      "from": "vercelEdge",
+      "to": "nextjs",
+      "label": "maintenance + redirects",
+      "labelDy": 54
+    },
+    {
+      "id": "nextjs-to-prisma",
+      "from": "nextjs",
+      "to": "prisma",
+      "label": "reads / writes",
+      "variant": "emphasis"
+    },
+    {
+      "id": "prisma-to-postgres",
+      "from": "prisma",
+      "to": "postgres",
+      "label": "SQL / TLS",
+      "labelDy": 54
+    },
+    {
+      "id": "nextjs-to-auth",
+      "from": "nextjs",
+      "to": "betterAuth",
+      "label": "sessions + OAuth",
+      "variant": "security",
+      "labelDy": 24
+    },
+    {
+      "id": "nextjs-to-realtime",
+      "from": "nextjs",
+      "to": "realtime",
+      "label": "order updates",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "realtime-to-browser",
+      "from": "realtime",
+      "to": "browser",
+      "label": "tracking UI",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "nextjs-to-cloudinary",
+      "from": "nextjs",
+      "to": "cloudinary",
+      "label": "uploads + URLs",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [511.5, 135]
+    },
+    {
+      "id": "nextjs-to-razorpay",
+      "from": "nextjs",
+      "to": "razorpay",
+      "label": "orders + verify",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "razorpay-webhook",
+      "from": "razorpay",
+      "to": "nextjs",
+      "label": "webhook · HMAC",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "nextjs-to-delhivery",
+      "from": "nextjs",
+      "to": "delhivery",
+      "label": "rates + tracking",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "nextjs-to-resend",
+      "from": "nextjs",
+      "to": "resend",
+      "label": "email dispatch",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [814, 164]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Platform",
+      "items": [
+        "Next.js 16.3.1 App Router + React Compiler on Vercel",
+        "proxy.ts maintenance guard, redirects, and auth error scrubbing"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Data Layer",
+      "items": [
+        "Prisma 6.19.3 → PostgreSQL hosted on Supabase",
+        "Supabase Realtime broadcasts PII-free tracking updates"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Commerce",
+      "items": [
+        "Razorpay checkout, HMAC webhook, and server-side verification",
+        "Delhivery rates and tracking with server-authoritative totals"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Auth & Email",
+      "items": [
+        "Better Auth sessions, Google/Discord OAuth, and RBAC",
+        "Resend verification, reset, inquiry, and repair email"
+      ]
+    }
+  ]
+}

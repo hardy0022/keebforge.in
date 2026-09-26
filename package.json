@@ -15,7 +15,7 @@
     "db:reset": "prisma migrate reset",
     "check:coupons": "tsx src/lib/checkout/coupons.ts",
     "check:environment": "tsx src/lib/environment.test.ts",
-    "architecture:map": "node scripts/architecture-map.mjs"
+    "architecture:map": "node scripts/architecture/architecture-map.mjs"
   },
   "dependencies": {
     "@better-auth/infra": "^0.4.2",
