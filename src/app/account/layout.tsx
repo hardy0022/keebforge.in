@@ -10,7 +10,9 @@ export default async function AccountLayoutWrapper({
   const { user } = await getCurrentAuth();
   if (!user) redirect("/auth/login");
 
-  const { profile: authProfile } = await requireUser();
+  // Keeps the customer guard + profile provisioning in place; the layout no
+  // longer renders the identity block, so the result is not needed.
+  await requireUser();
 
-  return <AccountLayout profile={authProfile}>{children}</AccountLayout>;
+  return <AccountLayout>{children}</AccountLayout>;
 }

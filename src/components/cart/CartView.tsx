@@ -197,28 +197,32 @@ export function CartView({ rows }: { rows: CartRow[] }) {
                 {row.productType === "CUSTOM" ? (
                   <span className="cart-qty-static">1</span>
                 ) : (
-                  <div className="cart-qty">
-                    <button
-                      type="button"
-                      aria-label="Decrease quantity"
-                      disabled={busy || qty <= 1}
-                      onClick={() => bump(row, -1)}
-                    >
-                      −
-                    </button>
-                    <span>{qty}</span>
-                    <button
-                      type="button"
-                      aria-label="Increase quantity"
-                      disabled={busy || qty >= row.available}
-                      onClick={() => bump(row, 1)}
-                    >
-                      +
-                    </button>
+                  <>
+                    <div className="cart-qty">
+                      <button
+                        type="button"
+                        aria-label="Decrease quantity"
+                        disabled={busy || qty <= 1}
+                        onClick={() => bump(row, -1)}
+                      >
+                        −
+                      </button>
+                      <span>{qty}</span>
+                      <button
+                        type="button"
+                        aria-label="Increase quantity"
+                        disabled={busy || qty >= row.available}
+                        onClick={() => bump(row, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
                     {error && (
-                      <span className="text-xs text-[var(--err)]">{error}</span>
+                      <span className="text-xs text-[var(--err)]">
+                        {error}
+                      </span>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
 

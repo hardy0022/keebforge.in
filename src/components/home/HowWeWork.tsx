@@ -8,35 +8,76 @@ import {
   useTransform,
 } from "motion/react";
 import { cn } from "@/lib/utils/cn";
-import type { AnimatedIconHandle } from "@/components/icons/types";
-import TruckElectricIcon from "@/components/icons/truck-electric-icon";
-import CpuIcon from "@/components/icons/cpu-icon";
-import ShieldCheck from "@/components/icons/shield-check";
 
 type Props = {
   progressTargetRef: RefObject<HTMLElement | null>;
 };
 
-const STEPS = [
+/** Rich body content per step. `options` renders the two shipping choices as a
+    scannable label/description pair; `points` renders a compact tick list. Both
+    are deliberately typographic — no card boxes — so the stage stays editorial. */
+type Step = {
+  num: string;
+  title: string;
+  lead: string;
+  options?: { label: string; text: string }[];
+  points?: string[];
+  note?: string;
+  sign?: string;
+};
+
+const STEPS: Step[] = [
   {
     num: "01",
     title: "Send it to us.",
-    desc: "Place an order and ship your board or mouse from anywhere in India.",
+    lead: "Once you've placed your order, you have two options:",
+    options: [
+      {
+        label: "Ship it yourself",
+        text: "Pack your keyboard, mouse, or device and send it to us using the courier of your choice. You provide the shipping and address details, and cover the shipping cost.",
+      },
+      {
+        label: "Book a pickup",
+        text: "We can arrange a pickup for you. Simply pack the device and hand it over to the pickup agent. The pickup and shipping charge is added to your order total.",
+      },
+    ],
   },
   {
     num: "02",
     title: "We diagnose and build.",
-    desc: "We inspect, plan and do the work — lubing, tuning, soldering, firmware.",
+    lead: "Once we receive your device, we inspect it and determine what needs to be done. We work out:",
+    points: [
+      "What needs to be repaired, modified, or built",
+      "The steps required",
+      "Required parts and services",
+      "Final pricing",
+    ],
+    note: "Once the work and pricing are confirmed, we proceed with the job.",
   },
   {
     num: "03",
     title: "We test everything.",
-    desc: "Every switch, stabilizer and layer is verified before it ships.",
+    lead: "Once the work is completed, we test the device before sending it back:",
+    points: [
+      "Switches and stabilizers",
+      "Keys and inputs",
+      "Firmware and functionality",
+      "Repaired or replaced components",
+      "Overall operation",
+    ],
+    note: "Where applicable, warranty coverage may be provided based on the work performed or parts installed.",
   },
   {
     num: "04",
     title: "We ship it back.",
-    desc: "Tracked, packed, and on its way back to your desk.",
+    lead: "Once the work is complete and you're satisfied with the result, we prepare the device for its return journey:",
+    points: [
+      "Secure packing",
+      "Return shipment",
+      "Tracking where available",
+      "Delivery back to your customer",
+    ],
+    sign: "From our workshop back to you.",
   },
 ];
 
@@ -46,9 +87,6 @@ export function HowWeWork({ progressTargetRef }: Props) {
   const lastV = useRef(0);
   const [active, setActive] = useState(0);
   const [dir, setDir] = useState(1);
-  const truckRef = useRef<AnimatedIconHandle>(null);
-  const truckBackRef = useRef<AnimatedIconHandle>(null);
-  const shieldRef = useRef<AnimatedIconHandle>(null);
 
   const { scrollYProgress } = useScroll({
     target: progressTargetRef,
@@ -112,57 +150,26 @@ export function HowWeWork({ progressTargetRef }: Props) {
               </span>
               <div className="hp-how-step-body">
                 <h3>{step.title}</h3>
-                <p>{step.desc}</p>
-                {i === 0 && (
-                  <div
-                    className="hp-how-step-ico"
-                    aria-hidden="true"
-                    onMouseEnter={() => truckRef.current?.startAnimation()}
-                    onMouseLeave={() => truckRef.current?.stopAnimation()}
-                  >
-                    <TruckElectricIcon
-                      ref={truckRef}
-                      size={132}
-                      strokeWidth={1.3}
-                      color="var(--purple)"
-                    />
-                  </div>
+                <p className="hp-how-step-lead">{step.lead}</p>
+                {step.options && (
+                  <ul className="hp-how-step-options">
+                    {step.options.map((o) => (
+                      <li key={o.label}>
+                        <span className="hp-how-opt-label">{o.label}</span>
+                        <span className="hp-how-opt-text">{o.text}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-                {i === 1 && (
-                  <div className="hp-how-step-ico" aria-hidden="true">
-                    <CpuIcon size={132} strokeWidth={1.3} color="var(--purple)" />
-                  </div>
+                {step.points && (
+                  <ul className="hp-how-step-list">
+                    {step.points.map((pt) => (
+                      <li key={pt}>{pt}</li>
+                    ))}
+                  </ul>
                 )}
-                {i === 2 && (
-                  <div
-                    className="hp-how-step-ico"
-                    aria-hidden="true"
-                    onMouseEnter={() => shieldRef.current?.startAnimation()}
-                    onMouseLeave={() => shieldRef.current?.stopAnimation()}
-                  >
-                    <ShieldCheck
-                      ref={shieldRef}
-                      size={132}
-                      strokeWidth={1.3}
-                      color="var(--purple)"
-                    />
-                  </div>
-                )}
-                {i === 3 && (
-                  <div
-                    className="hp-how-step-ico hp-how-step-img-flip"
-                    aria-hidden="true"
-                    onMouseEnter={() => truckBackRef.current?.startAnimation()}
-                    onMouseLeave={() => truckBackRef.current?.stopAnimation()}
-                  >
-                    <TruckElectricIcon
-                      ref={truckBackRef}
-                      size={132}
-                      strokeWidth={1.3}
-                      color="var(--purple)"
-                    />
-                  </div>
-                )}
+                {step.note && <p className="hp-how-step-note">{step.note}</p>}
+                {step.sign && <p className="hp-how-step-sign">{step.sign}</p>}
               </div>
             </article>
           ))}

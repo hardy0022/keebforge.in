@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatINR } from "@/lib/utils/money";
+import { PHONE_INPUT } from "@/lib/utils/phone";
+import { EMAIL_INPUT } from "@/lib/utils/email";
 import { cldUrl } from "@/lib/images/cloudinary-url";
 import { RazorpayScript } from "@/components/payments/RazorpayScript";
 import { AffordabilityWidget } from "@/components/payments/AffordabilityWidget";
@@ -491,8 +493,9 @@ export function ServiceCheckout({
                       onChange={(e) =>
                         setForm({ ...form, phone: e.target.value })
                       }
-                      placeholder="+91 98765 43210"
+                      placeholder="9876543210"
                       autoComplete="tel"
+                      {...PHONE_INPUT}
                     />
                   </Field>
                   <Field
@@ -510,6 +513,7 @@ export function ServiceCheckout({
                       }
                       placeholder="you@example.com"
                       autoComplete="email"
+                      {...EMAIL_INPUT}
                     />
                   </Field>
                 </div>
@@ -1477,6 +1481,7 @@ export function ProductCheckout({
                         value={form.email}
                         onChange={setField("email")}
                         autoComplete="email"
+                        {...EMAIL_INPUT}
                       />
                     </Field>
                   )}
@@ -1988,8 +1993,9 @@ function BillingSection({
               className={fieldClass(!!(showErrors && billingErrors.phone))}
               value={billing.phone}
               onChange={set("phone")}
-              placeholder="+91 98765 43210"
+              placeholder="9876543210"
               autoComplete="billing tel"
+              {...PHONE_INPUT}
             />
           </Field>
         </div>

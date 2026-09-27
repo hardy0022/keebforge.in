@@ -9,6 +9,8 @@ import {
 import { StateSelect } from "@/components/ui/StateSelect";
 import { PinCodeInput } from "@/components/ui/PinCodeInput";
 import { Field } from "@/components/ui/Field";
+import { PHONE_INPUT } from "@/lib/utils/phone";
+import { EMAIL_INPUT } from "@/lib/utils/email";
 import { Panel } from "@/components/ui/Panel";
 import { PillRadioGroup, PillRadio } from "@/components/ui/PillRadio";
 import {
@@ -623,7 +625,8 @@ export function RepairIntake({
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       autoComplete="tel"
-                      placeholder="+91 9998888000"
+                      placeholder="9876543210"
+                      {...PHONE_INPUT}
                     />
                   </Field>
                   <Field label="Email" htmlFor="ri-email">
@@ -635,6 +638,7 @@ export function RepairIntake({
                       onChange={(e) => setEmail(e.target.value)}
                       autoComplete="email"
                       placeholder="your@email.com"
+                      {...EMAIL_INPUT}
                     />
                   </Field>
                 </div>

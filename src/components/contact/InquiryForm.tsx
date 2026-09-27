@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { sendInquiry, type InquiryState } from "@/app/actions/inquiry";
 import { sniffImageFile } from "@/lib/images/validation";
+import { PHONE_INPUT } from "@/lib/utils/phone";
+import { EMAIL_INPUT } from "@/lib/utils/email";
 
 const ACCEPT = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_IMAGES = 5;
@@ -117,10 +119,10 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
           id="iq-phone"
           name="phone"
           type="tel"
-          placeholder="+91 9998888000"
+          placeholder="9876543210"
           required
           autoComplete="tel"
-          pattern="[0-9+\-\s()]{10,20}"
+          {...PHONE_INPUT}
         />
       </div>
       <div className="form-row">
@@ -132,6 +134,7 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
           placeholder="your@email.com"
           required
           autoComplete="email"
+          {...EMAIL_INPUT}
         />
       </div>
       <div className="form-row">

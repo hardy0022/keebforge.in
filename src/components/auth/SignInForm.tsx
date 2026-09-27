@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PasswordField } from "@/components/ui/PasswordField";
+import { EMAIL_INPUT } from "@/lib/utils/email";
 
 async function homeForRole(): Promise<string> {
   const res = await fetch("/api/auth/me", { cache: "no-store" });
@@ -51,6 +52,7 @@ export function SignInForm({ next }: { next?: string }) {
           onChange={(e) => setEmail(e.target.value)}
           disabled={busy}
           placeholder="you@example.com"
+          {...EMAIL_INPUT}
         />
       </div>
 

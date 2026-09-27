@@ -24,7 +24,7 @@ function PathMedia({
         src={image.url}
         alt={image.alt ?? title}
         fill
-        sizes="(min-width: 1024px) 40vw, 100vw"
+        sizes="(min-width: 1024px) min(768px, 60vw), 100vw"
       />
     </div>
   );

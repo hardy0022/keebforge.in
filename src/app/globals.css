@@ -784,6 +784,14 @@ ul {
   border-color: var(--bdr-h);
   transform: translateY(-1px);
 }
+/* Ghost buttons get disabled in a few places (the address delete button while
+   it is in flight), so they need the same muted read as btn-form-submit. */
+.btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  border-color: var(--bdr);
+}
 /* ─── Hero CTA group — compact matched pair (scoped; global btn styles untouched) ── */
 .hero-cta .btn-prime-lg,
 .hero-cta .btn-ghost {
@@ -1447,27 +1455,115 @@ ul {
   line-height: 1.6;
   margin: 0;
 }
-.hp-how-step-ico {
+/* ── Step rich content ───────────────────────────────────────────────────── */
+.hp-how-step-body .hp-how-step-lead {
+  color: var(--t2);
+  max-width: 48ch;
+  margin: 0 0 16px;
+}
+.hp-how-step-body .hp-how-step-list,
+.hp-how-step-body .hp-how-step-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 50ch;
+}
+/* compact tick list — a short lime rule, never a bullet glyph or a box */
+.hp-how-step-body .hp-how-step-list {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: clamp(260px, 26vw, 320px);
-  margin: clamp(32px, 4vh, 44px) auto 0;
-  padding: clamp(20px, 3vw, 32px);
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-lg);
-  background: var(--bg1);
-  color: var(--purple);
-  box-shadow: inset 0 0 0 1px rgba(124, 111, 242, 0.08);
+  flex-direction: column;
+  gap: 7px;
 }
-.hp-how-step-ico svg {
-  width: clamp(96px, 11vw, 132px);
-  height: auto;
-  cursor: default;
-  filter: drop-shadow(0 0 24px rgba(124, 111, 242, 0.35));
+.hp-how-step-body .hp-how-step-list li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--t3);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
-.hp-how-step-img-flip {
-  transform: scaleX(-1);
+.hp-how-step-body .hp-how-step-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 9px;
+  height: 1px;
+  background: var(--acc);
+}
+/* two shipping choices — a left rule + label reads as a definition pair,
+   scannable without becoming a card */
+.hp-how-step-body .hp-how-step-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.hp-how-step-body .hp-how-step-options li {
+  border-left: 2px solid var(--bdr-h);
+  padding-left: 14px;
+  transition: border-color 0.3s var(--ease-out);
+}
+.hp-how-step-body .hp-how-step-options li:hover {
+  border-left-color: var(--acc);
+}
+.hp-how-step-body .hp-how-opt-label {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--acc);
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+.hp-how-step-body .hp-how-opt-text {
+  display: block;
+  color: var(--t3);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  max-width: 46ch;
+}
+.hp-how-step-body .hp-how-step-note {
+  color: var(--t2);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: 48ch;
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--bdr);
+}
+.hp-how-step-body .hp-how-step-sign {
+  font-family: var(--ff-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--acc);
+  max-width: none;
+  margin: 18px 0 0;
+}
+/* The crossfade frame is height-driven (55svh), so on short desktop viewports a
+   two-line step title can push the copy past the frame. Tighten the vertical
+   rhythm there instead of shrinking type or growing the pinned stage. */
+@media (min-width: 1025px) and (max-height: 820px) {
+  .hp-how-step-body h3 {
+    margin: 10px 0 10px;
+  }
+  .hp-how-step-body .hp-how-step-lead {
+    margin-bottom: 12px;
+  }
+  .hp-how-step-body .hp-how-step-list {
+    gap: 5px;
+  }
+  .hp-how-step-body .hp-how-step-options {
+    gap: 12px;
+  }
+  .hp-how-step-body .hp-how-step-note {
+    margin-top: 12px;
+    padding-top: 10px;
+  }
+  .hp-how-step-body .hp-how-step-sign {
+    margin-top: 14px;
+  }
 }
 
 /* ─── Featured build ────────────────────────────────────────────────────── */
@@ -1499,7 +1595,7 @@ ul {
 }
 .hp-feature-img {
   object-fit: cover;
-  object-position: top;
+  object-position: center;
 }
 .hp-feature-fallback {
   position: absolute;
@@ -1616,37 +1712,48 @@ ul {
 
 /* ─── Mods + Workshop — two contrasting pathways ────────────────────────── */
 .hp-pathways {
-  padding: clamp(72px, 9vw, 140px) 0;
-  width: min(var(--max-w), 100% - 2 * var(--pad-x));
+  padding: clamp(40px, 4.5vw, 68px) 0;
+  /* 1280 rather than --max-w 1240: these two cards carry the widest imagery
+     on the page, so they were the ones losing the most to dead margin. */
+  width: min(1280px, 100% - 2 * var(--pad-x));
   margin-inline: auto;
   display: grid;
-  gap: 20px;
+  gap: 32px;
 }
 .hp-path {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Text 40 / image 60 — the photograph anchors each card. */
+  grid-template-columns: 2fr 3fr;
   border-radius: var(--r-lg);
   overflow: hidden;
   border: 1px solid var(--bdr);
   background: var(--bg1);
   text-decoration: none;
 }
+.hp-path--workshop {
+  /* Reversed card: the image leads, so the 60% column moves with it. */
+  grid-template-columns: 3fr 2fr;
+}
 .hp-path:hover {
   border-color: var(--bdr-h);
 }
 .hp-path-body {
-  padding: clamp(28px, 4vw, 56px);
+  padding: clamp(28px, 4vw, 52px);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
 }
+/* Tighter kicker gap than the shared .hp-kicker so the title reads first. */
+.hp-path-body .hp-kicker {
+  margin-bottom: 14px;
+}
 .hp-path-title {
   font-family: var(--ff-display);
   font-weight: 700;
   letter-spacing: -0.03em;
-  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  font-size: clamp(1.8rem, 3.4vw, 2.75rem);
   color: var(--t1);
   margin: 0 0 20px;
 }
@@ -1654,7 +1761,7 @@ ul {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 0 0 30px;
+  margin: 0 0 28px;
   padding: 0;
   width: 100%;
 }
@@ -1669,10 +1776,20 @@ ul {
 }
 .hp-path-media {
   position: relative;
-  min-height: 300px;
+  min-height: clamp(300px, 30vw, 420px);
 }
 .hp-path-media img {
   object-fit: cover;
+}
+/* Matched CTA pair (scoped; global button styles untouched) — the ghost sits
+   1px shorter without the equalizing transparent border. */
+.hp-path-body .btn-prime,
+.hp-path-body .btn-ghost {
+  gap: 7px;
+  padding: 11px 24px;
+}
+.hp-path-body .btn-prime {
+  border: 1px solid transparent;
 }
 
 
@@ -1693,6 +1810,9 @@ ul {
 }
 .hp-reviews-grid .product-review-card {
   flex: 1;
+  /* Without this the card keeps min-width:auto and refuses to shrink below the
+     photo strip's content width, overflowing the grid column. */
+  min-width: 0;
   transition:
     transform 0.35s var(--ease-out),
     border-color 0.35s ease,
@@ -1738,7 +1858,10 @@ ul {
   .hp-hero-grid {
     grid-template-columns: 1fr;
   }
+  /* width:100% is required — justify-self:center shrink-wraps the item, and the
+     panel's only children are absolutely positioned, so it would collapse to 0. */
   .hp-hero-visual {
+    width: 100%;
     max-width: 640px;
     justify-self: center;
   }
@@ -1776,11 +1899,31 @@ ul {
     height: auto;
     padding-top: 0;
   }
+  /* stacked reads text-first: give the extra copy room to breathe rather than
+     shrinking it to protect the desktop crossfade frame */
+  .hp-how-step-body .hp-how-step-lead,
+  .hp-how-step-body .hp-how-step-note {
+    max-width: 58ch;
+  }
+  .hp-how-step-body .hp-how-step-list li,
+  .hp-how-step-body .hp-how-opt-text,
+  .hp-how-step-body .hp-how-step-note {
+    font-size: 0.95rem;
+  }
+  .hp-how-step-body .hp-how-step-list,
+  .hp-how-step-body .hp-how-step-options {
+    max-width: 58ch;
+  }
   .hp-feature-grid {
     grid-template-columns: 1fr;
   }
-  .hp-path {
+  .hp-path,
+  .hp-path--workshop {
     grid-template-columns: 1fr;
+  }
+  /* Stacked, both cards read text-first: kicker, title, list, button, image. */
+  .hp-path--workshop .hp-path-body {
+    order: -1;
   }
   .hp-path-media {
     min-height: 240px;
@@ -1791,11 +1934,12 @@ ul {
     font-size: clamp(2.4rem, 11vw, 3.4rem);
   }
   .hp-hero-visual {
+    width: 100%;
     max-width: 520px;
     justify-self: center;
   }
   .hp-hero-frame {
-    height: clamp(380px, 70vw, 460px);
+    height: clamp(300px, 78vw, 420px);
   }
   .hp-hero-grid {
     padding-top: calc(var(--nav-h) + 8px);
@@ -3726,23 +3870,10 @@ a.shop-pager-num:hover {
   padding: 8px 0 12px;
 }
 .empty-card {
-  position: relative;
-  overflow: hidden;
   width: 100%;
   max-width: 680px;
   text-align: center;
   padding: 44px 28px 40px;
-  background: var(--bg1);
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-md);
-}
-.empty-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--acc), transparent);
-  opacity: 0.7;
 }
 .empty-ico {
   position: relative;
@@ -3864,45 +3995,65 @@ a.shop-pager-num:hover {
   background: var(--bg2);
 }
 
+/* One control, one border. The −/+ are borderless segments of a single pill;
+   the only inner lines are the two dividers flanking the number. */
 .cart-qty {
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  align-items: stretch;
+  background: var(--bg1);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-sm);
+  overflow: hidden;
 }
 .cart-qty button {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
   font-size: 1rem;
-  color: var(--t1);
-  background: var(--bg1);
-  border: 1px solid var(--bdr);
-  border-radius: 8px;
+  line-height: 1;
+  color: var(--t2);
+  background: transparent;
+  border: none;
   cursor: pointer;
   transition:
-    border-color 0.2s var(--ease-out),
-    color 0.2s var(--ease-out);
+    background-color 0.18s var(--ease-out),
+    color 0.18s var(--ease-out);
 }
 .cart-qty button:hover:not(:disabled) {
-  border-color: var(--acc);
+  background: var(--acc-dim);
+  color: var(--acc);
+}
+.cart-qty button:active:not(:disabled) {
+  background: var(--acc-glow);
   color: var(--acc);
 }
 .cart-qty button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 .cart-qty button:focus-visible {
   outline: 2px solid var(--acc);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 .cart-qty span {
-  min-width: 34px;
+  flex: 1 1 auto;
+  min-width: 44px;
+  max-width: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   font-family: var(--ff-display);
+  font-size: 0.95rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--t1);
+  border-left: 1px solid var(--bdr);
+  border-right: 1px solid var(--bdr);
+  user-select: none;
 }
 /* Custom orders are made to order — quantity is fixed at one. */
 .cart-qty-static {
@@ -3910,11 +4061,17 @@ a.shop-pager-num:hover {
   align-items: center;
   justify-content: center;
   min-width: 34px;
+  height: 32px;
+  padding: 0 12px;
   text-align: center;
   font-family: var(--ff-display);
   font-size: 0.95rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--t1);
+  background: var(--bg1);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-sm);
 }
 
 /* ─── Cart page ────────────────────────────────────────────────────────────── */
@@ -7378,132 +7535,27 @@ a.shop-pager-num:hover {
   }
 }
 
-/* ─── Account Page ───────────────────────────────────────────────────────── */
+/* ─── Account Page ───────────────────────────────────────────────────────────
+   Hierarchy is PAGE > SECTION > CARD. Sections carry no chrome of their own —
+   a lime `//` kicker plus a title — so the only bordered boxes on screen are
+   the actual cards. */
 
+/* One centered column for every account page. Navigation lives in the
+   navbar profile dropdown, so there is no rail here. */
 .account-page {
-  display: flex;
-  align-items: stretch;
-  min-height: 100vh;
-}
-
-/* Sidebar (full-height rail, sticky) */
-.account-sidebar {
-  width: 250px;
-  flex-shrink: 0;
-  background: var(--bg1);
-  border-right: 1px solid var(--bdr);
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  /* Keep the rail full-height, but start its content below the fixed navbar. */
-  padding: calc(var(--nav-h) + 24px) 20px 15px;
-  overflow-y: auto;
-  z-index: 100;
-}
-
-.account-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.account-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 12px;
-  border-radius: var(--r-sm);
-  color: var(--t2);
-  font-family: var(--ff-display);
-  font-size: 0.84rem;
-  font-weight: 500;
-  text-decoration: none;
-  border: 1px solid transparent;
-  transition:
-    color 0.15s,
-    background-color 0.15s,
-    border-color 0.15s;
-}
-
-.account-nav-item:hover {
-  color: var(--t1);
-  background: var(--surf);
-}
-
-.account-nav-item.active {
-  color: var(--acc);
-  background: var(--acc-dim);
-  border-color: rgba(201, 243, 29, 0.22);
-}
-
-.account-nav-item.active .account-nav-icon {
-  color: var(--acc);
-}
-
-.account-nav-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  color: var(--t3);
-  transition: color 0.15s;
-}
-
-.account-sidebar-footer {
-  margin-top: auto;
-  padding: 18px 6px 4px;
-  border-top: 1px solid var(--bdr);
-}
-
-.account-user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin: 0;
-}
-
-.account-user-name {
-  font-family: var(--ff-display);
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--t1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.account-user-email {
-  font-size: 0.74rem;
-  color: var(--t3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Main column */
-.account-main {
-  flex: 1;
-  min-width: 0;
+  width: min(1180px, 100% - clamp(40px, 10vw, 96px));
+  margin-inline: auto;
   /* Clear the fixed navbar, then a consistent small gap (matches the site's
-     .page-start rhythm) — the "shrink the navbar gap" requirement. */
-  padding: calc(var(--nav-h) + clamp(24px, 3.5vw, 40px)) clamp(20px, 5vw, 48px)
-    72px;
-}
-
-.account-main-inner {
-  max-width: 820px;
+     .page-start rhythm). */
+  padding: calc(var(--nav-h) + clamp(24px, 3.5vw, 40px)) 0 72px;
 }
 
 .account-page-header {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 26px;
-  padding-bottom: 20px;
+  margin-bottom: clamp(18px, 2.2vw, 24px);
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--bdr);
 }
+
 
 .account-kicker {
   display: block;
@@ -7517,17 +7569,17 @@ a.shop-pager-num:hover {
 }
 
 .account-section .account-kicker {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .account-page-title {
   font-family: var(--ff-display);
-  font-size: clamp(1.3rem, 2.5vw, 1.6rem);
+  font-size: clamp(1.5rem, 2.5vw, 1.95rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   color: var(--t1);
-  margin: 0 0 4px;
-  line-height: 1.2;
+  margin: 0 0 2px;
+  line-height: 1.1;
 }
 
 .account-page-desc {
@@ -7536,40 +7588,31 @@ a.shop-pager-num:hover {
   margin: 0;
 }
 
-.account-avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 99px;
-  background: var(--acc);
-  color: #000;
-  font-family: var(--ff-display);
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
 
 /* Sections */
 .account-stack {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: clamp(30px, 4vw, 46px);
+}
+/* Orders: the list already has its own card rhythm, so the reviews section
+   should start right after it rather than a full stack gap later. */
+.account-stack--tight {
+  gap: 24px;
 }
 
+/* Sections are editorial — no panel chrome. Cards inside them carry the border. */
 .account-section {
-  background: linear-gradient(180deg, var(--surf), transparent), var(--bg2);
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-lg);
-  padding: 24px;
+  min-width: 0;
 }
 
-.account-section--danger {
-  border-color: rgba(255, 107, 107, 0.28);
-  background:
-    linear-gradient(180deg, rgba(255, 107, 107, 0.04), transparent), var(--bg2);
+/* The one bordered surface primitive. Used for forms, setting groups and
+   anything else that would otherwise re-declare the same card. */
+.account-panel {
+  background: var(--bg1);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-md);
+  padding: clamp(18px, 2.2vw, 24px);
 }
 
 .account-section-header {
@@ -7581,9 +7624,56 @@ a.shop-pager-num:hover {
   flex-wrap: wrap;
 }
 
+/* The details form is a short, fixed set of fields, so its heading sits closer
+   than the default section rhythm. Scoped rather than changing
+   `.account-section-header`, which every other account section shares. */
+.account-section--details .account-section-header {
+  margin-bottom: 14px;
+}
+
+/* Small utility action for a section header (Add New Address, Save Changes).
+   Deliberately not `.btn-ghost`: that pill is right for inline card actions,
+   but at header scale it reads as a standalone CTA. Own class so the ~30 other
+   `.btn-ghost` buttons on the site are untouched. */
+.account-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  font-family: var(--ff-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--t2);
+  background: none;
+  border: 1px solid var(--bdr);
+  padding: 9px 15px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  /* centres against the heading text instead of the kicker above it */
+  align-self: center;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.account-action-btn:hover {
+  color: var(--t1);
+  border-color: var(--bdr-h);
+  background: var(--surf);
+}
+
+.account-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: none;
+}
+
+.account-action-btn svg {
+  flex: none;
+}
+
 .account-section-title {
   font-family: var(--ff-display);
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--t1);
@@ -7613,131 +7703,117 @@ a.shop-pager-num:hover {
   opacity: 0.8;
 }
 
-/* Stats */
-.account-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.account-stat {
-  background: var(--bg1);
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-md);
-  padding: 16px 18px;
-  position: relative;
-  overflow: hidden;
-}
-
-.account-stat::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--acc);
-  opacity: 0.85;
-}
-
-.account-stat-value {
-  display: block;
-  font-family: var(--ff-display);
-  font-size: 1.8rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--acc);
-  line-height: 1;
-  margin-bottom: 6px;
-}
-
-.account-stat-label {
-  font-size: 0.7rem;
-  color: var(--t3);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
 
 /* Orders */
 .account-order-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.account-order-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
+/* One order as a product card: media left, content right, date top-right,
+   and a full-width divider above the status/action row. */
+.account-order-card {
+  display: grid;
+  grid-template-columns: 152px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "media body date"
+    "foot foot foot";
+  gap: 18px;
+  padding: 20px 24px;
   background: var(--bg1);
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
-  text-decoration: none;
   transition:
     border-color 0.2s,
     background-color 0.2s;
 }
-
-.account-order-item.is-link:hover {
+.account-order-card:hover {
   border-color: var(--bdr-h);
   background: var(--surf);
 }
-
-.account-order-info {
+.account-order-media {
+  grid-area: media;
+  position: relative;
+  align-self: start;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--bg2);
+}
+.account-order-img {
+  object-fit: cover;
+}
+/* the shop tile is a 16:9 flex fill; match it to the card's 4:3 box */
+.account-order-fallback {
+  font-size: 2.5rem;
+}
+.account-order-body {
+  grid-area: body;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   min-width: 0;
 }
-
-.account-order-header {
+.account-order-date {
+  grid-area: date;
+  align-self: start;
+  font-size: 0.78rem;
+  color: var(--t3);
+  white-space: nowrap;
+}
+.account-order-title {
+  font-family: var(--ff-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--t1);
+  margin: 0;
+}
+.account-order-card-id {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
 }
-
+/* Secondary to the product title it sits under. */
 .account-order-number {
   font-family: var(--ff-display);
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--t1);
+  color: var(--t2);
   text-decoration: none;
 }
-
 .account-order-number.is-link:hover {
   color: var(--acc);
 }
-
-.account-order-type {
-  display: block;
-  font-size: 0.68rem;
-  color: var(--t3);
+.account-order-number-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-top: 3px;
-}
-
-.account-order-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.78rem;
   color: var(--t3);
-  margin-top: 4px;
 }
-
-.account-order-date {
-  white-space: nowrap;
-}
-
 .account-order-total {
   font-family: var(--ff-display);
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--acc);
   white-space: nowrap;
+}
+/* Spans all three columns, so the divider runs the full card width. */
+.account-order-card-foot {
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--bdr);
 }
 
 .account-order-status {
@@ -7771,18 +7847,6 @@ a.shop-pager-num:hover {
   color: var(--ok);
 }
 
-/* Orders page rows (grid) */
-.account-order-item--grid {
-  display: grid;
-  grid-template-columns: minmax(150px, 1.2fr) minmax(0, 1.8fr) auto auto auto;
-  align-items: center;
-  gap: 12px 18px;
-}
-
-.account-order-item--grid .account-order-info {
-  min-width: 0;
-}
-
 .account-order-actions {
   display: flex;
   gap: 8px;
@@ -7810,18 +7874,21 @@ a.shop-pager-num:hover {
 
 /* Account: my reviews */
 .account-review-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  /* 2 columns at the account width, 3 once there is room for them */
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
+  gap: 12px;
 }
 .account-review-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 16px 18px;
-  background: var(--bg2);
+  background: var(--bg1);
   border: 1px solid var(--bdr);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
+  min-width: 0;
 }
 .account-review-item.is-link {
   transition:
@@ -7830,7 +7897,7 @@ a.shop-pager-num:hover {
 }
 .account-review-item.is-link:hover {
   border-color: var(--bdr-h);
-  background: var(--bg3);
+  background: var(--surf);
 }
 .account-review-head {
   display: flex;
@@ -7864,6 +7931,13 @@ a.shop-pager-num:hover {
   color: var(--t2);
   margin: 0;
   white-space: pre-line;
+  /* Keep one long review from dwarfing its grid neighbours. The full text stays
+     in the DOM (and in the title attribute) for hover/copy. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  overflow: hidden;
 }
 .account-review-date {
   font-size: 0.75rem;
@@ -7910,61 +7984,6 @@ a.shop-pager-num:hover {
   color: var(--err);
 }
 
-/* Quick actions */
-.account-actions {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.account-action-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--bg1);
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-md);
-  text-decoration: none;
-  transition:
-    border-color 0.2s,
-    background-color 0.2s,
-    transform 0.2s;
-}
-
-.account-action-card:hover {
-  border-color: var(--bdr-h);
-  background: var(--surf);
-  transform: translateY(-1px);
-}
-
-.account-action-card svg {
-  color: var(--acc);
-  flex-shrink: 0;
-}
-
-.account-action-card div {
-  min-width: 0;
-}
-
-.account-action-card h3 {
-  font-family: var(--ff-display);
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--t1);
-  margin: 0;
-}
-
-.account-action-card p {
-  font-size: 0.73rem;
-  color: var(--t3);
-  margin: 2px 0 0;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* Empty state */
 .account-empty {
   text-align: center;
@@ -8000,6 +8019,38 @@ a.shop-pager-num:hover {
   margin-top: 12px;
 }
 
+/* Compact editorial empty state — no oversized box, no 48px icon.
+   Scoped under .account-empty--plain so these beat the base `.account-empty p`. */
+.account-empty--plain {
+  align-items: flex-start;
+  text-align: left;
+  padding: 22px 0 4px;
+  gap: 5px;
+}
+.account-empty--plain .account-empty-title {
+  font-family: var(--ff-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--t1);
+  margin: 0;
+}
+.account-empty--plain .account-empty-sub {
+  font-size: 0.9rem;
+  color: var(--t2);
+  margin: 0;
+}
+.account-empty--plain .btn-prime {
+  margin-top: 14px;
+}
+/* Address book only. The orders/reviews empties stay left-aligned: they sit
+   in much wider columns where centred text reads as floating. */
+.account-empty--center {
+  align-items: center;
+  text-align: center;
+  padding-inline: 16px;
+}
+
 /* Profile form */
 .account-form {
   display: flex;
@@ -8013,18 +8064,35 @@ a.shop-pager-num:hover {
   gap: 16px;
 }
 
+/* `.form-row`'s bottom margin is for stacked auth fields. Inside a grid it
+   stacks on the row gap, which is what made this card read as hollow. */
+.account-panel .form-row {
+  margin-bottom: 0;
+}
+
 /* Addresses */
 .account-addresses-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  /* Two explicit tracks rather than auto-fill: auto-fill reserves empty tracks,
+     which is what left two cards looking cramped beside a band of dead space.
+     A lone card fills one track, so it never spans the whole page. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .account-address-card {
+  display: flex;
+  flex-direction: column;
   background: var(--bg1);
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
-  padding: 18px;
+  padding: clamp(18px, 2vw, 24px);
+  transition: border-color 0.25s, background-color 0.25s;
+}
+
+.account-address-card:hover {
+  border-color: var(--bdr-h);
+  background: var(--bg2);
 }
 
 .account-address-header {
@@ -8032,13 +8100,14 @@ a.shop-pager-num:hover {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .account-address-label {
   font-family: var(--ff-display);
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--t1);
 }
 
@@ -8056,27 +8125,77 @@ a.shop-pager-num:hover {
 }
 
 .account-address-details {
-  font-size: 0.84rem;
+  font-size: 0.9rem;
   color: var(--t2);
-  line-height: 1.7;
-  margin-bottom: 16px;
+  line-height: 1.6;
   font-style: normal;
+  flex: 1;
 }
 
-.account-address-details div {
-  margin-bottom: 2px;
+.account-address-details div + div {
+  margin-top: 2px;
+}
+
+/* The recipient is the one line worth reading first, so it carries the only
+   piece of emphasis in the address block. */
+.account-address-details .account-address-name {
+  color: var(--t1);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.account-address-contact {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bdr);
+  font-size: 0.82rem;
+  color: var(--t2);
+}
+
+.account-address-contact div {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.account-address-contact div + div {
+  margin-top: 4px;
+}
+
+.account-address-contact span {
+  flex: none;
+  width: 44px;
+  color: var(--t3);
 }
 
 .account-address-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--bdr);
+}
+
+/* Edit/Delete belong on the right of the footer whichever branch renders:
+   the "Default address" note, or the "Set as default" button. */
+.account-address-actions > :first-child {
+  margin-right: auto;
 }
 
 .account-address-default-text {
   font-size: 0.75rem;
   color: var(--ok);
   font-weight: 500;
+  align-self: center;
+}
+
+.account-loading {
+  font-size: 0.85rem;
+  color: var(--t3);
+  padding: 12px 0;
 }
 
 .btn-sm {
@@ -8095,13 +8214,33 @@ a.shop-pager-num:hover {
   color: var(--err) !important;
 }
 
-/* Settings */
+/* Settings — preferences and security share the width, danger zone spans it. */
+.account-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(30px, 4vw, 46px);
+  align-items: start;
+}
+
+/* A settings group is one box of divided rows, not a stack of separate cards. */
 .account-settings-list,
 .account-danger-zone,
 .account-connections {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
+}
+
+.account-settings-list,
+.account-danger-zone {
+  background: var(--bg1);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.account-danger-zone {
+  border-color: rgba(255, 107, 107, 0.2);
 }
 
 .account-settings-item,
@@ -8111,19 +8250,28 @@ a.shop-pager-num:hover {
   justify-content: space-between;
   gap: 16px;
   padding: 16px 18px;
-  background: var(--bg1);
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-md);
 }
 
-.account-danger-item {
-  border-color: rgba(255, 107, 107, 0.2);
+.account-settings-list .account-settings-item + .account-settings-item,
+.account-danger-zone .account-danger-item + .account-danger-item {
+  border-top: 1px solid var(--bdr);
+}
+
+/* inside the connected-accounts modal each provider keeps its own card */
+.account-connections {
+  gap: 10px;
+}
+
+.account-connections .account-settings-item {
+  background: var(--bg1);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-sm);
 }
 
 .account-settings-item h3,
 .account-danger-item h3 {
   font-family: var(--ff-display);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--t1);
   margin: 0 0 4px;
@@ -8225,14 +8373,15 @@ a.shop-pager-num:hover {
 .account-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  /* Dimming only, no blur: an animated blur here re-rasterises the whole
+     viewport on every frame of the open/close transition. */
+  background: rgba(0, 0, 0, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
   z-index: 1000;
-  animation: modal-in 0.2s var(--ease-out);
+  animation: modal-in 0.16s var(--ease-out);
 }
 
 @keyframes modal-in {
@@ -8253,13 +8402,13 @@ a.shop-pager-num:hover {
   border: 1px solid var(--bdr);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-card);
-  animation: modal-slide 0.25s var(--ease-out);
+  animation: modal-slide 0.16s var(--ease-out);
 }
 
 @keyframes modal-slide {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(6px) scale(0.99);
   }
   to {
     opacity: 1;
@@ -8267,20 +8416,64 @@ a.shop-pager-num:hover {
   }
 }
 
+/* Exit mirrors the entry. The overlay only fades - transforming a
+   viewport-sized layer would re-rasterise the whole page every frame. */
+.account-modal-overlay.is-closing,
+.account-modal.is-closing {
+  pointer-events: none;
+  animation: modal-out 0.15s var(--ease-out) forwards;
+}
+
+.account-modal-overlay.is-closing {
+  animation-name: modal-out-fade;
+}
+
+@keyframes modal-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+}
+
+@keyframes modal-out-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .account-modal-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 16px;
+  flex: none;
   padding: 18px 24px;
   border-bottom: 1px solid var(--bdr);
 }
 
+.account-modal-heading {
+  min-width: 0;
+}
+
 .account-modal-header h3 {
   font-family: var(--ff-display);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--t1);
   margin: 0;
+}
+
+.account-modal-sub {
+  font-size: 0.82rem;
+  color: var(--t3);
+  margin: 4px 0 0;
 }
 
 .account-modal-close {
@@ -8318,91 +8511,160 @@ a.shop-pager-num:hover {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 8px;
-  padding: 16px 24px 24px;
+  flex: none;
 }
 
-/* Loading */
-.account-loading {
-  text-align: center;
-  padding: 32px;
-  color: var(--t3);
+/* Wide form dialog: the address editor. Header and footer stay put while only
+   the fields scroll, and the extra width buys a two-column form. */
+.account-modal--wide {
+  max-width: min(700px, calc(100vw - 32px));
+  max-height: min(820px, calc(100vh - 32px));
+  /* the dialog itself must not scroll - the form body handles that */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .account-page {
-    flex-direction: column;
-  }
-
-  .account-sidebar {
-    position: static;
-    width: 100%;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--bdr);
-    padding: 8px clamp(20px, 5vw, 48px);
-    overflow-x: hidden;
-  }
-
-  .account-sidebar-footer {
-    display: none;
-  }
-
-  .account-nav {
-    flex-direction: row;
-    gap: 4px;
-    flex: none;
-    overflow-x: auto;
-  }
-
-  .account-nav-item {
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-
-  .account-main {
-    width: 100%;
-    padding-top: calc(var(--nav-h) + 18px);
-    padding-bottom: 56px;
-  }
-
-  .account-action-card {
-    white-space: normal;
-  }
+.account-modal--wide .account-form {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
 }
 
-@media (max-width: 860px) {
-  .account-order-item--grid {
-    grid-template-columns: 1fr auto;
-    align-items: center;
-  }
+.account-modal--wide .account-form-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 22px 24px;
+}
 
-  .account-order-item--grid > .account-order-info,
-  .account-order-item--grid > .account-order-items-preview {
-    grid-column: 1 / -1;
-  }
+.account-modal--wide .account-modal-actions {
+  padding: 16px 24px;
+  border-top: 1px solid var(--bdr);
+  background: var(--bg2);
+}
 
-  .account-order-actions {
-    justify-content: flex-start;
-  }
+/* Keep the primary action a comfortable tap target on small screens. */
+.account-modal--wide .account-modal-actions .btn-form-submit {
+  width: auto;
+  min-width: 180px;
+}
 
-  .account-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* .form-row carries a bottom margin for stacked fields; inside the grid the
+   row gap already spaces them, so drop it to keep one vertical rhythm. */
+.account-modal--wide .account-field-grid .form-row {
+  margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-modal-overlay,
+  .account-modal {
+    animation: none;
   }
 }
 
 @media (max-width: 640px) {
-  .account-main-inner {
-    max-width: none;
+  .account-modal--wide .account-form-body {
+    padding: 18px 16px;
   }
+
+  .account-modal--wide .account-modal-actions {
+    padding: 14px 16px;
+  }
+
+  .account-modal-close {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .account-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .account-order-list {
+    gap: 12px;
+  }
+
+  .account-order-card {
+    grid-template-columns: 132px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "media body date"
+      "foot foot foot";
+    gap: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .account-page {
+    width: auto;
+    margin-inline: clamp(20px, 5vw, 48px);
+  }
+
 
   .account-page-header {
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
   }
 
-  .account-section {
-    padding: 20px 16px;
+
+  /* image sits beside the copy instead of above it; date and the action
+     row still span the full card */
+  .account-order-card {
+    padding: 16px;
+    grid-template-columns: 110px minmax(0, 1fr);
+    grid-template-areas:
+      "date date"
+      "media body"
+      "foot foot";
+    gap: 14px;
+  }
+
+  .account-order-date {
+    justify-self: end;
+  }
+
+  .account-order-media {
+    aspect-ratio: 4 / 3;
+  }
+
+  .account-order-card .account-order-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+
+  /* Desktop sizes these as inline text; on touch they need a real hit area. */
+  .account-section-link,
+  .account-order-number,
+  .account-delete-review {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .account-section-link,
+  .account-order-number {
+    padding: 0 4px;
+  }
+
+  .account-order-number {
+    margin: -4px;
+  }
+
+  .account-delete-review {
+    padding: 0 16px;
+  }
+
+  .account-empty--plain .account-empty-sub {
+    font-size: 0.95rem;
   }
 
   .account-field-grid {
@@ -8420,7 +8682,23 @@ a.shop-pager-num:hover {
   .account-danger-item .btn-ghost {
     width: 100%;
   }
+
+  /* Buttons grow to share the row here, so the auto margin has no slack to
+     absorb. */
+  .account-address-actions > :first-child {
+    margin-right: 0;
+  }
+
+  .account-addresses-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Share the row so the three actions stay comfortable tap targets. */
+  .account-address-actions .btn-ghost {
+    flex: 1 1 auto;
+  }
 }
+
 /* ─── Repair intake (/repair) ───────────────────────────────────────────────── */
 
 .ri-page {
@@ -9406,6 +9684,7 @@ a.shop-pager-num:hover {
   padding: 16px;
   gap: 10px;
   margin: 0;
+  min-width: 0;
 }
 .reviews-grid .review-card-head {
   display: flex;
@@ -9438,14 +9717,66 @@ a.shop-pager-num:hover {
 
 /* Card photos — larger 2×2 grid, cover-cropped. */
 .reviews-grid .review-photos {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* One horizontal row — photos never wrap onto a second line. A review with
+     more photos than fit scrolls THIS strip; the card itself never scrolls.
+     min-width:0 lets the strip shrink below its content width inside the
+     card's column flex layout. Scrollbar hidden, scrolling kept. */
+  display: flex;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-top: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.reviews-grid .review-photos::-webkit-scrollbar {
+  display: none;
+}
+.reviews-grid .review-photos-wrap {
+  position: relative;
+  min-width: 0;
+}
+.reviews-grid .review-photos:focus-visible {
+  outline: 1px solid var(--acc);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+.reviews-grid .review-photos-btn {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+  border-radius: 99px;
+  background: rgba(6, 6, 8, 0.72);
+  border: 1px solid var(--bdr);
+  color: var(--t1);
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+.reviews-grid .review-photos-btn:hover {
+  border-color: var(--bdr-h);
+  background: rgba(6, 6, 8, 0.9);
+  color: var(--acc);
+}
+.reviews-grid .review-photos-btn-prev {
+  left: 6px;
+}
+.reviews-grid .review-photos-btn-next {
+  right: 6px;
 }
 .reviews-grid .review-photo {
   display: block;
-  width: 100%;
+  flex: 0 0 auto;
+  width: 120px;
+  height: 90px;
   aspect-ratio: 4 / 3;
   border: 1px solid var(--bdr);
   border-radius: var(--r-sm);
@@ -9533,7 +9864,10 @@ a.reviews-page:hover {
 }
 @media (max-width: 767px) {
   .reviews-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0,…) not 1fr: 1fr floors the track at the card's min-content
+       width, so any wide child (e.g. the single-row photo strip) blows the
+       column out past the viewport. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
 }
@@ -10063,13 +10397,13 @@ a.reviews-page:hover {
   }
 }
 
-/* ═══ /work — premium workshop portfolio (wider than the global 1160px) ═══
+/* ═══ /work — premium workshop portfolio ═══════════════════════════════════
    KeebForge workshop portfolio: editorial hero + large featured project + a
    3-column visual gallery + customer reviews on a distinct surface + strong CTA.
    Uses real WorkProject data; reviews use the existing central Review table. */
 .work-wrap {
   width: 100%;
-  max-width: 1040px;
+  max-width: 1280px;
   margin-inline: auto;
   padding: 0 var(--pad-x);
 }
@@ -10079,7 +10413,7 @@ a.reviews-page:hover {
 /* Reviews use the shared ReviewSection on the product page too — scope the
    container to /work so every section shares the same content grid here. */
 .work-page .wrap {
-  max-width: 1040px;
+  max-width: 1280px;
 }
 
 /* ── Hero ─────────────────────────────────────────────────────────────── */
@@ -10106,70 +10440,12 @@ a.reviews-page:hover {
   margin: 0;
 }
 
-/* ── Section header ───────────────────────────────────────────────────── */
-.work-sec-head {
-  margin-bottom: clamp(20px, 2.5vw, 28px);
-}
-.work-sec-head .hp-kicker {
-  margin-bottom: 14px;
-}
-.work-sec-title {
-  font-family: var(--ff-display);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.02;
-  color: var(--t1);
-  font-size: clamp(1.8rem, 3.6vw, 2.9rem);
-  margin: 0;
-  max-width: 720px;
-}
-
-/* ── Featured project (Magic UI card language) ───────────────────────── */
-.work-feat {
-  padding: clamp(36px, 4vw, 6px) 0 clamp(32px, 3.5vw, 48px);
-}
-.work-showcase-wrap {
-  display: flex;
-  justify-content: flex-start;
-}
-.work-showcase {
-  width: min(100%, 325px);
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-lg, 20px);
-  overflow: hidden;
-  background: var(--bg1);
-  box-shadow: 0 12px 28px -22px rgba(0, 0, 0, 0.85);
-  transition:
-    transform 0.3s var(--ease-out),
-    border-color 0.3s ease,
-    box-shadow 0.3s ease;
-}
-.work-showcase:hover {
-  transform: translateY(-1px);
-  border-color: var(--bdr-h);
-  box-shadow: var(--shadow-card);
-}
-.work-showcase-media {
-  position: relative;
-  height: clamp(160px, 15vw, 150px);
-  border-bottom: 1px solid var(--bdr);
-  background: var(--bg2);
-}
-.work-showcase-media::after {
-  content: "";
+/* ── Featured badge on the first project card ──────────────────────────── */
+.work-card-flag {
   position: absolute;
-  inset: auto 0 0 0;
-  height: 55%;
-  background: linear-gradient(180deg, transparent, rgba(4, 4, 10, 0.55));
-  pointer-events: none;
-}
-.work-showcase-flag {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 1;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
   padding: 3px 8px;
   border-radius: 99px;
   background: rgba(9, 8, 16, 0.72);
@@ -10182,65 +10458,6 @@ a.reviews-page:hover {
   text-transform: uppercase;
   color: var(--acc);
 }
-.work-showcase-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: brightness(0.95) saturate(0.95);
-  transition: transform 0.8s var(--ease-out);
-}
-.work-showcase:hover .work-showcase-media img {
-  transform: scale(1.02);
-}
-.work-media-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 100%;
-  color: var(--t3);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.02),
-    transparent 60%
-  );
-}
-.work-media-empty span {
-  font-family: var(--ff-display);
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-.work-showcase-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 12px 14px;
-}
-.work-showcase-title-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-.work-showcase-link {
-  font-family: var(--ff-display);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--acc);
-  white-space: nowrap;
-  transition:
-    transform 0.2s var(--ease-out),
-    color 0.2s;
-}
-.work-showcase-link:hover {
-  color: #eaff6a;
-  transform: translateX(2px);
-}
 .work-cat {
   font-family: var(--ff-display);
   font-size: 0.5rem;
@@ -10249,29 +10466,7 @@ a.reviews-page:hover {
   text-transform: uppercase;
   color: var(--acc);
 }
-.work-feat-title {
-  font-family: var(--ff-display);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  color: var(--t1);
-  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
-  margin: 0;
-  min-width: 0;
-}
-.work-feat-desc {
-  color: var(--t2);
-  line-height: 1.45;
-  font-size: 0.7rem;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-}
-
-/* ── Featured empty state ─────────────────────────────────────────────── */
+/* ── Empty state ──────────────────────────────────────────────────────── */
 .work-empty {
   border: 1px dashed var(--bdr);
   border-radius: var(--r-lg, 20px);
@@ -10295,20 +10490,23 @@ a.reviews-page:hover {
 
 /* ── Portfolio grid ───────────────────────────────────────────────────── */
 .work-portfolio {
-  padding: 0 0 clamp(56px, 4vw, 72px);
+  /* top gap replaces the bottom padding the removed featured hero used to add */
+  padding: clamp(28px, 3.5vw, 44px) 0 clamp(56px, 4vw, 72px);
 }
 .work-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 .work-grid > .hp-reveal {
   display: flex;
 }
-.work-grid > .hp-reveal::after {
-  content: "";
-  display: block;
+/* The card is the flex item that fills the cell. An empty ::after with flex:1
+   in this row-direction container would claim all the free space instead and
+   pin each card to its text width. */
+.work-grid > .hp-reveal > .work-card {
   flex: 1;
+  min-width: 0;
 }
 .work-pager {
   display: flex;
@@ -10369,29 +10567,6 @@ a.reviews-page:hover {
 .work-card:hover .work-card-media::after {
   opacity: 1;
 }
-.work-card-arrow {
-  position: absolute;
-  right: 16px;
-  top: 16px;
-  z-index: 2;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: var(--bg1);
-  background: var(--acc);
-  box-shadow: 0 8px 24px -8px rgba(201, 243, 29, 0.5);
-  opacity: 0;
-  transform: translateY(-6px);
-  transition:
-    opacity 0.35s,
-    transform 0.35s var(--ease-out);
-}
-.work-card:hover .work-card-arrow {
-  opacity: 1;
-  transform: none;
-}
 .work-card-body {
   padding: 18px 20px 20px;
   display: flex;
@@ -10411,6 +10586,29 @@ a.reviews-page:hover {
   color: var(--t3);
   font-variant-numeric: tabular-nums;
 }
+.work-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.work-card-cta {
+  font-family: var(--ff-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--acc);
+  white-space: nowrap;
+  transition:
+    transform 0.2s var(--ease-out),
+    color 0.2s;
+}
+.work-card:hover .work-card-cta {
+  color: #eaff6a;
+  transform: translateX(2px);
+}
 
 /* ── Reviews (shared ReviewSection, scoped so the product page is untouched) ─ */
 .work-page .reviews-section {
@@ -10425,7 +10623,8 @@ a.reviews-page:hover {
   line-height: 0.98;
 }
 .work-page .reviews-grid-wrap {
-  padding-top: clamp(4px, 4vw, 2px);
+  /* was clamp(4px, 4vw, 2px) — min > max, so it always resolved to 4px */
+  padding-top: clamp(8px, 1.2vw, 16px);
 }
 .work-page .reviews-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -10445,18 +10644,18 @@ a.reviews-page:hover {
 }
 @media (max-width: 640px) {
   .work-page .reviews-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
 }
-@media (max-width: 720px) {
-  .work-showcase-media {
-    height: clamp(110px, 24vw, 130px);
+@media (max-width: 960px) {
+  .work-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 640px) {
   .work-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -2,17 +2,20 @@
 
 import { ActionForm, Spinner } from "@/components/admin/ActionForm";
 import { saveDelhiveryPickup } from "@/app/admin/actions/settings";
+import { PHONE_INPUT } from "@/lib/utils/phone";
 
 const Field = ({
   name,
   label,
   defaultValue,
   placeholder,
+  inputProps,
 }: {
   name: string;
   label: string;
   defaultValue: string;
   placeholder?: string;
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
 }) => (
   <label
     style={{
@@ -29,6 +32,7 @@ const Field = ({
       defaultValue={defaultValue}
       placeholder={placeholder}
       className="input"
+      {...inputProps}
     />
   </label>
 );
@@ -99,7 +103,8 @@ export function PickupLocationCard({
                 name="phone"
                 label="Phone"
                 defaultValue={p.phone ?? ""}
-                placeholder="10-digit phone"
+                placeholder="9876543210"
+                inputProps={PHONE_INPUT}
               />
               <Field
                 name="email"

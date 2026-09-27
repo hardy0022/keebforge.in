@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { getSiteSetting } from "@/lib/catalog/data";
+import { FooterStatus } from "@/components/layout/FooterStatus";
 
 /* Central social config — update handles here only.
    Reddit/Discord/Instagram mirror the owner's real profiles (see /about);
@@ -95,10 +95,7 @@ function SocialButton({ label }: { label: (typeof SOCIALS)[number]["label"] }) {
   );
 }
 
-export async function SiteFooter() {
-  const accepting =
-    (await getSiteSetting("acceptingOrders").catch(() => null)) !== false;
-
+export function SiteFooter() {
   return (
     <footer className="site-footer">
       <span className="footer-watermark" aria-hidden="true">
@@ -120,13 +117,7 @@ export async function SiteFooter() {
             keyboard builds, tuning, modifications, repairs, and keyboard
             accessories.
           </p>
-          <span className="footer-status">
-            <span
-              className="footer-status-dot"
-              data-off={!accepting || undefined}
-            />
-            {accepting ? "Accepting Orders" : "Not Accepting Orders"}
-          </span>
+          <FooterStatus />
           <div className="footer-follow">
             <span className="footer-follow-label">Follow KeebForge</span>
             <div className="footer-follow-row">

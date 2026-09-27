@@ -1,14 +1,12 @@
-import Image from "next/image";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
 import { ReviewBody } from "@/components/reviews/ReviewBody";
+import {
+  ReviewPhotoStrip,
+  type ReviewPhotoTile,
+} from "@/components/reviews/ReviewPhotoStrip";
 
 /** Photos shown per review before the "+N more" tile takes over. */
 const PHOTOS_SHOWN = 4;
-
-// next/image only for hosts whitelisted in next.config (Cloudinary) or local
-// /public assets. Other CDN URLs keep a plain <img> so nothing breaks.
-const isOptimizable = (url: string) =>
-  url.startsWith("/") || url.startsWith("https://res.cloudinary.com/");
 
 export type ReviewCardItem = {
   id: string;
@@ -49,6 +47,20 @@ export function ReviewCard({
       ? review.images.slice(0, PHOTOS_SHOWN - 1)
       : review.images.slice(0, PHOTOS_SHOWN);
 
+  // Resolved here (server) so the client strip only receives plain data.
+  const tiles: ReviewPhotoTile[] = shownPhotos.map((img) => ({
+    href: img.url,
+    src: img.url,
+    label: "View review photo",
+  }));
+  if (morePhotos > 0) {
+    tiles.push({
+      href: review.images[PHOTOS_SHOWN - 1].url,
+      label: `+${morePhotos}`,
+      more: true,
+    });
+  }
+
   return (
     <article className="review-card product-review-card">
       <div className="review-card-head">
@@ -56,38 +68,7 @@ export function ReviewCard({
         <ReviewStars rating={review.rating} />
       </div>
       <ReviewBody review={review} />
-      {shownPhotos.length > 0 && (
-        <div className="review-photos">
-          {shownPhotos.map((img) => (
-            <a
-              key={img.id}
-              href={img.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="review-photo"
-              aria-label="View review photo"
-            >
-              {isOptimizable(img.url) ? (
-                <Image src={img.url} alt="" fill sizes="120px" />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={img.url} alt="" loading="lazy" />
-              )}
-            </a>
-          ))}
-          {morePhotos > 0 && (
-            <a
-              href={review.images[PHOTOS_SHOWN - 1].url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="review-photo review-photo-more"
-              aria-label={`View ${morePhotos} more photos`}
-            >
-              <span>+{morePhotos}</span>
-            </a>
-          )}
-        </div>
-      )}
+      {tiles.length > 0 && <ReviewPhotoStrip tiles={tiles} />}
       <footer className="review-footer">
         <div className="review-author">
           {review.profile?.avatarUrl ? (

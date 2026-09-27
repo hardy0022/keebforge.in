@@ -58,11 +58,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // notFound() here (pre-render) so miss-status is 404 even though the route
   // has a loading.tsx that would otherwise commit a 200 shell first (G-003).
   if (!product) notFound();
-  // Non-draft gallery image first, legitimate admin OG image second (P2:
-  // draft assets leaked into Product/OG schema). Admin OG image is only used
-  // when it's an actual image (a page URL in that field is stale data).
-  // Canonical override is only trusted when it points at this product's own
-  // page.
+  // Admin-configured OG image first, then the first non-draft gallery image,
+  // then buildMetadata's brand default. The admin field is labelled "Defaults
+  // to the primary image", so an explicit value must win — the reverse order
+  // made the field dead for every product that had any non-draft image. Both
+  // sources exclude draft assets (P2: drafts leaked into Product/OG schema),
+  // and the admin value is only used when it's an actual image (a page URL in
+  // that field is stale data). Canonical override is only trusted when it
+  // points at this product's own page.
   const galleryImage = product.images.find((i) => !isDraftImage(i))?.url;
   const ogImage =
     product.ogImageUrl &&
@@ -71,11 +74,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? product.ogImageUrl
       : undefined;
 
-  const image = galleryImage ?? ogImage;
+  const image = ogImage ?? galleryImage;
   const ownUrl = `${SITE_URL}/product/${product.slug}`;
   const canonical =
-    product.canonicalUrl === ownUrl ||
-    product.canonicalUrl === `${ownUrl}/`
+    product.canonicalUrl === ownUrl || product.canonicalUrl === `${ownUrl}/`
       ? product.canonicalUrl
       : undefined;
 

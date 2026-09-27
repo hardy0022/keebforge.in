@@ -6,17 +6,15 @@ export type EmptyStateAction = {
   variant?: "primary" | "ghost";
 };
 export type EmptyStateConfig = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  desc: string;
+  desc?: string;
   actions: EmptyStateAction[];
 };
 
 /* Polished fallback for listings without a bespoke empty state. */
 export const DEFAULT_EMPTY_STATE: EmptyStateConfig = {
-  eyebrow: "// Shop",
   title: "Nothing Here Yet",
-  desc: "No products in this view right now. Browse the full catalogue or check back soon.",
   actions: [
     { label: "Browse All Products →", href: "/shop", variant: "ghost" },
   ],
@@ -38,9 +36,9 @@ export function ShopEmptyState({ config }: { config: EmptyStateConfig }) {
             <path d="M6 10h.01M9 10h.01M12 10h.01M15 10h.01M18 10h.01M6 13h.01M9 13h.01M12 13h.01M15 13h.01M18 13h.01M8.5 15.7h7" />
           </svg>
         </span>
-        <p className="sec-num">{config.eyebrow}</p>
+        {config.eyebrow && <p className="sec-num">{config.eyebrow}</p>}
         <h2 className="empty-title">{config.title}</h2>
-        <p className="empty-desc">{config.desc}</p>
+        {config.desc && <p className="empty-desc">{config.desc}</p>}
         <div className="empty-actions">
           {config.actions.map((a) => (
             <Link

@@ -17,6 +17,8 @@ import {
 import { PACKAGE_LIMITS } from "@/lib/shipping/package-limits";
 import { deriveLegs } from "@/lib/shipping/shipping-estimate";
 import { formatPaiseWhole } from "@/lib/utils/money";
+import { PHONE_INPUT } from "@/lib/utils/phone";
+import { EMAIL_INPUT, EMAIL_RE } from "@/lib/utils/email";
 import { StateSelect } from "@/components/ui/StateSelect";
 import { PinCodeInput } from "@/components/ui/PinCodeInput";
 import { Field } from "@/components/ui/Field";
@@ -636,7 +638,7 @@ export function ModConfigurator({
   const nameOk =
     contact.firstName.trim().length >= 1 && contact.lastName.trim().length >= 1;
   const phoneOk = /^\d{10}$/.test(contact.phone);
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim());
+  const emailOk = EMAIL_RE.test(contact.email.trim());
   const contactValidation = [
     ...(!nameOk ? ["Please enter your full name."] : []),
     ...(!phoneOk ? ["Enter a valid WhatsApp / phone number."] : []),
@@ -1372,8 +1374,6 @@ export function ModConfigurator({
                   id="ct-phone"
                   type="tel"
                   autoComplete="tel"
-                  inputMode="numeric"
-                  maxLength={10}
                   value={contact.phone}
                   onChange={(e) =>
                     setContact((c) => ({
@@ -1381,8 +1381,9 @@ export function ModConfigurator({
                       phone: e.target.value.replace(/\D/g, "").slice(0, 10),
                     }))
                   }
-                  placeholder="9998888000"
+                  placeholder="9876543210"
                   aria-invalid={contact.phone !== "" && !phoneOk}
+                  {...PHONE_INPUT}
                 />
               </Field>
               <Field
@@ -1409,6 +1410,7 @@ export function ModConfigurator({
                   }
                   placeholder="your@email.com"
                   aria-invalid={contact.email !== "" && !emailOk}
+                  {...EMAIL_INPUT}
                 />
               </Field>
             </div>

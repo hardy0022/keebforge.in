@@ -130,8 +130,17 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
 
   return (
     <div className="account-stack">
+      <div className="account-settings-grid">
       <section className="account-section">
-        <span className="account-kicker">{"// Account Preferences"}</span>
+        <header className="account-section-header">
+          <div>
+            <span className="account-kicker">{"// Account Preferences"}</span>
+            <h2 className="account-section-title">Preferences</h2>
+            <p className="account-section-desc">
+              How KeebForge keeps you in the loop
+            </p>
+          </div>
+        </header>
 
         <div className="account-settings-list">
           <div className="account-settings-item">
@@ -174,7 +183,15 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
       </section>
 
       <section className="account-section">
-        <span className="account-kicker">{"// Account Security"}</span>
+        <header className="account-section-header">
+          <div>
+            <span className="account-kicker">{"// Account Security"}</span>
+            <h2 className="account-section-title">Security</h2>
+            <p className="account-section-desc">
+              Your password and connected sign-in methods
+            </p>
+          </div>
+        </header>
 
         <div className="account-settings-list">
           <div className="account-settings-item">
@@ -211,10 +228,20 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
         </div>
       </section>
 
-      <section className="account-section account-section--danger">
-        <span className="account-kicker account-kicker--danger">
-          {"// Danger Zone"}
-        </span>
+      </div>
+
+      <section className="account-section">
+        <header className="account-section-header">
+          <div>
+            <span className="account-kicker account-kicker--danger">
+              {"// Danger Zone"}
+            </span>
+            <h2 className="account-section-title">Irreversible Actions</h2>
+            <p className="account-section-desc">
+              These cannot be undone
+            </p>
+          </div>
+        </header>
 
         <div className="account-danger-zone">
           <div className="account-danger-item">

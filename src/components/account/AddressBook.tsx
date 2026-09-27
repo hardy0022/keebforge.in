@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { StateSelect } from "@/components/ui/StateSelect";
 import { PinCodeInput } from "@/components/ui/PinCodeInput";
 import { AccountModal } from "@/components/ui/AccountModal";
+import { PHONE_INPUT } from "@/lib/utils/phone";
+import { EMAIL_INPUT } from "@/lib/utils/email";
 
 interface Address {
   id: string;
@@ -158,126 +160,132 @@ export function AddressBook() {
     <section className="account-section">
       <header className="account-section-header">
         <div>
-          <h2 className="account-section-title">Saved Addresses</h2>
-          <p className="account-section-desc">Manage your shipping addresses</p>
+          <span className="account-kicker">{"// Saved Addresses"}</span>
+          <h2 className="account-section-title">Shipping Addresses</h2>
+          <p className="account-section-desc">
+            Where your builds and repairs get shipped
+          </p>
         </div>
-      </header>
-
-      {addresses.length === 0 ? (
-        <div className="account-empty">
+        <button
+          type="button"
+          className="account-action-btn"
+          onClick={openAddModal}
+        >
           <svg
-            width="48"
-            height="48"
+            width="15"
+            height="15"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="1.75"
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-            <circle cx="12" cy="10" r="3" />
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          <h3>No addresses saved</h3>
-          <p>Add an address to speed up checkout.</p>
-          <button
-            type="button"
-            className="btn-prime"
-            onClick={openAddModal}
-            style={{ marginTop: 16 }}
-          >
-            Add Address
-          </button>
+          Add New Address
+        </button>
+      </header>
+
+      {addresses.length === 0 ? (
+        <div className="account-empty account-empty--plain account-empty--center">
+          <h3 className="account-empty-title">No saved addresses yet</h3>
+          <p className="account-empty-sub">
+            Add an address to make checkout and workshop shipments faster.
+          </p>
         </div>
       ) : (
-        <>
-          <div className="account-addresses-grid">
-            {addresses.map((address) => (
-              <div key={address.id} className="account-address-card">
-                <div className="account-address-header">
-                  <span className="account-address-label">{address.label}</span>
-                  {address.isDefault && (
-                    <span className="account-address-default">Default</span>
+        <div className="account-addresses-grid">
+          {addresses.map((address) => (
+            <div key={address.id} className="account-address-card">
+              <div className="account-address-header">
+                <span className="account-address-label">{address.label}</span>
+                {address.isDefault && (
+                  <span className="account-address-default">Default</span>
+                )}
+              </div>
+
+              <address className="account-address-details">
+                {address.name && (
+                  <div className="account-address-name">{address.name}</div>
+                )}
+                <div>{address.streetAddress}</div>
+                {address.apartment && <div>{address.apartment}</div>}
+                <div>
+                  {address.city}, {address.state} {address.postalCode}
+                </div>
+                <div>{address.country}</div>
+              </address>
+
+              {(address.email || address.phone) && (
+                <div className="account-address-contact">
+                  {address.email && (
+                    <div>
+                      <span>Email</span>
+                      {address.email}
+                    </div>
+                  )}
+                  {address.phone && (
+                    <div>
+                      <span>Phone</span>
+                      {address.phone}
+                    </div>
                   )}
                 </div>
-                <address className="account-address-details">
-                  {address.name && <div>{address.name}</div>}
-                  <div>{address.streetAddress}</div>
-                  {address.apartment && <div>{address.apartment}</div>}
-                  <div>
-                    {address.city}, {address.state} {address.postalCode}
-                  </div>
-                  <div>{address.country}</div>
-                  {address.email && <div>Email: {address.email}</div>}
-                  {address.phone && <div>Phone: {address.phone}</div>}
-                </address>
-                <div className="account-address-actions">
-                  {address.isDefault || !addresses.some((a) => a.isDefault) ? (
-                    <span className="account-address-default-text">
-                      Default address
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm"
-                      onClick={() => handleSetDefault(address.id)}
-                    >
-                      Set as default
-                    </button>
-                  )}
+              )}
+
+              <div className="account-address-actions">
+                {address.isDefault || !addresses.some((a) => a.isDefault) ? (
+                  <span className="account-address-default-text">
+                    Default address
+                  </span>
+                ) : (
                   <button
                     type="button"
                     className="btn-ghost btn-sm"
-                    onClick={() => openEditModal(address)}
+                    onClick={() => handleSetDefault(address.id)}
                   >
-                    Edit
+                    Set as default
                   </button>
-                  <button
-                    type="button"
-                    className="btn-ghost btn-sm btn-danger"
-                    onClick={() => handleDelete(address.id)}
-                    disabled={deletingId === address.id}
-                  >
-                    {deletingId === address.id ? "Deleting…" : "Delete"}
-                  </button>
-                </div>
+                )}
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm"
+                  onClick={() => openEditModal(address)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm btn-danger"
+                  onClick={() => handleDelete(address.id)}
+                  disabled={deletingId === address.id}
+                >
+                  {deletingId === address.id ? "Deleting…" : "Delete"}
+                </button>
               </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={openAddModal}
-            style={{ marginTop: 20 }}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Add New Address
-          </button>
-        </>
+            </div>
+          ))}
+        </div>
       )}
 
       {showModal && (
         <AccountModal
+          kicker={"// Shipping Address"}
           title={editingAddress ? "Edit Address" : "Add Address"}
+          subtitle={
+            editingAddress
+              ? "Update the address used for delivery."
+              : "Save a new delivery address to your account."
+          }
+          className="account-modal--wide"
           titleId="address-modal-title"
           onClose={closeModal}
         >
           <form onSubmit={handleSubmit} className="account-form">
+            <div className="account-form-body">
               <div className="form-row">
                 <label htmlFor="label">Label</label>
                 <input
@@ -292,32 +300,34 @@ export function AddressBook() {
                 />
               </div>
 
-              <div className="form-row">
-                <label htmlFor="addr-first-name">First Name *</label>
-                <input
-                  id="addr-first-name"
-                  type="text"
-                  required
-                  value={formData.firstName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, firstName: e.target.value })
-                  }
-                  placeholder="Recipient's first name"
-                />
-              </div>
+              <div className="account-field-grid">
+                <div className="form-row">
+                  <label htmlFor="addr-first-name">First Name *</label>
+                  <input
+                    id="addr-first-name"
+                    type="text"
+                    required
+                    value={formData.firstName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, firstName: e.target.value })
+                    }
+                    placeholder="Recipient's first name"
+                  />
+                </div>
 
-              <div className="form-row">
-                <label htmlFor="addr-last-name">Last Name *</label>
-                <input
-                  id="addr-last-name"
-                  type="text"
-                  required
-                  value={formData.lastName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lastName: e.target.value })
-                  }
-                  placeholder="Recipient's last name"
-                />
+                <div className="form-row">
+                  <label htmlFor="addr-last-name">Last Name *</label>
+                  <input
+                    id="addr-last-name"
+                    type="text"
+                    required
+                    value={formData.lastName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, lastName: e.target.value })
+                    }
+                    placeholder="Recipient's last name"
+                  />
+                </div>
               </div>
 
               <div className="form-row">
@@ -331,6 +341,7 @@ export function AddressBook() {
                     setFormData({ ...formData, email: e.target.value })
                   }
                   placeholder="you@example.com"
+                  {...EMAIL_INPUT}
                 />
               </div>
 
@@ -361,21 +372,21 @@ export function AddressBook() {
                 />
               </div>
 
-              <div className="form-row">
-                <label htmlFor="city">City *</label>
-                <input
-                  id="city"
-                  type="text"
-                  required
-                  value={formData.city}
-                  onChange={(e) =>
-                    setFormData({ ...formData, city: e.target.value })
-                  }
-                  placeholder="e.g. Bengaluru"
-                />
-              </div>
-
               <div className="account-field-grid">
+                <div className="form-row">
+                  <label htmlFor="city">City *</label>
+                  <input
+                    id="city"
+                    type="text"
+                    required
+                    value={formData.city}
+                    onChange={(e) =>
+                      setFormData({ ...formData, city: e.target.value })
+                    }
+                    placeholder="e.g. Bengaluru"
+                  />
+                </div>
+
                 <div className="form-row">
                   <label htmlFor="state">State *</label>
                   <StateSelect
@@ -385,7 +396,9 @@ export function AddressBook() {
                     required
                   />
                 </div>
+              </div>
 
+              <div className="account-field-grid">
                 <div className="form-row">
                   <label htmlFor="postalCode">PIN Code *</label>
                   <PinCodeInput
@@ -399,27 +412,24 @@ export function AddressBook() {
                     placeholder="560001"
                   />
                 </div>
-              </div>
 
-              <div className="form-row">
-                <label htmlFor="phone">Phone Number</label>
-                <input
-                  id="phone"
-                  type="tel"
-                  inputMode="numeric"
-                  required
-                  pattern="[0-9]{10}"
-                  maxLength={10}
-                  title="Enter a 10-digit phone number"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      phone: onlyDigits(e.target.value),
-                    })
-                  }
-                  placeholder="9998888000"
-                />
+                <div className="form-row">
+                  <label htmlFor="phone">Phone Number</label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    {...PHONE_INPUT}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        phone: onlyDigits(e.target.value),
+                      })
+                    }
+                    placeholder="9998888000"
+                  />
+                </div>
               </div>
 
               <div className="form-row">
@@ -441,22 +451,19 @@ export function AddressBook() {
                   Set as default address
                 </label>
               </div>
+            </div>
 
-              <div className="account-modal-actions">
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={closeModal}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-form-submit">
-                  {editingAddress ? "Save Changes" : "Add Address"}
-                </button>
-              </div>
-            </form>
-          </AccountModal>
-        )}
-      </section>
-    );
-  }
+            <div className="account-modal-actions">
+              <button type="button" className="btn-ghost" onClick={closeModal}>
+                Cancel
+              </button>
+              <button type="submit" className="btn-form-submit">
+                {editingAddress ? "Save Changes →" : "Add Address →"}
+              </button>
+            </div>
+          </form>
+        </AccountModal>
+      )}
+    </section>
+  );
+}

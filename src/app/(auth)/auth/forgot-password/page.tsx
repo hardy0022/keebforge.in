@@ -4,6 +4,7 @@ import { authClient } from "@/lib/auth/auth-client";
 
 import { useState } from "react";
 import Link from "next/link";
+import { EMAIL_INPUT } from "@/lib/utils/email";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -66,6 +67,7 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               disabled={status === "loading"}
               placeholder="you@example.com"
+              {...EMAIL_INPUT}
             />
           </div>
 

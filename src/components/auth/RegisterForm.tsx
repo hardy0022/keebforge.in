@@ -4,6 +4,7 @@ import { authClient } from "@/lib/auth/auth-client";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/ui/PasswordField";
+import { EMAIL_INPUT, EMAIL_RE } from "@/lib/utils/email";
 import { usernameError } from "@/lib/utils/username";
 import { PASSWORD_RULES } from "@/lib/utils/password";
 
@@ -56,7 +57,7 @@ export function RegisterForm({ next }: { next?: string }) {
 
   const uErr = username.length > 0 ? usernameError(username) : null;
   const allMet = requirements.every((r) => r.met);
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const emailValid = EMAIL_RE.test(email);
   const canSubmit =
     !uErr &&
     username.trim().length > 0 &&
@@ -152,6 +153,7 @@ export function RegisterForm({ next }: { next?: string }) {
           onChange={(e) => setEmail(e.target.value)}
           disabled={busy}
           placeholder="you@example.com"
+          {...EMAIL_INPUT}
         />
         {email.length > 0 && !emailValid && (
           <p className="field-note err">Please enter a valid email address.</p>

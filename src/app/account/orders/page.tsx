@@ -3,12 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAuth, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { formatINR } from "@/lib/utils/money";
-import {
-  ORDER_STATUS_CHIP,
-  ORDER_STATUS_LABELS,
-  ORDER_TYPE_LABELS,
-} from "@/lib/orders";
+import { OrderCard, formatOrderDate } from "@/components/account/OrderCard";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
 import { DeleteReviewButton } from "@/components/account/DeleteReviewButton";
 import type { ReviewStatus } from "@prisma/client";
@@ -29,7 +24,9 @@ async function getOrders(profileId: string) {
       status: true,
       total: true,
       createdAt: true,
-      items: { select: { name: true, quantity: true } },
+      // imageUrl is the product shot snapshotted onto the line at checkout
+      // (see src/app/api/payments/create-order/route.ts) — no extra query needed.
+      items: { select: { name: true, quantity: true, imageUrl: true } },
       services: { select: { name: true, quantity: true } },
       repairs: { select: { deviceType: true } },
     },
@@ -77,129 +74,26 @@ export default async function OrdersPage() {
     getReviews(auth.profile.id),
   ]);
 
-  const formatDate = (d: Date) =>
-    new Date(d).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-
   return (
-    <div className="account-stack">
+    <div className="account-stack account-stack--tight">
+      {/* No section header: the page header above already says "My Orders",
+          so a second "Your Orders" block repeated it. */}
       <section className="account-section">
         {orders.length === 0 ? (
-          <div className="account-empty">
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-            <h3>No orders yet</h3>
-            <p>When you place an order, it will appear here.</p>
-            <Link href="/shop" className="btn-prime">
-              Start Shopping
+          <div className="account-empty account-empty--plain">
+            <p className="account-empty-title">No orders yet.</p>
+            <p className="account-empty-sub">
+              Your completed orders will appear here.
+            </p>
+            <Link href="/shop" className="btn-prime btn-sm">
+              Browse Shop →
             </Link>
           </div>
         ) : (
           <div className="account-order-list">
-            {orders.map((order) => {
-              const preview = [
-                ...order.items
-                  .slice(0, 2)
-                  .map(
-                    (i) =>
-                      `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`,
-                  ),
-                ...order.services
-                  .slice(0, 2)
-                  .map(
-                    (s) =>
-                      `${s.name}${s.quantity > 1 ? ` ×${s.quantity}` : ""}`,
-                  ),
-                ...order.repairs
-                  .slice(0, 1)
-                  .map((r) => `${r.deviceType} Repair`),
-              ];
-              const extra =
-                order.items.length +
-                order.services.length +
-                order.repairs.length -
-                preview.length;
-
-              return (
-                <div
-                  key={order.id}
-                  className="account-order-item account-order-item--grid"
-                >
-                  <div className="account-order-info">
-                    <div className="account-order-header">
-                      <Link
-                        href={`/order/success/${order.orderNumber}`}
-                        className="account-order-number is-link"
-                      >
-                        {order.orderNumber}
-                      </Link>
-                      <span className="account-order-type">
-                        {ORDER_TYPE_LABELS[order.type]}
-                      </span>
-                    </div>
-                    <div className="account-order-meta">
-                      <span className="account-order-date">
-                        {new Date(order.createdAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="account-order-items-preview">
-                    {preview.map((line, i) => (
-                      <span key={i} className="account-order-item-name">
-                        {line}
-                      </span>
-                    ))}
-                    {extra > 0 && (
-                      <span className="account-order-more">+{extra} more</span>
-                    )}
-                  </div>
-
-                  <div className="account-order-total">
-                    {formatINR(order.total)}
-                  </div>
-
-                  <span
-                    className={`account-order-status ${ORDER_STATUS_CHIP[order.status]}`}
-                  >
-                    {ORDER_STATUS_LABELS[order.status]}
-                  </span>
-
-                  <div className="account-order-actions">
-                    <Link
-                      href={`/order/success/${order.orderNumber}`}
-                      className="btn-ghost btn-sm"
-                    >
-                      Summary
-                    </Link>
-                    <Link
-                      href={`/track-order?order=${order.orderNumber}`}
-                      className="btn-prime btn-sm"
-                    >
-                      Track
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+            {orders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))}
           </div>
         )}
       </section>
@@ -207,6 +101,7 @@ export default async function OrdersPage() {
       <section className="account-section">
         <header className="account-section-header">
           <div>
+            <span className="account-kicker">{"// Your Reviews"}</span>
             <h2 className="account-section-title">Your Reviews</h2>
             <p className="account-section-desc">
               Reviews you&apos;ve submitted and their status
@@ -231,22 +126,11 @@ export default async function OrdersPage() {
         </header>
 
         {reviews.length === 0 ? (
-          <div className="account-empty">
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            <h3>No reviews yet</h3>
-            <p>Reviews you submit will appear here with their status.</p>
+          <div className="account-empty account-empty--plain">
+            <p className="account-empty-title">No reviews yet.</p>
+            <p className="account-empty-sub">
+              Reviews you submit will appear here with their status.
+            </p>
           </div>
         ) : (
           <div className="account-review-list">
@@ -282,10 +166,12 @@ export default async function OrdersPage() {
                 {review.title && (
                   <p className="account-review-title">{review.title}</p>
                 )}
-                <p className="account-review-body">{review.body}</p>
+                <p className="account-review-body" title={review.body}>
+                  {review.body}
+                </p>
                 <div className="account-review-foot">
                   <p className="account-review-date">
-                    {formatDate(review.createdAt)}
+                    {formatOrderDate(review.createdAt)}
                   </p>
                   <DeleteReviewButton reviewId={review.id} />
                 </div>
