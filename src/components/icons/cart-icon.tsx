@@ -4,11 +4,10 @@ import { forwardRef, useImperativeHandle } from "react";
 import type { AnimatedIconHandle, AnimatedIconProps } from "./types";
 
 /**
- * Animated cart icon. The hover play/stop are driven entirely by CSS now
- * (.icon-animated + .nav-icon:hover) — the motion/react runtime was being
- * pulled into the app shell on every page just for a hover wriggle.
- * `startAnimation`/`stopAnimation` are kept as no-ops so SiteHeader's ref
- * calls stay source-compatible.
+ * Animated cart icon. The hover nudge is CSS-only: `.nav-cart:hover .cart-icon`
+ * runs the `kf-icon-nudge` keyframes (0.35s, translateX 0 -> 6px -> 0), and
+ * `prefers-reduced-motion: reduce` disables it. `startAnimation`/`stopAnimation`
+ * are kept as no-ops so SiteHeader's ref calls stay source-compatible.
  */
 const CartIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
   (

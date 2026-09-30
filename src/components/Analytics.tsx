@@ -22,12 +22,12 @@ export default function Analytics() {
         defer
         src="https://cloud.umami.is/script.js"
         data-website-id="390b58fa-d7bc-4b68-a2ff-11aafad50476"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
       <Script
         async
         src={`https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`}
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
       <VercelAnalytics />
       <SpeedInsights />

@@ -25,10 +25,13 @@ const TITLE_MAX_CHARS = 30;
 type NewPhoto = { uid: string; url: string; file: File };
 
 export function ReviewForm({
+  mode,
   product,
   existing,
   preview,
 }: {
+  /** "create" submits a new review, "edit" updates the one in `existing`. */
+  mode: "create" | "edit";
   product: {
     id: string;
     name: string;
@@ -133,6 +136,7 @@ export function ReviewForm({
           className="review-form write-review-form"
         >
           {product && <input type="hidden" name="slug" value={product.slug} />}
+          <input type="hidden" name="mode" value={mode} />
           <section className="write-review-field">
             <span className="write-review-label">Your rating</span>
             <RatingPicker value={rating} onChange={setRating} />
@@ -265,9 +269,9 @@ export function ReviewForm({
               {pending ? (
                 <>
                   <span className="spinner" aria-hidden="true" />
-                  {existing ? "Saving…" : "Submitting…"}
+                  {mode === "edit" ? "Saving…" : "Submitting…"}
                 </>
-              ) : existing ? (
+              ) : mode === "edit" ? (
                 <>
                   Save Changes <span aria-hidden="true">→</span>
                 </>

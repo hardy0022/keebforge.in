@@ -5,6 +5,8 @@ import { getAdminReviews } from "@/lib/admin";
 import { fmtIST } from "@/lib/utils/ist";
 import { ReviewDeleteButton } from "@/components/admin/reviews/ReviewDeleteButton";
 import { ReviewModeration } from "@/components/admin/reviews/ReviewModeration";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { parsePage } from "@/lib/admin/pagination";
 
 export const metadata: Metadata = {
   title: "Reviews | KeebForge Admin",
@@ -62,22 +64,8 @@ export default async function AdminReviewsPage({
         ? Number(sp.rating)
         : undefined,
     q: sp.q,
-    page: Math.max(1, Number(sp.page) || 1),
+    page: parsePage(sp.page),
   });
-
-  const link = (extra: Record<string, string | number | undefined>) => {
-    const p = new URLSearchParams();
-    if (sp.q) p.set("q", sp.q);
-    if (sp.status) p.set("status", sp.status);
-    if (sp.type) p.set("type", sp.type);
-    if (sp.rating) p.set("rating", sp.rating);
-    for (const [k, v] of Object.entries(extra)) {
-      if (v === undefined || v === "") p.delete(k);
-      else p.set(k, String(v));
-    }
-    const s = p.toString();
-    return s ? `/admin/reviews?${s}` : "/admin/reviews";
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -294,42 +282,14 @@ export default async function AdminReviewsPage({
         </div>
       )}
 
-      {result.pages > 1 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Link
-            className="btn-admin sm"
-            href={link({ page: result.page - 1 })}
-            style={
-              result.page <= 1
-                ? { pointerEvents: "none", opacity: 0.4 }
-                : undefined
-            }
-          >
-            ← Prev
-          </Link>
-          <span className="muted num">
-            Page {result.page} of {result.pages}
-          </span>
-          <Link
-            className="btn-admin sm"
-            href={link({ page: result.page + 1 })}
-            style={
-              result.page >= result.pages
-                ? { pointerEvents: "none", opacity: 0.4 }
-                : undefined
-            }
-          >
-            Next →
-          </Link>
-        </div>
-      )}
+      <AdminPagination
+        page={result.page}
+        pages={result.pages}
+        total={result.total}
+        searchParams={sp}
+        basePath="/admin/reviews"
+        unit="reviews"
+      />
     </div>
   );
 }

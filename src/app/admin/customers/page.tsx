@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { prisma } from "@/lib/db/prisma";
+import { getAdminCustomers } from "@/lib/admin";
+import { parsePage } from "@/lib/admin/pagination";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { formatINR } from "@/lib/utils/money";
 import { fmtIST } from "@/lib/utils/ist";
 
@@ -10,27 +12,20 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminCustomersPage() {
+export default async function AdminCustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requirePermission("customer", "view");
+  const sp = await searchParams;
+  const one = (k: string) => (typeof sp[k] === "string" ? sp[k] : sp[k]?.[0]);
 
-  const [customers, total] = await Promise.all([
-    prisma.profile.findMany({
-      where: { role: "CUSTOMER" },
-      orderBy: { createdAt: "desc" },
-      include: {
-        customer: true,
-        _count: { select: { orders: { where: { isDeleted: false } } } },
-        orders: { where: { isDeleted: false }, select: { total: true } },
-      },
-    }),
-    prisma.profile.count({ where: { role: "CUSTOMER" } }),
-  ]);
-
-  const withOrders = customers.filter((c) => c._count.orders > 0).length;
-  const totalPaid = customers.reduce(
-    (sum, c) => sum + c.orders.reduce((s, o) => s + o.total, 0),
-    0,
-  );
+  const result = await getAdminCustomers({
+    q: one("q"),
+    page: parsePage(one("page")),
+  });
+  const { items: customers, total, pages, page, withOrders } = result;
 
   const join = (d: Date) =>
     fmtIST(d, { year: "numeric", month: "short", day: "numeric" });
@@ -74,10 +69,35 @@ export default async function AdminCustomersPage() {
           <span>With Orders</span>
         </div>
         <div className="admin-stat purple">
-          <b>{formatINR(totalPaid)}</b>
+          <b>{formatINR(result.allTimeSpent)}</b>
           <span>Total Spent (All Time)</span>
         </div>
       </div>
+
+      <form
+        method="get"
+        action="/admin/customers"
+        style={{ display: "flex", flexWrap: "wrap", gap: 10 }}
+        className="admin-card"
+      >
+        <input
+          className="input"
+          name="q"
+          defaultValue={typeof sp.q === "string" ? sp.q : ""}
+          placeholder="Search name, username, email or phone"
+          style={{ flex: "1 1 240px" }}
+        />
+        <div className="admin-actions" style={{ marginLeft: "auto" }}>
+          <button type="submit" className="btn-admin primary">
+            Search
+          </button>
+          {one("q") && (
+            <Link href="/admin/customers" className="btn-admin">
+              Clear
+            </Link>
+          )}
+        </div>
+      </form>
 
       <div className="admin-card" style={{ overflow: "auto" }}>
         <table className="admin-table" style={{ width: "100%" }}>
@@ -127,19 +147,17 @@ export default async function AdminCustomersPage() {
                       {c.phone}
                     </div>
                   )}
-                  {c.customer?.discordHandle && (
+                  {c.discordHandle && (
                     <div className="muted" style={{ fontSize: "0.72rem" }}>
-                      Discord: {c.customer.discordHandle}
+                      Discord: {c.discordHandle}
                     </div>
                   )}
                 </td>
                 <td className="muted" style={{ whiteSpace: "nowrap" }}>
                   {join(c.createdAt)}
                 </td>
-                <td className="num">{c._count.orders}</td>
-                <td className="num">
-                  {formatINR(c.orders.reduce((s, o) => s + o.total, 0))}
-                </td>
+                <td className="num">{c.orderCount}</td>
+                <td className="num">{formatINR(c.totalSpent)}</td>
               </tr>
             ))}
             {customers.length === 0 && (
@@ -156,6 +174,15 @@ export default async function AdminCustomersPage() {
           </tbody>
         </table>
       </div>
+
+      <AdminPagination
+        page={page}
+        pages={pages}
+        total={total}
+        searchParams={sp}
+        basePath="/admin/customers"
+        unit="customers"
+      />
 
       <Link href="/admin" className="muted" style={{ fontSize: "0.75rem" }}>
         ← Dashboard

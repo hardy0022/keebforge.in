@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { getProductBySlug } from "@/lib/catalog/data";
-import { ReviewForm } from "@/components/reviews/ReviewForm";
-import { cldUrl } from "@/lib/images/cloudinary-url";
+import { ReviewComposer } from "@/components/reviews/ReviewComposer";
 
 export const metadata: Metadata = {
   title: "Write a review | KeebForge",
   robots: { index: false, follow: false },
 };
 
+/**
+ * Always a NEW review for this product. The form stays empty even when the
+ * customer already reviewed it — the server rejects a second product review
+ * (one per customer per product), and /write-review/[slug]/edit is the way to
+ * change an existing one. Only the notice below reads the stored review.
+ */
 export default async function WriteReviewPage({
   params,
 }: {
@@ -25,90 +31,43 @@ export default async function WriteReviewPage({
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const existing = await prisma.review.findUnique({
+  const mine = await prisma.review.findUnique({
     where: {
       profileId_productId: { profileId: profile.id, productId: product.id },
     },
+    select: { id: true },
   });
-  const editReview = existing?.type === "PRODUCT" ? existing : null;
-  const reviewMedia = editReview
-    ? await prisma.media.findMany({
-        where: { entityType: "REVIEW", entityId: editReview.id },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-      })
-    : [];
 
   return (
-    <main className="product-page">
-      <div className="wrap page-start">
-        <div className="write-review">
-          <header className="write-review-head">
-            <h1 className="product-title">
-              {editReview ? "Edit your review" : "Write a Review"}
-            </h1>
-            <p className="write-review-sub">
-              Share your experience with this product.
-            </p>
-            {editReview && (
-              <p className="review-status-note">
-                {editReview.status === "APPROVED"
-                  ? "Your published review is shown below — edits re-enter moderation."
-                  : editReview.status === "REJECTED"
-                    ? "Your previous review needs changes before it can be published."
-                    : "Your review is awaiting moderation — you can still update it."}
-              </p>
-            )}
-          </header>
-
-          <div className="write-review-product-card">
-            {product.images[0] && (
-              <img
-                src={cldUrl(product.images[0].url, 168)}
-                alt=""
-                width={84}
-                height={53}
-                className="write-review-thumb"
-              />
-            )}
-            <div className="write-review-product-meta">
-              <span className="write-review-product-cat">
-                {product.category.name}
-                {product.brand ? ` · ${product.brand.name}` : ""}
-              </span>
-              <span className="write-review-product-name">{product.name}</span>
-            </div>
-          </div>
-
-          <ReviewForm
-            product={{
-              id: product.id,
-              name: product.name,
-              slug: product.slug,
-              image: product.images[0]?.url ?? null,
-              category: product.category.name,
-              brand: product.brand?.name ?? null,
-            }}
-            existing={
-              editReview
-                ? {
-                    id: editReview.id,
-                    rating: editReview.rating,
-                    title: editReview.title ?? "",
-                    body: editReview.body,
-                    images: reviewMedia.map((m) => ({
-                      id: m.id,
-                      url: m.secureUrl,
-                    })),
-                  }
-                : null
-            }
-            preview={{
-              name: profile.name ?? "Customer",
-              avatarUrl: profile.avatarUrl ?? null,
-            }}
-          />
-        </div>
-      </div>
-    </main>
+    <ReviewComposer
+      mode="create"
+      product={{
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        image: product.images[0]?.url ?? null,
+        category: product.category.name,
+        brand: product.brand?.name ?? null,
+      }}
+      existing={null}
+      notice={
+        mine ? (
+          <>
+            You already reviewed this product —{" "}
+            <Link
+              href={`/write-review/${product.slug}/edit`}
+              className="account-section-link"
+            >
+              edit your existing review
+            </Link>{" "}
+            instead.
+          </>
+        ) : undefined
+      }
+      preview={{
+        name: profile.name ?? "Customer",
+        avatarUrl: profile.avatarUrl ?? null,
+      }}
+    />
   );
 }

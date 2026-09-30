@@ -98,7 +98,12 @@ export default async function WorkPage({
                   const img = imgs[0];
                   const isFeatured = p.id === featured?.id;
                   return (
-                    <Reveal as="div" key={p.id} delay={(i % 3) * 80}>
+                    <Reveal
+                      as="div"
+                      key={p.id}
+                      delay={(i % 3) * 80}
+                      className={isFeatured ? "work-card-lead" : undefined}
+                    >
                       <Link
                         href={`/work/${p.slug}`}
                         className="work-card"

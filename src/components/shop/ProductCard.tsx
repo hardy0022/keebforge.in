@@ -5,8 +5,16 @@ import { isPurchasable, CONDITION_LABELS, MAX_CARD_FEATURES } from "@/lib/catalo
 import { CardAddToCart } from "@/components/shop/CardAddToCart";
 import { CardIcon, type ProductCardFeature } from "@/components/ui/CardIcons";
 import { ImageCycler } from "@/components/shop/ImageCycler";
+import { DeferredMedia } from "@/components/shop/DeferredMedia";
 
-export function ProductCard({ product }: { product: ShopProduct }) {
+export function ProductCard({
+  product,
+  eager = true,
+}: {
+  product: ShopProduct;
+  /** Only the first card may mount its images at first layout. */
+  eager?: boolean;
+}) {
   const images = product.images;
   const count = images.length;
   const compareAt = product.compareAtPrice;
@@ -44,7 +52,9 @@ export function ProductCard({ product }: { product: ShopProduct }) {
       className={`shop-card${buyable ? "" : " shop-card--unavailable"}`}
     >
       {count > 0 ? (
-        <ImageCycler images={images} name={product.name} slug={product.slug} />
+        <DeferredMedia eager={eager}>
+          <ImageCycler images={images} name={product.name} slug={product.slug} />
+        </DeferredMedia>
       ) : (
         <span className="shop-card-fallback" aria-hidden="true">
           {product.name.charAt(0)}

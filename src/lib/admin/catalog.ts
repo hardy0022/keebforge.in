@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { defineCached, TAG, TTL } from "@/lib/caching/cache";
 import { availableQuantity } from "@/lib/cart";
+import { ADMIN_PAGE_SIZE, paginate } from "@/lib/admin/pagination";
 import type { ProductStatus, ProductType } from "@/lib/catalog/product-labels";
 export type { ProductStatus, ProductType };
 export {
@@ -78,7 +79,7 @@ export const getAdminProducts = cache((params: AdminProductQuery) => {
     status = "any",
     sort = "newest",
     page = 1,
-    pageSize = 20,
+    pageSize = ADMIN_PAGE_SIZE,
   } = params;
 
   const where: Prisma.ProductWhereInput = {
@@ -126,33 +127,30 @@ export const getAdminProducts = cache((params: AdminProductQuery) => {
             ? [{ name: "asc" }]
             : [{ createdAt: "desc" }];
 
+  // Only what the list renders. Previously also selected slug, costPrice,
+  // createdAt, category.slug, brand.slug and every active variant row — none
+  // were used by the page, and costPrice is a margin secret that had no
+  // business in the RSC payload.
   const select = {
     id: true,
     name: true,
-    slug: true,
     sku: true,
     type: true,
     status: true,
     price: true,
     compareAtPrice: true,
-    costPrice: true,
     stock: true,
     reservedQuantity: true,
     lowStockThreshold: true,
     featured: true,
-    createdAt: true,
     updatedAt: true,
-    category: { select: { name: true, slug: true } },
-    brand: { select: { name: true, slug: true } },
+    category: { select: { name: true } },
+    brand: { select: { name: true } },
     images: {
       where: { active: true },
       orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],
       take: 1,
       select: { url: true },
-    },
-    variants: {
-      where: { active: true },
-      select: { stock: true, reservedQuantity: true },
     },
   } satisfies Prisma.ProductSelect;
 
@@ -177,16 +175,16 @@ export const getAdminProducts = cache((params: AdminProductQuery) => {
         { units: s._sum.quantity ?? 0, revenue: s._sum.lineTotal ?? 0 },
       ]),
     );
-    return {
-      items: items.map((p) => ({
+    return paginate(
+      items.map((p) => ({
         ...p,
         sales: salesByProduct.get(p.id) ?? { units: 0, revenue: 0 },
         available: availableQuantity(p.stock, p.reservedQuantity),
       })),
       total,
       page,
-      pages: Math.max(1, Math.ceil(total / pageSize)),
-    };
+      pageSize,
+    );
   });
 });
 

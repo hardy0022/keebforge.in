@@ -10,6 +10,7 @@ import type {
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { defineCached, TAG, TTL } from "@/lib/caching/cache";
+import { ADMIN_PAGE_SIZE, paginate, type Paginated } from "@/lib/admin/pagination";
 
 import {
   fmtIST,
@@ -243,7 +244,7 @@ export const getAdminOrders = cache((params: AdminOrdersQuery) => {
     to,
     sort = "newest",
     page = 1,
-    pageSize = 20,
+    pageSize = ADMIN_PAGE_SIZE,
     completed,
     excludeCompleted,
   } = params;
@@ -307,57 +308,192 @@ export const getAdminOrders = cache((params: AdminOrdersQuery) => {
       take: pageSize,
       select,
     }),
-  ]).then(([total, items]) => ({
-    items,
-    total,
-    page,
-    pages: Math.max(1, Math.ceil(total / pageSize)),
-  }));
+  ]).then(([total, items]) => paginate(items, total, page, pageSize));
 });
 
 // ─── Shipments (admin) ────────────────────────────────────────────────────
 
 /** Shipment rows with their order context, newest first. Admin-only.
  *  Delivered and returned are hidden unless a status is explicitly asked for. */
+const SHIPMENT_SELECT = {
+  id: true,
+  courier: true,
+  trackingNumber: true,
+  status: true,
+  pickupId: true,
+  createdAt: true,
+  order: {
+    select: {
+      orderNumber: true,
+      customerName: true,
+      customerEmail: true,
+      shippingDestinationPincode: true,
+    },
+  },
+} satisfies Prisma.ShipmentSelect;
+
+type ShipmentRowWithOrder = Prisma.ShipmentGetPayload<{
+  select: typeof SHIPMENT_SELECT;
+}>;
+
 export const getAdminShipments = cache(
-  ({ q, status }: { q?: string; status?: ShippingStatus }) =>
-    prisma.shipment.findMany({
-      where: {
-        ...(q
-          ? {
-              OR: [
-                { trackingNumber: { contains: q, mode: "insensitive" } },
-                { courier: { contains: q, mode: "insensitive" } },
-                {
-                  order: {
-                    orderNumber: { contains: q, mode: "insensitive" },
-                  },
+  ({
+    q,
+    status,
+    page = 1,
+    pageSize = ADMIN_PAGE_SIZE,
+  }: {
+    q?: string;
+    status?: ShippingStatus;
+    page?: number;
+    pageSize?: number;
+  }): Promise<Paginated<ShipmentRowWithOrder>> => {
+    const where: Prisma.ShipmentWhereInput = {
+      ...(q
+        ? {
+            OR: [
+              { trackingNumber: { contains: q, mode: "insensitive" } },
+              { courier: { contains: q, mode: "insensitive" } },
+              {
+                order: {
+                  orderNumber: { contains: q, mode: "insensitive" },
                 },
-                {
-                  order: { customerName: { contains: q, mode: "insensitive" } },
-                },
-              ],
-            }
-          : {}),
-        ...(status
-          ? { status }
-          : {
-              status: { notIn: ["DELIVERED", "RETURNED"] as ShippingStatus[] },
-            }),
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        order: {
-          select: {
-            orderNumber: true,
-            customerName: true,
-            customerEmail: true,
-            total: true,
-            shippingDestinationPincode: true,
-          },
+              },
+              {
+                order: { customerName: { contains: q, mode: "insensitive" } },
+              },
+            ],
+          }
+        : {}),
+      ...(status
+        ? { status }
+        : {
+            status: { notIn: ["DELIVERED", "RETURNED"] as ShippingStatus[] },
+          }),
+    };
+    return Promise.all([
+      prisma.shipment.count({ where }),
+      prisma.shipment.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: SHIPMENT_SELECT,
+      }),
+    ]).then(([total, items]) => paginate(items, total, page, pageSize));
+  },
+);
+
+// ─── Customers (admin) ───────────────────────────────────────────────────────
+
+export type AdminCustomerRow = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  email: string;
+  phone: string | null;
+  discordHandle: string | null;
+  createdAt: Date;
+  orderCount: number;
+  totalSpent: number;
+};
+
+/**
+ * Customer list, newest first.
+ *
+ * The header KPIs ("with orders", "total spent") are all-time aggregates over
+ * every matching customer computed in SQL — NOT derived from the current page,
+ * which would silently change their meaning once paginated.
+ *
+ * Previously this loaded every Customer row *plus every one of their Order
+ * rows* to total them in JS. Spend is now a groupBy over the ≤15 profiles on
+ * the current page, so the row count no longer scales with order volume.
+ */
+export const getAdminCustomers = cache(
+  async ({
+    q,
+    page = 1,
+    pageSize = ADMIN_PAGE_SIZE,
+  }: {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+  } = {}): Promise<
+    Paginated<AdminCustomerRow> & { withOrders: number; allTimeSpent: number }
+  > => {
+    const where: Prisma.ProfileWhereInput = {
+      role: "CUSTOMER",
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { username: { contains: q, mode: "insensitive" } },
+              { email: { contains: q, mode: "insensitive" } },
+              { phone: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, items] = await Promise.all([
+      prisma.profile.count({ where }),
+      prisma.profile.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+          customer: { select: { discordHandle: true } },
+          _count: { select: { orders: { where: { isDeleted: false } } } },
         },
-      },
-    }),
+      }),
+    ]);
+
+    // Spend for just the profiles on this page (≤ pageSize rows back).
+    const [spentByProfile, withOrders, allTimeSpent] = await Promise.all([
+      prisma.order.groupBy({
+        by: ["profileId"],
+        where: { isDeleted: false, profileId: { in: items.map((c) => c.id) } },
+        _sum: { total: true },
+      }),
+      prisma.profile.count({
+        where: { ...where, orders: { some: { isDeleted: false } } },
+      }),
+      // All-time revenue across every matching customer, via the Profile
+      // relation so no customer id list is materialised.
+      prisma.order.aggregate({
+        where: { isDeleted: false, profile: where },
+        _sum: { total: true },
+      }),
+    ]);
+
+    const spent = new Map(
+      spentByProfile.map((s) => [s.profileId, s._sum.total ?? 0]),
+    );
+    const rows: AdminCustomerRow[] = items.map((c) => ({
+      id: c.id,
+      name: c.name,
+      username: c.username,
+      email: c.email,
+      phone: c.phone,
+      discordHandle: c.customer?.discordHandle ?? null,
+      createdAt: c.createdAt,
+      orderCount: c._count.orders,
+      totalSpent: spent.get(c.id) ?? 0,
+    }));
+
+    return {
+      ...paginate(rows, total, page, pageSize),
+      withOrders,
+      allTimeSpent: allTimeSpent._sum.total ?? 0,
+    };
+  },
 );
 
 // ─── Order detail ───────────────────────────────────────────────────────────
@@ -411,7 +547,7 @@ export type AdminReviewRow = Prisma.ReviewGetPayload<{
 }> & { images: { url: string }[] };
 
 const adminReviewsPage = cache(async (params: AdminReviewsQuery) => {
-  const { status, type, rating, q, page = 1, pageSize = 20 } = params;
+  const { status, type, rating, q, page = 1, pageSize = ADMIN_PAGE_SIZE } = params;
   const where: Prisma.ReviewWhereInput = {
     ...(status ? { status } : {}),
     ...(type ? { type } : {}),
@@ -455,9 +591,12 @@ const adminReviewsPage = cache(async (params: AdminReviewsQuery) => {
     }),
   ]);
   const [total, items] = pageResults;
+  // Only secureUrl is rendered; selecting every media column shipped the whole
+  // Media row (publicId, folder, role, dimensions) into the RSC payload.
   const media = await prisma.media.findMany({
     where: { entityType: "REVIEW", entityId: { in: items.map((r) => r.id) } },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { entityId: true, secureUrl: true },
   });
   const byReview = new Map<string, { url: string }[]>();
   for (const m of media) {
@@ -469,12 +608,7 @@ const adminReviewsPage = cache(async (params: AdminReviewsQuery) => {
     ...r,
     images: byReview.get(r.id) ?? [],
   }));
-  return {
-    items: rows,
-    total,
-    page,
-    pages: Math.max(1, Math.ceil(total / pageSize)),
-  };
+  return paginate(rows, total, page, pageSize);
 });
 
 const cachedAdminReviews = defineCached(adminReviewsPage, {

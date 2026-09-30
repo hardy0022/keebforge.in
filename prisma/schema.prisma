@@ -897,6 +897,13 @@ model Review {
   /// treat NULLs as distinct, so orphaned reviews (productId = NULL after
   /// product deletion) never collide.
   @@unique([profileId, productId])
+  /// One general review per customer, enforced by a partial unique index that
+  /// Prisma cannot express here — see the `add_general_review_unique_index`
+  /// migration. A bare UNIQUE(profileId) would not work: general reviews AND
+  /// orphaned product reviews (productId → NULL via ON DELETE SET NULL) share
+  /// the same productId value, so the predicate must also pin type = GENERAL.
+  /// Do not replace this with @@unique([profileId]) — it would forbid a
+  /// customer from holding a general review alongside a deleted product's.
   @@index([status, type])
   @@index([productId, status])
   @@index([serviceId, status])

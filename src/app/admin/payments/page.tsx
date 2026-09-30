@@ -4,6 +4,8 @@ import { requirePermission } from "@/lib/auth/admin";
 import { prisma } from "@/lib/db/prisma";
 import { formatINR } from "@/lib/utils/money";
 import { fmtIST } from "@/lib/utils/ist";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { ADMIN_PAGE_SIZE, paginate, parsePage } from "@/lib/admin/pagination";
 
 export const metadata: Metadata = {
   title: "Payments | KeebForge Admin",
@@ -30,32 +32,40 @@ function methodLabel(m: string | null): string {
 export default async function AdminPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await requirePermission("order", "view");
   const sp = await searchParams;
 
-  const page = Math.max(1, Number(sp.page) || 1);
-  const pageSize = 50;
-  const skip = (page - 1) * pageSize;
+  const page = parsePage(
+    typeof sp.page === "string" ? sp.page : sp.page?.[0],
+  );
 
-  const [payments, total] = await Promise.all([
-    prisma.payment.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        order: {
-          select: {
-            orderNumber: true,
-            customerName: true,
-            customerEmail: true,
+  const { items: payments, total, page: current, pages: totalPages } =
+    await Promise.all([
+      prisma.payment.count(),
+      prisma.payment.findMany({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          razorpayPaymentId: true,
+          razorpayCustomerId: true,
+          amount: true,
+          status: true,
+          method: true,
+          createdAt: true,
+          order: {
+            select: {
+              orderNumber: true,
+              customerName: true,
+              customerEmail: true,
+            },
           },
         },
-      },
-      skip,
-      take: pageSize,
-    }),
-    prisma.payment.count(),
-  ]);
+        skip: (page - 1) * ADMIN_PAGE_SIZE,
+        take: ADMIN_PAGE_SIZE,
+      }),
+    ]).then(([total, items]) => paginate(items, total, page));
 
   const summary = await prisma.payment.groupBy({
     by: ["status"],
@@ -70,8 +80,6 @@ export default async function AdminPaymentsPage({
     (stat("PARTIALLY_PAID")?._sum.amount ?? 0);
   const failed = stat("FAILED")?._sum.amount ?? 0;
   const refunded = stat("REFUNDED")?._sum.amount ?? 0;
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -212,29 +220,14 @@ export default async function AdminPaymentsPage({
         </table>
       </div>
 
-      {totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {page > 1 && (
-            <a
-              className="btn-admin sm"
-              href={`/admin/payments?page=${page - 1}`}
-            >
-              ← Prev
-            </a>
-          )}
-          <span className="muted" style={{ fontSize: "0.8rem" }}>
-            Page {page} of {totalPages}
-          </span>
-          {page < totalPages && (
-            <a
-              className="btn-admin sm"
-              href={`/admin/payments?page=${page + 1}`}
-            >
-              Next →
-            </a>
-          )}
-        </div>
-      )}
+      <AdminPagination
+        page={current}
+        pages={totalPages}
+        total={total}
+        searchParams={sp}
+        basePath="/admin/payments"
+        unit="payments"
+      />
 
       <Link href="/admin" className="muted" style={{ fontSize: "0.75rem" }}>
         ← Dashboard

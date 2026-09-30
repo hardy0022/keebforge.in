@@ -57,6 +57,7 @@ export async function PATCH(
       lastName,
       email,
       streetAddress,
+      apartment,
       city,
       state,
       postalCode,
@@ -97,6 +98,9 @@ export async function PATCH(
         name: name ?? existing.name,
         email: email ?? existing.email,
         streetAddress: streetAddress ?? existing.streetAddress,
+        // Was never destructured here, so every edit silently dropped the
+        // apartment line. Empty string clears it, matching POST + phone.
+        apartment: apartment === "" ? null : (apartment ?? existing.apartment),
         city: city ?? existing.city,
         state: state ?? existing.state,
         postalCode: postalCode ?? existing.postalCode,

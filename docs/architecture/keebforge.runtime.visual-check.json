@@ -12,7 +12,7 @@
   },
   "state": {
     "detail": "read",
-    "motion": "still"
+    "motion": "removed"
   },
   "chrome": {
     "status": "available",

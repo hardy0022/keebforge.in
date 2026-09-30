@@ -11,6 +11,8 @@ import {
   PRODUCT_TYPE_LABELS,
 } from "@/lib/admin/catalog";
 import { fmtIST } from "@/lib/utils/ist";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { parsePage } from "@/lib/admin/pagination";
 
 export const metadata: Metadata = {
   title: "Products | KeebForge Admin",
@@ -48,32 +50,13 @@ export default async function AdminProductsPage({
       category: sp.category,
       brand: sp.brand,
       stock: sp.stock as never,
-      status: sp.status as never,
+      status: STATUSES.includes(sp.status as never)
+        ? (sp.status as (typeof STATUSES)[number])
+        : "any",
       sort: (sp.sort as never) || "newest",
-      page: Math.max(1, Number(sp.page) || 1),
+      page: parsePage(sp.page),
     }),
   ]);
-
-  const link = (extra: Record<string, string | number | undefined>) => {
-    const p = new URLSearchParams();
-    for (const k of [
-      "q",
-      "category",
-      "brand",
-      "stock",
-      "status",
-      "sort",
-    ] as const) {
-      const v = k in sp ? sp[k as keyof typeof sp] : undefined;
-      if (v) p.set(k, v);
-    }
-    for (const [k, v] of Object.entries(extra)) {
-      if (v === undefined || v === "") p.delete(k);
-      else p.set(k, String(v));
-    }
-    const s = p.toString();
-    return s ? `/admin/products?${s}` : "/admin/products";
-  };
 
   const stockBadge = (p: {
     stock: number;
@@ -350,42 +333,14 @@ export default async function AdminProductsPage({
         </div>
       )}
 
-      {result.pages > 1 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Link
-            className="btn-admin sm"
-            href={link({ page: result.page - 1 })}
-            style={
-              result.page <= 1
-                ? { pointerEvents: "none", opacity: 0.4 }
-                : undefined
-            }
-          >
-            ← Prev
-          </Link>
-          <span className="muted num">
-            Page {result.page} of {result.pages}
-          </span>
-          <Link
-            className="btn-admin sm"
-            href={link({ page: result.page + 1 })}
-            style={
-              result.page >= result.pages
-                ? { pointerEvents: "none", opacity: 0.4 }
-                : undefined
-            }
-          >
-            Next →
-          </Link>
-        </div>
-      )}
+      <AdminPagination
+        page={result.page}
+        pages={result.pages}
+        total={result.total}
+        searchParams={sp}
+        basePath="/admin/products"
+        unit="products"
+      />
     </div>
   );
 }

@@ -1,6 +1,4 @@
-import { useCallback } from "react";
 import type { AnimatedIconProps } from "./types";
-import { motion, useAnimate } from "motion/react";
 
 const PlugConnectedIcon = ({
   size = 24,
@@ -8,63 +6,8 @@ const PlugConnectedIcon = ({
   strokeWidth = 2,
   className = "",
 }: AnimatedIconProps) => {
-  const [scope, animate] = useAnimate();
-
-  const start = useCallback(async () => {
-    animate(
-      ".plug-upper-part",
-      {
-        y: 2,
-        x: -2,
-      },
-      {
-        duration: 0.35,
-        ease: "easeOut",
-      },
-    );
-
-    animate(
-      ".plug-lower-leg",
-      {
-        opacity: 0,
-      },
-      {
-        duration: 0.35,
-        ease: "easeOut",
-      },
-    );
-
-    animate(
-      ".plug-lower-part",
-      {
-        y: -2,
-        x: 2,
-      },
-      {
-        duration: 0.35,
-        ease: "easeOut",
-      },
-    );
-  }, [animate]);
-
-  const stop = useCallback(async () => {
-    animate(
-      ".plug-upper-part, .plug-lower-leg, .plug-lower-part",
-      {
-        y: 0,
-        x: 0,
-        opacity: 1,
-      },
-      {
-        duration: 0.3,
-        ease: "easeInOut",
-      },
-    );
-  }, [animate]);
-
   return (
-    <motion.svg
-      ref={scope}
+    <svg
       xmlns="http://www.w3.org/2000/svg"
       width={size}
       height={size}
@@ -74,32 +17,24 @@ const PlugConnectedIcon = ({
       strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`cursor-pointer ${className}`}
-      onHoverStart={start}
-      onHoverEnd={stop}
+      className={`icon-animated kf-ico-plug cursor-pointer ${className}`}
     >
-      <motion.path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      {/* <motion.path d="M20 16l-4 4" /> */}
-      <motion.path
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      {/* <path d="M20 16l-4 4" /> */}
+      <path
         d="M7 12l5 5l-1.5 1.5a3.536 3.536 0 1 1 -5 -5l1.5 -1.5z"
         className="plug-lower-part"
       />
-      <motion.path
+      <path
         d="M17 12l-5 -5l1.5 -1.5a3.536 3.536 0 1 1 5 5l-1.5 1.5z"
         className="plug-upper-part"
       />
-      <motion.path d="M3 21l2.5 -2.5" className="plug-lower-part" />
-      <motion.path d="M18.5 5.5l2.5 -2.5" className="plug-upper-part" />
-      <motion.path
-        d="M10 11l-2 2"
-        className="plug-lower-part plug-lower-leg"
-      />
-      <motion.path
-        d="M13 14l-2 2"
-        className="plug-lower-part plug-lower-leg"
-      />
-      {/* <motion.path d="M16 16l4 4" /> */}
-    </motion.svg>
+      <path d="M3 21l2.5 -2.5" className="plug-lower-part" />
+      <path d="M18.5 5.5l2.5 -2.5" className="plug-upper-part" />
+      <path d="M10 11l-2 2" className="plug-lower-part plug-lower-leg" />
+      <path d="M13 14l-2 2" className="plug-lower-part plug-lower-leg" />
+      {/* <path d="M16 16l4 4" /> */}
+    </svg>
   );
 };
 

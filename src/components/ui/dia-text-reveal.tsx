@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import {
-  animate,
-  motion,
-  useInView,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-  type HTMLMotionProps,
-} from "motion/react";
+  useEffect,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+  type RefObject,
+} from "react";
 
 import { cn } from "@/lib/utils/cn";
 
@@ -17,6 +14,7 @@ const DEFAULT_COLORS = ["#c679c4", "#fa3d1d", "#ffb005", "#e1e1fe", "#0358f7"];
 const BAND_HALF = 17;
 const SWEEP_START = -BAND_HALF;
 const SWEEP_END = 100 + BAND_HALF;
+const WIDTH_MS = 400;
 
 const sweepEase = (t: number) =>
   t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
@@ -63,13 +61,76 @@ function measureWidths(el: HTMLElement, texts: string[]) {
   return widths;
 }
 
+function sweepPos(now: number, start: number, durMs: number, delayMs: number) {
+  const elapsed = Math.round(now - start) - delayMs;
+  if (elapsed < 0) return SWEEP_START;
+  if (elapsed >= durMs) return SWEEP_END;
+  return SWEEP_START + (SWEEP_END - SWEEP_START) * sweepEase(elapsed / durMs);
+}
+
+function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
+  const cx = 3 * x1;
+  const bx = 3 * (x2 - x1) - cx;
+  const ax = 1 - bx - cx;
+  const cy = 3 * y1;
+  const by = 3 * (y2 - y1) - cy;
+  const ay = 1 - by - cy;
+  return (x: number) => {
+    let t = x;
+    for (let i = 0; i < 8; i++) {
+      const d = (3 * ax * t + 2 * bx) * t + cx;
+      if (d === 0) break;
+      t -= (((ax * t + bx) * t + cx) * t - x) / d;
+    }
+    return ((ay * t + by) * t + cy) * t;
+  };
+}
+
+const widthEase = cubicBezier(0.4, 0, 0.2, 1);
+
+function useInView(ref: RefObject<HTMLSpanElement | null>, once: boolean, amount: number) {
+  const [isInView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let leave: (() => void) | undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting === Boolean(leave)) return;
+        if (entry.isIntersecting) {
+          setInView(true);
+          if (once) observer.unobserve(el);
+          else
+            leave = () => {
+              leave = undefined;
+              setInView(false);
+            };
+        } else if (leave) {
+          leave();
+        }
+      },
+      { threshold: amount },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, once, amount]);
+
+  return isInView;
+}
+
+function usePrefersReducedMotion() {
+  const [reduced] = useState(
+    () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion)").matches,
+  );
+  return reduced;
+}
+
 /**
  * Props for {@link DiaTextReveal}.
  */
-export interface DiaTextRevealProps extends Omit<
-  HTMLMotionProps<"span">,
-  "ref" | "children" | "style" | "animate" | "transition" | "color"
-> {
+export interface DiaTextRevealProps
+  extends Omit<ComponentPropsWithoutRef<"span">, "children" | "style" | "color"> {
   /**
    * Text to reveal. Pass multiple strings to rotate when {@link DiaTextRevealProps.repeat} is `true`.
    */
@@ -140,7 +201,7 @@ export function DiaTextReveal({
 }: DiaTextRevealProps) {
   const texts = Array.isArray(text) ? text : [text];
   const isMulti = texts.length > 1;
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const spanRef = useRef<HTMLSpanElement>(null);
   const optsRef = useRef({
@@ -170,14 +231,9 @@ export function DiaTextReveal({
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [measuredWidths, setMeasuredWidths] = useState<number[]>([]);
+  const [initialGradient] = useState(() => buildGradient(SWEEP_START, colors, textColor));
 
-  const sweepPos = useMotionValue(SWEEP_START);
-
-  const backgroundImage = useTransform(sweepPos, (pos) =>
-    buildGradient(pos, optsRef.current.colors, optsRef.current.textColor),
-  );
-
-  const isInView = useInView(spanRef, { once, amount: 0.1 });
+  const isInView = useInView(spanRef, once, 0.1);
   const textKey = Array.isArray(text) ? text.join("\0") : text;
 
   useEffect(() => {
@@ -187,8 +243,14 @@ export function DiaTextReveal({
   }, [textKey, isMulti]);
 
   useEffect(() => {
+    const el = spanRef.current;
+    if (!el) return;
     if (prefersReducedMotion) {
-      sweepPos.set(SWEEP_END);
+      el.style.backgroundImage = buildGradient(
+        SWEEP_END,
+        optsRef.current.colors,
+        optsRef.current.textColor,
+      );
       return;
     }
     if (startOnView && !isInView) return;
@@ -196,36 +258,54 @@ export function DiaTextReveal({
     hasPlayedRef.current = true;
 
     const { duration, delay, repeat, repeatDelay, texts } = optsRef.current;
-    let stop: (() => void) | null = null;
+    const durMs = duration * 1000;
+    const delayMs = delay * 1000;
+    let raf = 0;
+    let start = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const play = () => {
-      sweepPos.set(SWEEP_START);
-
-      const controls = animate(sweepPos, SWEEP_END, {
-        duration,
-        delay,
-        ease: sweepEase,
-        onComplete() {
-          if (!repeat) return;
-          timer = setTimeout(() => {
-            indexRef.current = (indexRef.current + 1) % texts.length;
-            setActiveIndex(indexRef.current);
-            play();
-          }, repeatDelay * 1000);
-        },
-      });
-
-      stop = () => controls.stop();
+    const write = (pos: number) => {
+      el.style.backgroundImage = buildGradient(
+        pos,
+        optsRef.current.colors,
+        optsRef.current.textColor,
+      );
     };
+
+    const frame = () => {
+      const pos = sweepPos(performance.now(), start, durMs, delayMs);
+      write(pos);
+      if (pos < SWEEP_END) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      raf = 0;
+      if (!repeat) return;
+      timer = setTimeout(() => {
+        indexRef.current = (indexRef.current + 1) % texts.length;
+        setActiveIndex(indexRef.current);
+        play();
+      }, repeatDelay * 1000);
+    };
+
+    function play() {
+      write(SWEEP_START);
+      start = performance.now();
+      raf = requestAnimationFrame(frame);
+    }
 
     play();
 
     return () => {
-      stop?.();
+      if (raf) {
+        cancelAnimationFrame(raf);
+        clearTimeout(timer);
+        write(sweepPos(performance.now(), start, durMs, delayMs));
+        return;
+      }
       clearTimeout(timer);
     };
-  }, [isInView, startOnView, once, prefersReducedMotion, sweepPos]);
+  }, [isInView, startOnView, once, prefersReducedMotion]);
 
   const fixedW =
     isMulti && fixedWidth && measuredWidths.length > 0
@@ -237,8 +317,27 @@ export function DiaTextReveal({
       ? measuredWidths[activeIndex]
       : undefined;
 
+  useEffect(() => {
+    const el = spanRef.current;
+    if (!el || animatedW == null) return;
+    const from = parseFloat(el.style.width);
+    if (!Number.isFinite(from)) {
+      el.style.width = `${animatedW}px`;
+      return;
+    }
+    const start = performance.now();
+    let raf = 0;
+    const step = () => {
+      const t = Math.min(1, Math.round(performance.now() - start) / WIDTH_MS);
+      el.style.width = `${from + (animatedW - from) * widthEase(t)}px`;
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [animatedW]);
+
   return (
-    <motion.span
+    <span
       ref={spanRef}
       className={cn("align-bottom leading-[100%] text-inherit", className)}
       style={{
@@ -247,7 +346,7 @@ export function DiaTextReveal({
         backgroundClip: "text",
         WebkitBackgroundClip: "text",
         backgroundSize: "100% 100%",
-        backgroundImage,
+        backgroundImage: initialGradient,
         ...(isMulti && {
           display: "inline-block",
           overflow: "hidden",
@@ -256,11 +355,9 @@ export function DiaTextReveal({
           ...(fixedW != null && { width: fixedW }),
         }),
       }}
-      animate={animatedW != null ? { width: animatedW } : undefined}
-      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       {...props}
     >
       {texts[activeIndex]}
-    </motion.span>
+    </span>
   );
 }

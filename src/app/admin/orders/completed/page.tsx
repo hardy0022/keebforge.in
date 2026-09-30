@@ -1,10 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import type { PaymentStatus } from "@prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
 import { formatINR } from "@/lib/utils/money";
 import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS } from "@/lib/orders";
 import { getAdminOrders, COMPLETED_STATUSES } from "@/lib/admin";
 import { fmtIST } from "@/lib/utils/ist";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { parsePage } from "@/lib/admin/pagination";
 
 export const metadata: Metadata = {
   title: "Completed Orders | KeebForge Admin",
@@ -35,28 +38,15 @@ export default async function AdminCompletedOrdersPage({
   const sp = await searchParams;
   const result = await getAdminOrders({
     q: sp.q,
-    payment: sp.payment as never,
+    payment: PAYMENT_STATUSES.includes(sp.payment as never)
+      ? (sp.payment as PaymentStatus)
+      : undefined,
     from: sp.from,
     to: sp.to,
     sort: (sp.sort as never) || "newest",
-    page: Math.max(1, Number(sp.page) || 1),
+    page: parsePage(sp.page),
     completed: true,
   });
-
-  const link = (extra: Record<string, string | number | undefined>) => {
-    const p = new URLSearchParams();
-    if (sp.q) p.set("q", sp.q);
-    if (sp.payment) p.set("payment", sp.payment);
-    if (sp.from) p.set("from", sp.from);
-    if (sp.to) p.set("to", sp.to);
-    if (sp.sort) p.set("sort", sp.sort);
-    for (const [k, v] of Object.entries(extra)) {
-      if (v === undefined || v === "") p.delete(k);
-      else p.set(k, String(v));
-    }
-    const s = p.toString();
-    return s ? `/admin/orders/completed?${s}` : "/admin/orders/completed";
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -220,42 +210,14 @@ export default async function AdminCompletedOrdersPage({
         </div>
       )}
 
-      {result.pages > 1 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Link
-            className="btn-admin sm"
-            href={link({ page: result.page - 1 })}
-            style={
-              result.page <= 1
-                ? { pointerEvents: "none", opacity: 0.4 }
-                : undefined
-            }
-          >
-            ← Prev
-          </Link>
-          <span className="muted num">
-            Page {result.page} of {result.pages}
-          </span>
-          <Link
-            className="btn-admin sm"
-            href={link({ page: result.page + 1 })}
-            style={
-              result.page >= result.pages
-                ? { pointerEvents: "none", opacity: 0.4 }
-                : undefined
-            }
-          >
-            Next →
-          </Link>
-        </div>
-      )}
+      <AdminPagination
+        page={result.page}
+        pages={result.pages}
+        total={result.total}
+        searchParams={sp}
+        basePath="/admin/orders/completed"
+        unit="completed orders"
+      />
     </div>
   );
 }

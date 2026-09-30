@@ -113,13 +113,18 @@ const nextConfig: NextConfig = {
   // Prisma loads the native query engine (libquery_engine-*.so.node) and the generated
   // client sets `engineWasm`/`compilerWasm` to undefined, so these WASM packs are never
   // loaded. Turbopack still traces them into every server function (≈53 MB each).
-  // Exclude only the embedded WASM packs; keep the native engine and all runtime JS.
+  // Exclude only the embedded WASM packs and the generated client's own
+  // uncompiled WASM engine (node_modules/.prisma/client/query_engine_bg.wasm,
+  // 2.2 MB per function) — same never-loaded path, traced into all 84
+  // Prisma-carrying functions (~184 MB aggregate). Keep the native engine and
+  // all runtime JS.
   outputFileTracingExcludes: {
     "/*": [
       "node_modules/@prisma/client/runtime/query_engine_bg.*.wasm-base64.js",
       "node_modules/@prisma/client/runtime/query_engine_bg.*.wasm-base64.mjs",
       "node_modules/@prisma/client/runtime/query_compiler_bg.*.wasm-base64.js",
       "node_modules/@prisma/client/runtime/query_compiler_bg.*.wasm-base64.mjs",
+      "node_modules/.prisma/client/query_engine_bg.wasm",
     ],
   },
   images: {

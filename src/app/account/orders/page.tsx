@@ -173,7 +173,19 @@ export default async function OrdersPage() {
                   <p className="account-review-date">
                     {formatOrderDate(review.createdAt)}
                   </p>
-                  <DeleteReviewButton reviewId={review.id} />
+                  <div className="account-review-actions">
+                    <Link
+                      href={
+                        review.type === "PRODUCT" && review.productSlugSnapshot
+                          ? `/write-review/${review.productSlugSnapshot}/edit`
+                          : "/write-review/edit"
+                      }
+                      className="account-section-link"
+                    >
+                      Edit
+                    </Link>
+                    <DeleteReviewButton reviewId={review.id} />
+                  </div>
                 </div>
               </div>
             ))}

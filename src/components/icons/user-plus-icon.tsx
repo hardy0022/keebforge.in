@@ -4,9 +4,12 @@ import { forwardRef, useImperativeHandle } from "react";
 import type { AnimatedIconHandle, AnimatedIconProps } from "./types";
 
 /**
- * Animated "user +" icon. Hover animation is CSS-only (.icon-animated + parent
- * :hover) so the app shell doesn't ship the motion/react runtime.
- * `startAnimation`/`stopAnimation` are kept as no-ops for source compatibility.
+ * Animated "user +" icon. The hover lift is CSS-only: `.icon-animated .user-avatar`
+ * transitions `transform` over 0.25s and a parent `.nav-icon:hover` /
+ * `.nav-profile-trigger:hover` applies `translateY(-1px) scale(1.05)`, while
+ * `.icon-animated .plus-sign` rotates `45deg` and scales `1.15`; a
+ * `prefers-reduced-motion: reduce` block disables both. `startAnimation`/
+ * `stopAnimation` are kept as no-ops for source compatibility.
  */
 const UserPlusIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
   (

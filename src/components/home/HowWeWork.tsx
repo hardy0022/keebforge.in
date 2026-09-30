@@ -1,12 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import {
-  motion,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-} from "motion/react";
 import { cn } from "@/lib/utils/cn";
 
 type Props = {
@@ -83,26 +77,59 @@ const STEPS: Step[] = [
 
 /** Sticky workshop-process story: steps crossfade as the shared pinned stage scrolls. */
 export function HowWeWork({ progressTargetRef }: Props) {
-  const reduced = useReducedMotion();
+  const railRef = useRef<HTMLDivElement>(null);
   const lastV = useRef(0);
+  const isReduced = useRef(false);
   const [active, setActive] = useState(0);
   const [dir, setDir] = useState(1);
 
-  const { scrollYProgress } = useScroll({
-    target: progressTargetRef,
-    offset: ["start start", "end end"],
-  });
-  const progress = useTransform(scrollYProgress, (v) => (reduced ? 1 : v));
-  const railWidth = useTransform(progress, [0, 1], ["0%", "100%"]);
-
+  /** Rail progress is the runway's own scroll fraction: 0 when the pinned
+      runway top meets the viewport top, 1 when its bottom meets the viewport
+      bottom. Written straight to a custom property — no easing, the fill
+      tracks the scroll position exactly as the motion value did. Under
+      reduced motion the rail stays full and the step index intentionally
+      stops advancing, matching the previous hook's behaviour. */
   useEffect(() => {
-    return progress.on("change", (v) => {
+    const rail = railRef.current;
+    const target = progressTargetRef.current;
+    if (!rail || !target) return;
+
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    isReduced.current = mq.matches;
+
+    const update = () => {
+      const rect = target.getBoundingClientRect();
+      const span = rect.height - window.innerHeight;
+      const v = isReduced.current
+        ? 1
+        : span <= 0
+          ? 1
+          : Math.min(1, Math.max(0, -rect.top / span));
+      rail.style.setProperty("--hp-how-progress", String(v));
+      if (isReduced.current || v === lastV.current) return;
+
       setDir(v >= lastV.current ? 1 : -1);
       lastV.current = v;
       const idx = Math.min(STEPS.length - 1, Math.floor(v * STEPS.length));
       setActive((cur) => (cur === idx ? cur : idx));
-    });
-  }, [progress]);
+    };
+
+    const onPrefChange = () => {
+      isReduced.current = mq.matches;
+      update();
+    };
+
+    mq.addEventListener("change", onPrefChange);
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
+    update();
+
+    return () => {
+      mq.removeEventListener("change", onPrefChange);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [progressTargetRef]);
 
   /** Forward: past steps sit above (-20), next steps below (+20). Backward: reversed. */
   const stepState = (i: number) => {
@@ -125,11 +152,8 @@ export function HowWeWork({ progressTargetRef }: Props) {
         <p className="hp-how-sub">
           From arrived-in-mail to back-on-desk — four steps, handled by hand.
         </p>
-        <div className="hp-how-rail" aria-hidden="true">
-          <motion.span
-            style={{ width: railWidth }}
-            className="hp-how-rail-fill"
-          />
+        <div className="hp-how-rail" ref={railRef} aria-hidden="true">
+          <span className="hp-how-rail-fill" />
         </div>
         <p className="hp-how-count">
           <span className="num">{String(active + 1).padStart(2, "0")}</span> /{" "}

@@ -1,58 +1,22 @@
-import { forwardRef, useImperativeHandle, useCallback } from "react";
+import { forwardRef, useImperativeHandle, useCallback, useRef } from "react";
 import type { AnimatedIconHandle, AnimatedIconProps } from "./types";
-import { motion, useAnimate } from "motion/react";
 
 const TruckElectricIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
   (
     { size = 24, color = "currentColor", strokeWidth = 2, className = "" },
     ref,
   ) => {
-    const [scope, animate] = useAnimate();
+    const svgRef = useRef<SVGSVGElement>(null);
 
-    const start = useCallback(async () => {
-      await animate(
-        ".truck",
-        {
-          x: [0, 30],
-          opacity: [1, 0],
-        },
-        {
-          duration: 0.5,
-          ease: "easeIn",
-        },
-      );
-
-      animate(
-        ".truck",
-        {
-          x: -30,
-        },
-        {
-          duration: 0,
-        },
-      );
-
-      await animate(
-        ".truck",
-        {
-          x: [-30, 0],
-          opacity: [0, 1],
-        },
-        {
-          duration: 0.5,
-          ease: "easeOut",
-          delay: 0.1,
-        },
-      );
-    }, [animate]);
+    // The parent (ShippingWarranty) owns the hover state and calls this handle;
+    // the drive-off animation itself is CSS, keyed off .is-anim.
+    const start = useCallback(() => {
+      svgRef.current?.classList.add("is-anim");
+    }, []);
 
     const stop = useCallback(() => {
-      animate(
-        ".truck",
-        { x: 0, opacity: 1 },
-        { duration: 0.2, ease: "easeOut" },
-      );
-    }, [animate]);
+      svgRef.current?.classList.remove("is-anim");
+    }, []);
 
     useImperativeHandle(ref, () => ({
       startAnimation: start,
@@ -60,8 +24,8 @@ const TruckElectricIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
     }));
 
     return (
-      <motion.svg
-        ref={scope}
+      <svg
+        ref={svgRef}
         xmlns="http://www.w3.org/2000/svg"
         width={size}
         height={size}
@@ -71,10 +35,10 @@ const TruckElectricIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`cursor-pointer ${className}`}
+        className={`kf-ico-anim kf-ico-truck cursor-pointer ${className}`}
         style={{ overflow: "visible" }}
       >
-        <motion.g className="truck">
+        <g className="truck">
           <path d="M14 19V7a2 2 0 0 0-2-2H9" />
           <path d="M15 19H9" />
           <path d="M19 19h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62L18.3 9.38a1 1 0 0 0-.78-.38H14" />
@@ -82,11 +46,12 @@ const TruckElectricIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
           <path d="M4 3 2.15 5.15a.495.495 0 0 0 .35.86h2.15a.47.47 0 0 1 .35.86L3 9.02" />
           <circle cx="17" cy="19" r="2" />
           <circle cx="7" cy="19" r="2" />
-        </motion.g>
-      </motion.svg>
+        </g>
+      </svg>
     );
   },
 );
 
 TruckElectricIcon.displayName = "TruckElectricIcon";
+
 export default TruckElectricIcon;

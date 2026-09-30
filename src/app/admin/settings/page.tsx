@@ -3,10 +3,8 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { getSiteSetting } from "@/lib/catalog/data";
 import { MAINTENANCE_KEY, DEVELOPMENT_NOTICE_KEY } from "@/lib/config/environment";
-import { PICKUP_SETTING_KEY } from "@/lib/shipping/delhivery";
 import { MaintenanceModeCard } from "./MaintenanceModeCard";
 import { DevelopmentNoticeCard } from "./DevelopmentNoticeCard";
-import { PickupLocationCard } from "./PickupLocationCard";
 
 export const metadata: Metadata = {
   title: "Settings | KeebForge Admin",
@@ -16,20 +14,12 @@ export const metadata: Metadata = {
 export default async function AdminSettingsPage() {
   await requirePermission("setting", "view");
 
-  const [productionEnabled, developmentEnabled, pickupSetting, developmentNoticeEnabled] =
+  const [productionEnabled, developmentEnabled, developmentNoticeEnabled] =
     await Promise.all([
       (await getSiteSetting(MAINTENANCE_KEY.production)) === true,
       (await getSiteSetting(MAINTENANCE_KEY.development)) === true,
-      getSiteSetting(PICKUP_SETTING_KEY),
       (await getSiteSetting(DEVELOPMENT_NOTICE_KEY)) === true,
     ]);
-
-  const pickupInitial =
-    pickupSetting &&
-    typeof pickupSetting === "object" &&
-    !Array.isArray(pickupSetting)
-      ? (pickupSetting as Record<string, string>)
-      : null;
 
   return (
     <div
@@ -167,22 +157,6 @@ export default async function AdminSettingsPage() {
       </div>
 
       <DevelopmentNoticeCard enabled={developmentNoticeEnabled} />
-
-      <div>
-        <h2
-          style={{
-            fontFamily: "var(--ff-display)",
-            fontSize: "1.05rem",
-            fontWeight: 700,
-            letterSpacing: "-0.02em",
-            marginBottom: 12,
-          }}
-        >
-          Shipping
-        </h2>
-      </div>
-
-      <PickupLocationCard initial={pickupInitial} />
     </div>
   );
 }

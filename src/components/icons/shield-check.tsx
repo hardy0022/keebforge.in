@@ -1,36 +1,22 @@
-import { forwardRef, useImperativeHandle, useCallback } from "react";
+import { forwardRef, useImperativeHandle, useCallback, useRef } from "react";
 import type { AnimatedIconHandle, AnimatedIconProps } from "./types";
-import { motion, useAnimate } from "motion/react";
 
 const ShieldCheck = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
   (
     { size = 24, color = "currentColor", strokeWidth = 2, className = "" },
     ref,
   ) => {
-    const [scope, animate] = useAnimate();
+    const svgRef = useRef<SVGSVGElement>(null);
 
-    const start = useCallback(async () => {
-      animate(
-        ".shield-body",
-        { scale: [1, 1.05, 1] },
-        { duration: 0.35, ease: "easeOut" },
-      );
-
-      await animate(
-        ".shield-check",
-        { pathLength: [0, 1], opacity: [0, 1] },
-        { duration: 0.3, ease: "easeInOut" },
-      );
-    }, [animate]);
+    // The parent (ShippingWarranty) owns the hover state and calls this handle;
+    // the animation itself is CSS, keyed off .is-anim.
+    const start = useCallback(() => {
+      svgRef.current?.classList.add("is-anim");
+    }, []);
 
     const stop = useCallback(() => {
-      animate(".shield-body", { scale: 1 }, { duration: 0.2 });
-      animate(
-        ".shield-check",
-        { pathLength: 1, opacity: 1 },
-        { duration: 0.2 },
-      );
-    }, [animate]);
+      svgRef.current?.classList.remove("is-anim");
+    }, []);
 
     useImperativeHandle(ref, () => ({
       startAnimation: start,
@@ -38,8 +24,8 @@ const ShieldCheck = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
     }));
 
     return (
-      <motion.svg
-        ref={scope}
+      <svg
+        ref={svgRef}
         xmlns="http://www.w3.org/2000/svg"
         width={size}
         height={size}
@@ -49,21 +35,21 @@ const ShieldCheck = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`cursor-pointer ${className}`}
+        className={`kf-ico-anim kf-ico-shield cursor-pointer ${className}`}
         style={{ overflow: "visible" }}
       >
-        <motion.path
+        <path
           className="shield-body"
           style={{ transformOrigin: "50% 50%" }}
           d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06"
         />
 
-        <motion.path
+        <path
           className="shield-check"
+          pathLength="1"
           d="M15 19l2 2l4 -4"
-          initial={{ pathLength: 1, opacity: 1 }}
         />
-      </motion.svg>
+      </svg>
     );
   },
 );

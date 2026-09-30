@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import type { ShippingStatus } from "@prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
 import { getAdminShipments } from "@/lib/admin";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { parsePage } from "@/lib/admin/pagination";
 import { ShipmentsManager, type ShipmentRow } from "./ShipmentsManager";
 
 export const metadata: Metadata = {
@@ -31,16 +33,20 @@ const SHIP_STATUS_LABELS: Record<ShippingStatus, string> = {
 export default async function AdminShipmentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await requirePermission("order", "view");
   const sp = await searchParams;
-  const status = SHIP_STATUSES.includes(sp.status as ShippingStatus)
-    ? (sp.status as ShippingStatus)
+  const rawStatus = typeof sp.status === "string" ? sp.status : sp.status?.[0];
+  const status = SHIP_STATUSES.includes(rawStatus as ShippingStatus)
+    ? (rawStatus as ShippingStatus)
     : undefined;
-  const rows = await getAdminShipments({ status });
+  const result = await getAdminShipments({
+    status,
+    page: parsePage(typeof sp.page === "string" ? sp.page : sp.page?.[0]),
+  });
 
-  const shipRows: ShipmentRow[] = rows.map((s) => ({
+  const shipRows: ShipmentRow[] = result.items.map((s) => ({
     id: s.id,
     courier: s.courier,
     trackingNumber: s.trackingNumber,
@@ -67,15 +73,27 @@ export default async function AdminShipmentsPage({
       >
         Shipments{" "}
         <span className="muted num">
-          ({rows.length}
+          ({result.total}
           {!status ? " active" : ""})
         </span>
       </h1>
 
       <ShipmentsManager
-        key={status ?? "active"}
+        // Selection is page-scoped: the bulk "book pickup" action posts the ids
+        // of the rows on screen, so reset it when the page or status changes
+        // (same reset-on-status-change behaviour as before).
+        key={`${status ?? "active"}:${result.page}`}
         rows={shipRows}
         status={status}
+      />
+
+      <AdminPagination
+        page={result.page}
+        pages={result.pages}
+        total={result.total}
+        searchParams={sp}
+        basePath="/admin/shipments"
+        unit="shipments"
       />
     </div>
   );

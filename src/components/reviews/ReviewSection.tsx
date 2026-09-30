@@ -141,9 +141,15 @@ async function productReviews(
         },
       })
     : null;
+  // The CTA now points at a real edit route when a review already exists, so
+  // "Write a Review" and "Edit your review" are separate destinations rather
+  // than one URL that changes meaning.
+  const writePath = myReview
+    ? `/write-review/${product.slug}/edit`
+    : `/write-review/${product.slug}`;
   const writeHref = auth.user
-    ? `/write-review/${product.slug}`
-    : `/auth/login?next=${encodeURIComponent(`/write-review/${product.slug}`)}`;
+    ? writePath
+    : `/auth/login?next=${encodeURIComponent(writePath)}`;
   return {
     summary,
     distribution,

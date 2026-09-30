@@ -34,6 +34,13 @@ export async function submitReview(
   if (!user || !profile) return { error: "Please sign in to write a review." };
 
   const slug = String(formData.get("slug") ?? "").trim();
+  // The caller states its intent explicitly. Never infer it from what happens
+  // to be stored, otherwise "new review" submissions get silently saved as
+  // updates and the two actions are indistinguishable server-side.
+  const mode = String(formData.get("mode") ?? "");
+  if (mode !== "create" && mode !== "edit") {
+    return { error: "Unsupported review action." };
+  }
   const ratingRaw = Number(formData.get("rating"));
   const rating =
     Number.isInteger(ratingRaw) && ratingRaw >= 1 && ratingRaw <= 5
@@ -70,7 +77,9 @@ export async function submitReview(
   if (!general && !product)
     return { error: "This product is no longer available to review." };
 
-  const existing = product
+  // Always scoped to the signed-in profile, so no crafted slug or form value
+  // can reach another customer's review.
+  const owned = product
     ? await prisma.review.findUnique({
         where: {
           profileId_productId: { profileId: profile.id, productId: product.id },
@@ -80,13 +89,31 @@ export async function submitReview(
         where: { profileId: profile.id, type: "GENERAL" },
         orderBy: { createdAt: "desc" },
       });
-  if (existing && product && existing.type !== "PRODUCT") {
-    return { error: "Unexpected review state — please contact support." };
+
+  // `target` is the review this submission may update; it stays null for a
+  // create so a new review can never overwrite an existing one.
+  let target: typeof owned = null;
+  if (mode === "edit") {
+    if (!owned)
+      return { error: "We couldn't find one of your reviews to edit." };
+    if (product && owned.type !== "PRODUCT")
+      return { error: "Unexpected review state — please contact support." };
+    target = owned;
+  } else if (owned) {
+    // Both limits are database rules — @@unique([profileId, productId]) for
+    // product reviews, and the Review_one_general_review_per_profile partial
+    // unique index for general ones. Report them instead of updating, so a
+    // create can never be coerced into an overwrite.
+    return {
+      error: product
+        ? "You have already reviewed this product. Edit your existing review instead."
+        : "You have already written a review. Edit your existing review instead.",
+    };
   }
 
-  const existingMedia = existing
+  const existingMedia = target
     ? await prisma.media.findMany({
-        where: { entityType: "REVIEW", entityId: existing.id },
+        where: { entityType: "REVIEW", entityId: target.id },
       })
     : [];
   const kept = existingMedia.filter((m) => !removeIds.includes(m.id));
@@ -128,7 +155,7 @@ export async function submitReview(
   const verified = product
     ? (await verifiedProfileIds(product.id, [profile.id])).has(profile.id)
     : false;
-  const reviewId = existing?.id ?? `review-${crypto.randomUUID()}`;
+  const reviewId = target?.id ?? `review-${crypto.randomUUID()}`;
 
   // Upload new photos once the row exists so they land in the review's own folder.
   const uploaded: {
@@ -161,9 +188,9 @@ export async function submitReview(
   };
 
   try {
-    if (existing) {
+    if (target) {
       await prisma.review.update({
-        where: { id: existing.id },
+        where: { id: target.id },
         data: { ...common, verified },
       });
       // Remove retired photos (Cloudinary best-effort — a failed delete must not block).
@@ -175,7 +202,7 @@ export async function submitReview(
       await prisma.media.deleteMany({
         where: {
           entityType: "REVIEW",
-          entityId: existing.id,
+          entityId: target.id,
           id: { in: removeIds },
         },
       });
@@ -185,8 +212,8 @@ export async function submitReview(
             publicId: u.publicId,
             secureUrl: u.url,
             entityType: "REVIEW" as const,
-            entityId: existing.id,
-            folder: mediaFolder("REVIEW", existing.id),
+            entityId: target.id,
+            folder: mediaFolder("REVIEW", target.id),
             role: "CUSTOMER_UPLOAD" as const,
             sortOrder: kept.length + i,
             width: u.width,

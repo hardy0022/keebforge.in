@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { detectEnvironment, MAINTENANCE_KEY } from "@/lib/config/environment";
+import {
+  adminPanelEnabled,
+  detectEnvironment,
+  MAINTENANCE_KEY,
+} from "@/lib/config/environment";
 
 // Next.js redirect() matches sources case-insensitively, so case-variant old
 // URLs are handled here instead of next.config to avoid shadowing real routes.
@@ -41,8 +45,21 @@ function isBypassPath(pathname: string): boolean {
   );
 }
 
+function isAdminPath(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Admin panel kill switch. Server-side routing gate only — requireAdminContext()
+  // in the admin layout still runs and is the real authorization boundary.
+  // 404 (not 403) so a disabled panel does not confirm the route exists.
+  if (isAdminPath(pathname)) {
+    if (!adminPanelEnabled(request.nextUrl.hostname)) {
+      return new NextResponse(null, { status: 404 });
+    }
+  }
 
   const target = CASED_PATHS[pathname];
   if (target) {

@@ -108,7 +108,7 @@ export function ReviewBody({ review }: { review: ReviewCardItem }) {
                     rel="noopener noreferrer"
                     className="review-modal-photo"
                   >
-                    <img src={cldUrl(img.url, 1600)} alt="" loading="lazy" />
+                    <img src={cldUrl(img.url, 480)} alt="" loading="lazy" />
                   </a>
                 ))}
               </div>

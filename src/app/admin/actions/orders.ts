@@ -16,14 +16,16 @@ import {
   type CreateShipmentInput,
   type PickupLocation,
 } from "@/lib/shipping/delhivery";
+import { resolvePickupLocation } from "@/lib/shipping/pickup-config";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
 const rupees = (paise: number) => (paise / 100).toFixed(2).replace(/\.00$/, "");
 
-/** Pickup location from the admin Settings card (PICKUP_SETTING_KEY), falling
- * back to DELHIVERY_PICKUP_* env vars, then DELHIVERY_ORIGIN_PINCODE. */
-async function resolvePickupLocation(): Promise<PickupLocation | null> {
+/** Legacy pickup row (SiteSetting["delhivery_pickup"]). Kept only as a
+ *  fallback for deployments that never set DELHIVERY_PICKUP_* — the
+ *  environment is the authoritative source. See @/lib/shipping/pickup-config. */
+async function readLegacyPickupSetting(): Promise<Partial<PickupLocation> | null> {
   const setting = await prisma.siteSetting.findUnique({
     where: { key: PICKUP_SETTING_KEY },
   });
@@ -32,41 +34,14 @@ async function resolvePickupLocation(): Promise<PickupLocation | null> {
     typeof setting.value === "object" &&
     !Array.isArray(setting.value)
   ) {
-    return setting.value as unknown as PickupLocation;
+    return setting.value as Partial<PickupLocation>;
   }
   return null;
 }
 
-function pickupLocationFromPs(ps: PickupLocation | null): {
-  name: string;
-  add: string;
-  city: string;
-  pin_code: string;
-  country: string;
-  phone: string;
-  returnAdd: string;
-  returnPin: string;
-  returnCity: string;
-  returnState: string;
-  returnCountry: string;
-} {
-  return {
-    name: ps?.name ?? process.env.DELHIVERY_PICKUP_NAME ?? "",
-    add: ps?.address ?? process.env.DELHIVERY_PICKUP_ADDRESS ?? "",
-    city: ps?.city ?? process.env.DELHIVERY_PICKUP_CITY ?? "",
-    pin_code:
-      ps?.pin ??
-      process.env.DELHIVERY_PICKUP_PIN ??
-      process.env.DELHIVERY_ORIGIN_PINCODE ??
-      "",
-    country: ps?.country ?? process.env.DELHIVERY_PICKUP_COUNTRY ?? "India",
-    phone: ps?.phone ?? process.env.DELHIVERY_PICKUP_PHONE ?? "",
-    returnAdd: ps?.returnAddress ?? ps?.address ?? "",
-    returnPin: ps?.returnPin ?? ps?.pin ?? "",
-    returnCity: ps?.returnCity ?? ps?.city ?? "",
-    returnState: ps?.returnState ?? ps?.state ?? "",
-    returnCountry: ps?.returnCountry ?? ps?.country ?? "India",
-  };
+/** Env-first pickup location, legacy DB row as fallback. */
+async function resolvePickup() {
+  return resolvePickupLocation(await readLegacyPickupSetting());
 }
 
 const statusSchema = z.object({
@@ -486,10 +461,10 @@ export async function createShipmentDelivery(
   if (!weightGrams || weightGrams < 1)
     return { error: "A shipment weight (grams) is required." };
 
-  // Pickup location from the admin Settings card (PICKUP_SETTING_KEY), falling
-  // back to DELHIVERY_PICKUP_* env vars, then DELHIVERY_ORIGIN_PINCODE. The
-  // return fields default to the same warehouse so RTO packages have an address.
-  const pickup = pickupLocationFromPs(await resolvePickupLocation());
+  // Pickup location from DELHIVERY_PICKUP_* env vars (authoritative), falling
+  // back to the legacy SiteSetting row. Return fields default to the same
+  // warehouse so RTO packages have an address.
+  const pickup = await resolvePickup();
 
   // Content description: real item/service names first, then repair rows and
   // work types, so repair orders don't manifest as the generic fallback.
@@ -800,11 +775,11 @@ export async function bookPickupDelivery(
   });
   if (!order) return { error: "Order not found." };
 
-  const pickup = pickupLocationFromPs(await resolvePickupLocation());
+  const pickup = await resolvePickup();
   if (!pickup.name)
     return {
       error:
-        "Set a Delhivery Pickup Location in Admin → Settings → Shipping first.",
+        "Set DELHIVERY_PICKUP_NAME (and DELHIVERY_PICKUP_PIN) in the server environment first.",
     };
   const time = pickupTime.length === 5 ? `${pickupTime}:00` : pickupTime;
 
@@ -897,11 +872,11 @@ export async function bookWarehousePickup(
       error: "Some selected shipments are missing. Reload the page and try again.",
     };
 
-  const pickup = pickupLocationFromPs(await resolvePickupLocation());
+  const pickup = await resolvePickup();
   if (!pickup.name)
     return {
       error:
-        "Set a Delhivery Pickup Location in Admin → Settings → Shipping first.",
+        "Set DELHIVERY_PICKUP_NAME (and DELHIVERY_PICKUP_PIN) in the server environment first.",
     };
   const time = pickupTime.length === 5 ? `${pickupTime}:00` : pickupTime;
 
