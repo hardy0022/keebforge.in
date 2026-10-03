@@ -664,7 +664,8 @@ ul {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
+  /* 24px minimum tap target (the chevron itself stays 12px). */
+  width: 24px;
   height: 24px;
   padding: 0;
   background: none;
@@ -1615,28 +1616,40 @@ ul {
   gap: 10px;
   margin-top: clamp(16px, 2vh, 24px);
 }
+/* 24px tap target (WCAG 2.5.8) with an 8px visual dot: the button is a
+   transparent 24px box and ::before draws the visible dot centred in it. */
 .hp-feature-dot {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.hp-feature-dot::before {
+  content: "";
+  position: absolute;
+  inset: 50%;
   width: 8px;
   height: 8px;
-  padding: 0;
+  transform: translate(-50%, -50%);
   border-radius: 99px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
-    background-color 0.2s ease,
     transform 0.2s ease;
 }
-.hp-feature-dot:hover {
+.hp-feature-dot:hover::before {
   background: rgba(255, 255, 255, 0.85);
   border-color: rgba(255, 255, 255, 0.6);
 }
-.hp-feature-dot.is-active {
+.hp-feature-dot.is-active::before {
   background: var(--acc);
   border-color: var(--acc);
-  transform: scale(1.25);
+  transform: translate(-50%, -50%) scale(1.25);
 }
 .hp-feature-body {
   display: flex;
@@ -6055,6 +6068,9 @@ a.shop-pager-num:hover {
 .qty-btn {
   width: 36px;
   height: 36px;
+  /* Without this the flex row shrinks the button below the 24px minimum
+     tap target inside a narrow mod card. */
+  flex: 0 0 auto;
   background: transparent;
   border: none;
   color: var(--t1);

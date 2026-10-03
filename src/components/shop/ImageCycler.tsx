@@ -13,10 +13,13 @@ export function ImageCycler({
   images,
   name,
   slug,
+  priorityFirst = false,
 }: {
   images: { url: string; alt: string | null }[];
   name: string;
   slug: string;
+  /** First card in a listing: make its first image the LCP candidate. */
+  priorityFirst?: boolean;
 }) {
   const count = images.length;
   const [manual, setManual] = useState<number | null>(null);
@@ -41,6 +44,7 @@ export function ImageCycler({
             src={img.url}
             alt={img.alt ?? name}
             fill
+            priority={priorityFirst && i === 0}
             sizes="(min-width: 1200px) 25vw, (min-width: 850px) 33vw, (min-width: 600px) 50vw, 100vw"
             className="shop-card-img"
             style={

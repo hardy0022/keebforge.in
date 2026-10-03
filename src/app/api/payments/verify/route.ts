@@ -2,7 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentAuth } from "@/lib/auth/session";
 import { syncTrackingCache } from "@/lib/orders/tracking";
-import crypto from "crypto";
+import {
+  capturedAmount,
+  derivePaymentStatus,
+  orderStatusAfterCapture,
+  settledAmount,
+} from "@/lib/payments/payment-status";
+import { verifyRazorpayCheckoutSignature } from "@/lib/payments/razorpay-signature";
+import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +23,25 @@ export const dynamic = "force-dynamic";
  * Guests may pay, so this endpoint does NOT require a session. Integrity comes
  * from the HMAC signature (order|payment signed with the key secret) plus the
  * stored razorpayOrderId binding on the order — not from authentication.
+ *
+ * Both limits are keyed per client and set far above what a human retrying a
+ * card needs. The per-order one exists because the attack this endpoint must
+ * survive is "one order, endless fake payment ids", which an IP-only limit does
+ * not catch behind rotating proxies.
  */
+const RATE_LIMIT_IP = { limit: 30, windowMs: 60_000 };
+const RATE_LIMIT_ORDER = { limit: 10, windowMs: 60_000 };
+
 export async function POST(req: NextRequest) {
   try {
+    // Before anything else, and keyed only on the caller, so a flood of
+    // malformed bodies cannot reach the database.
+    const ipLimit = checkRateLimit(
+      `verify:ip:${clientIp(req)}`,
+      RATE_LIMIT_IP,
+    );
+    if (!ipLimit.allowed) return rateLimitResponse(ipLimit, "verify");
+
     const body = await req.json();
     const {
       razorpay_order_id,
@@ -40,6 +67,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const orderLimit = checkRateLimit(
+      `verify:order:${orderId}`,
+      RATE_LIMIT_ORDER,
+    );
+    if (!orderLimit.allowed) return rateLimitResponse(orderLimit, "verify");
+
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keySecret) {
       return NextResponse.json(
@@ -48,8 +81,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
+    // findFirst, not findUnique: a soft-deleted order is not gone, and letting a
+    // deleted order be marked paid would resurrect it into the admin queues and
+    // write a customer-visible timeline entry on a cancelled order.
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, isDeleted: false },
       include: { payments: true },
     });
     if (!order) {
@@ -58,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     // Idempotency: replayed verifications are a no-op success.
     if (
-      order.paymentStatus === "PAID" &&
+      (order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") &&
       order.payments.some((p) => p.razorpayPaymentId === razorpay_payment_id)
     ) {
       return NextResponse.json({ success: true, alreadyProcessed: true });
@@ -68,6 +104,7 @@ export async function POST(req: NextRequest) {
     const billing = (order.billingDetails ?? {}) as {
       razorpayOrderId?: string;
       razorpayCustomerId?: string;
+      razorpayOrderAmount?: number;
     };
     if (
       !billing.razorpayOrderId ||
@@ -79,45 +116,50 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const expectedSignature = crypto
-      .createHmac("sha256", keySecret)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest("hex");
+    // What this payment is worth. NEVER the order total: pay-inline opens one
+    // Razorpay order per attempt for the *outstanding balance*, so the second
+    // capture on a partially-paid order legitimately covers less than the total.
+    // Recording the total for it made the paid sum overshoot, which reported the
+    // order as fully paid while the customer still owed the remainder.
+    //
+    // Razorpay's checkout handler sends no amount, so the trustworthy figure here
+    // is the amount the Razorpay order was created for. Already-recorded payments
+    // keep the amount they were first written with, which makes a replayed
+    // verify idempotent instead of counting the same payment twice.
+    const existingPayment = order.payments.find(
+      (p) => p.razorpayPaymentId === razorpay_payment_id,
+    );
+    const settledBefore = settledAmount(
+      order.payments.filter((p) => p.razorpayPaymentId !== razorpay_payment_id),
+    );
+    const amount =
+      existingPayment?.amount ??
+      capturedAmount({
+        total: order.total,
+        settled: settledBefore,
+        razorpayOrderAmount: billing.razorpayOrderAmount ?? null,
+      });
 
-    if (expectedSignature !== razorpay_signature) {
-      await prisma.$transaction([
-        prisma.payment.upsert({
-          where: { razorpayPaymentId: razorpay_payment_id },
-          update: {
-            status: "FAILED",
-            failureReason: "Signature verification failed",
-            ...(billing.razorpayCustomerId
-              ? { razorpayCustomerId: billing.razorpayCustomerId }
-              : {}),
-          },
-          create: {
-            orderId: order.id,
-            amount: order.total,
-            currency: "INR",
-            status: "FAILED",
-            method: "razorpay",
-            razorpayOrderId: razorpay_order_id,
-            razorpayPaymentId: razorpay_payment_id,
-            razorpaySignature: razorpay_signature,
-            ...(billing.razorpayCustomerId
-              ? { razorpayCustomerId: billing.razorpayCustomerId }
-              : {}),
-            failureReason: "Signature verification failed",
-          },
-        }),
-        prisma.orderTimeline.create({
-          data: {
-            orderId: order.id,
-            status: "PAYMENT_PENDING",
-            note: `Payment signature verification failed (${razorpay_payment_id}).`,
-          },
-        }),
-      ]);
+    // Constant-time, and shared with the webhook route.
+    if (
+      !verifyRazorpayCheckoutSignature({
+        razorpayOrderId: razorpay_order_id,
+        razorpayPaymentId: razorpay_payment_id,
+        signature: razorpay_signature,
+        keySecret,
+      })
+    ) {
+      // Nothing is written. A failed HMAC means we cannot establish that
+      // Razorpay created any payment at all, yet this endpoint used to upsert a
+      // FAILED `Payment` row AND an `OrderTimeline` entry for it — both keyed on
+      // an attacker-supplied `razorpay_payment_id`. Varying that id produced
+      // unbounded fake payments (inflating the admin FAILED tile) and unbounded
+      // customer-visible timeline entries, on any order whose id one could guess
+      // or enumerate. Rejecting without writing makes the endpoint unable to be
+      // used as a write amplifier at all, independent of the rate limit above.
+      console.error(
+        `Payment signature verification failed for order ${order.orderNumber} (payment ${razorpay_payment_id})`,
+      );
       return NextResponse.json(
         { error: "Invalid payment signature" },
         { status: 400 },
@@ -142,44 +184,125 @@ export async function POST(req: NextRequest) {
     // The PAID transition mirrors the webhook's idempotency: the order-level
     // guard makes it run at most once even if a webhook and this verify race on
     // the same razorpayPaymentId (a concurrent PAID write makes us skip, never
-    // throw on a duplicate payment row).
+    // throw on a duplicate payment row). REFUNDED is guarded for the same
+    // reason — a replayed verify must not un-refund a settled refund.
     await prisma.$transaction(async (tx) => {
       const current = await tx.order.findUnique({
         where: { id: order.id },
         select: { paymentStatus: true },
       });
-      if (current?.paymentStatus === "PAID") return;
+      if (
+        current?.paymentStatus === "PAID" ||
+        current?.paymentStatus === "REFUNDED"
+      ) {
+        return;
+      }
 
-      await tx.payment.upsert({
+      // F9. Re-read the payment inside the transaction and never write status over a
+      // settled refund.
+      //
+      // Both REFUNDED guards above test the ORDER's status, which is not the same
+      // question. An order can be PARTIALLY_PAID while one of its individual
+      // payments is fully REFUNDED — a second capture was taken, then the first
+      // was returned, leaving money still retained. A replayed verification for
+      // that returned payment slipped past both guards (the order was not
+      // REFUNDED) and reached the upsert, whose `update` branch hardcoded
+      // `status: "PAID"` — flipping a payment whose money had gone back to PAID.
+      //
+      // `refundedAmount` was absent from that branch, so gross and net were
+      // unaffected and no balance moved; the defect was that the ledger stopped
+      // describing what happened, and a payment labelled PAID is one a later
+      // refund would match against as though it had never been returned.
+      //
+      // The upsert therefore becomes an explicit read-then-branch: an existing
+      // REFUNDED payment is left exactly as it is, and the order is not re-settled
+      // on the strength of a payment that returned its money.
+      const alreadyRecorded = await tx.payment.findUnique({
         where: { razorpayPaymentId: razorpay_payment_id },
-        update: {
-          status: "PAID",
-          paidAt: new Date(),
-          ...(billing.razorpayCustomerId
-            ? { razorpayCustomerId: billing.razorpayCustomerId }
-            : {}),
-        },
-        create: {
-          orderId: order.id,
-          amount: order.total,
-          currency: "INR",
-          status: "PAID",
-          method: "razorpay",
-          razorpayOrderId: razorpay_order_id,
+        select: { status: true, amount: true },
+      });
+      const paymentReturned =
+        alreadyRecorded?.status === "REFUNDED" ||
+        order.payments.some(
+          (p) =>
+            p.razorpayPaymentId === razorpay_payment_id && p.status === "REFUNDED",
+        );
+
+      if (paymentReturned) {
+        // Record nothing and re-settle nothing. The money for this payment was
+        // returned; a replayed checkout callback must not resurrect it.
+        return;
+      }
+
+      // The read above is a hint, not a lock. A refund can settle between it and
+      // this write, and the old `upsert` flipped `status: "PAID"` unconditionally
+      // — so under READ COMMITTED a refund landing in that window was overwritten
+      // and the payment went back on the books as money the customer still holds.
+      //
+      // So the write refuses, rather than trusting the read. Both statements below
+      // rely on the same Postgres guarantee the refund path uses: `createMany` is
+      // ON CONFLICT DO NOTHING, and a status predicate on `updateMany` is
+      // re-evaluated against the committed row while the row lock is held.
+      if (!alreadyRecorded) {
+        await tx.payment.createMany({
+          data: [
+            {
+              orderId: order.id,
+              amount,
+              currency: "INR",
+              status: "PAID",
+              method: "razorpay",
+              razorpayOrderId: razorpay_order_id,
+              razorpayPaymentId: razorpay_payment_id,
+              razorpaySignature: razorpay_signature,
+              ...(billing.razorpayCustomerId
+                ? { razorpayCustomerId: billing.razorpayCustomerId }
+                : {}),
+              paidAt: new Date(),
+            },
+          ],
+          skipDuplicates: true,
+        });
+      }
+
+      const claimed = await tx.payment.updateMany({
+        where: {
           razorpayPaymentId: razorpay_payment_id,
-          razorpaySignature: razorpay_signature,
+          // The whole point: a REFUNDED payment is terminal and cannot be moved
+          // back to PAID by a replayed checkout callback.
+          status: { not: "REFUNDED" },
+        },
+        data: {
+          status: "PAID",
+          paidAt: new Date(),
           ...(billing.razorpayCustomerId
             ? { razorpayCustomerId: billing.razorpayCustomerId }
             : {}),
-          paidAt: new Date(),
         },
       });
 
+      if (claimed.count === 0) {
+        // A refund settled while this transaction was writing. Leave the payment
+        // and the order exactly as the refund left them: re-settling here is what
+        // would let money the customer already returned be collected twice.
+        return;
+      }
+
+      const settledAfter = settledBefore + amount;
       await tx.order.update({
         where: { id: order.id },
         data: {
-          paymentStatus: "PAID",
-          status: "PAYMENT_RECEIVED",
+          // Derived, not hardcoded: a capture that only covers part of the order
+          // leaves it PARTIALLY_PAID so the balance stays payable.
+          paymentStatus: derivePaymentStatus(
+            settledAfter,
+            order.total,
+            order.paymentStatus,
+          ),
+          status: orderStatusAfterCapture(
+            order.status,
+            order.total > 0 && settledAfter >= order.total,
+          ),
           ...(profileId ? { profileId } : {}),
         },
       });

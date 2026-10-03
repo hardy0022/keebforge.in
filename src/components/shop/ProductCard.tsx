@@ -10,11 +10,16 @@ import { DeferredMedia } from "@/components/shop/DeferredMedia";
 export function ProductCard({
   product,
   eager = true,
+  headingLevel = 3,
 }: {
   product: ShopProduct;
   /** Only the first card may mount its images at first layout. */
   eager?: boolean;
+  /** 3 under a SectionHead (h2). 2 in the bare shop grid, whose only
+   *  preceding heading is the page h1 — otherwise the heading order skips. */
+  headingLevel?: 2 | 3;
 }) {
+  const Title = `h${headingLevel}` as "h2" | "h3";
   const images = product.images;
   const count = images.length;
   const compareAt = product.compareAtPrice;
@@ -53,7 +58,12 @@ export function ProductCard({
     >
       {count > 0 ? (
         <DeferredMedia eager={eager}>
-          <ImageCycler images={images} name={product.name} slug={product.slug} />
+          <ImageCycler
+            images={images}
+            name={product.name}
+            slug={product.slug}
+            priorityFirst={eager}
+          />
         </DeferredMedia>
       ) : (
         <span className="shop-card-fallback" aria-hidden="true">
@@ -68,9 +78,9 @@ export function ProductCard({
             {kicker}
           </span>
         )}
-        <h3 className="shop-card-title">
+        <Title className="shop-card-title">
           <Link href={`/product/${product.slug}`}>{product.name}</Link>
-        </h3>
+        </Title>
         <div className="shop-card-foot">
           <div className="shop-card-pricing">
             <span className="shop-card-price">

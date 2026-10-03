@@ -104,11 +104,9 @@ export default async function WorkPage({
                       delay={(i % 3) * 80}
                       className={isFeatured ? "work-card-lead" : undefined}
                     >
-                      <Link
-                        href={`/work/${p.slug}`}
-                        className="work-card"
-                        aria-label={p.title}
-                      >
+                      {/* No aria-label: the name is computed from the visible
+                          title + "View ->", so it always matches what is on screen. */}
+                      <Link href={`/work/${p.slug}`} className="work-card">
                         <div className="work-card-media">
                           {img ? (
                             <Image

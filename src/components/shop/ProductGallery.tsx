@@ -90,7 +90,9 @@ export function ProductGallery({
             setIsFullscreen(true);
           }
         }}
-        aria-label="View fullscreen"
+        /* The counter below is visible text ("1 / 2"), so the accessible name has
+           to contain it or axe flags a content-name mismatch. */
+        aria-label={`View fullscreen — ${productName} (${selectedIndex + 1} / ${allImages.length})`}
       >
         {allImages.map((img, i) => (
           <Image

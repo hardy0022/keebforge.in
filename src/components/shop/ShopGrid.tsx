@@ -47,7 +47,7 @@ export function ShopGrid({
     <>
       <div className="shop-grid">
         {items.map((p, i) => (
-          <ProductCard key={p.id} product={p} eager={i === 0} />
+          <ProductCard key={p.id} product={p} eager={i === 0} headingLevel={2} />
         ))}
       </div>
 

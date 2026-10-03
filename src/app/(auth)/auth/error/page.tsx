@@ -42,7 +42,7 @@ export default async function AuthErrorPage({
     <main className="auth-page">
       <div className="auth-card">
         <header className="auth-header">
-          <Link href="/" className="auth-logo" aria-label="KeebForge Home">
+          <Link href="/" className="auth-logo">
             <span className="auth-logo-text">
               <span>KeebForge</span>
               <span className="logo-dot">.</span>

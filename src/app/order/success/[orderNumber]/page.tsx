@@ -9,6 +9,15 @@ import { SERVICE_UNIT_LABELS } from "@/lib/orders";
 import { buildMetadata } from "@/lib/seo";
 import { CopyPaymentId } from "@/components/order/CopyPaymentId";
 import { OrderPaymentSummary } from "@/components/order/OrderPaymentSummary";
+import {
+  canPayFromCookie,
+} from "@/lib/payments/order-access";
+
+// Defence in depth. The page is already forced dynamic by awaiting
+// `searchParams` + `headers()` + a Prisma query, but stating it explicitly
+// matches /track-order and means a future refactor that removes one of those
+// signals cannot silently turn an order page into a cached artifact.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -16,10 +25,17 @@ export async function generateMetadata({
   params: Promise<{ orderNumber: string }>;
 }): Promise<Metadata> {
   const { orderNumber } = await params;
+  // noIndex: this page is reachable by order number, which the app treats as a
+  // public identifier — it must never enter an index. The title/description are
+  // deliberately generic too: og:* tags are scraped by third parties whenever
+  // the URL is shared, and must not carry order data. Canonical still points at
+  // this exact URL so the page has one stable identity.
   return buildMetadata({
-    title: `Order ${orderNumber} Confirmed | KeebForge`,
-    description: `Your KeebForge order ${orderNumber} has been received.`,
+    title: "Order Confirmed | KeebForge",
+    description:
+      "Your KeebForge order has been received. Open the link in your confirmation email, or sign in, to view the full order.",
     path: `/order/success/${orderNumber}`,
+    noIndex: true,
   });
 }
 
@@ -57,15 +73,90 @@ function deviceRows(summary: unknown): Array<[string, string]> {
   return rows;
 }
 
+/**
+ * Shown when the visitor holds neither the order's guest payment capability nor
+ * an owning session. It confirms that the URL resolves — which is what a guest
+ * who closed the tab needs — and nothing else. No name, email, phone, address,
+ * items, services, prices, totals, payment id or device configuration, and no
+ * wording that hints at whether the customer's email has an account.
+ */
+function OrderUnverified() {
+  return (
+    <main>
+      <section className="svc-section order-success-page">
+        <div className="wrap">
+          <header className="order-success-hero">
+            <p className="order-success-eyebrow">{"// Order"}</p>
+            <div
+              className="order-success-check"
+              aria-hidden="true"
+              style={{ borderColor: "var(--bdr-h)" }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--acc)"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h1 className="order-success-title">Order received</h1>
+            <p className="order-success-sub">
+              This page shows full order details only to the customer who placed
+              it.
+            </p>
+          </header>
+
+          <div className="os-process-box">
+            <p className="os-process-text">
+              To see your items, delivery address and receipt, open the private
+              link in your order confirmation email, or{" "}
+              <Link href="/auth/login" style={{ color: "var(--acc)" }}>
+                sign in
+              </Link>{" "}
+              to the account that placed the order. If you no longer have the
+              email, our support team can resend it — quote your order number
+              and the email address you used.
+            </p>
+          </div>
+
+          <div className="os-actions">
+            <Link href="/track-order" className="btn-prime btn-sm">
+              Track an order
+            </Link>
+            <Link href="/contact" className="btn-ghost btn-sm">
+              Contact Support
+            </Link>
+          </div>
+
+          <p className="os-support">
+            Need help? <Link href="/contact">Contact our support team</Link>.
+          </p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default async function OrderSuccessPage({
   params,
 }: {
   params: Promise<{ orderNumber: string }>;
 }) {
   const { orderNumber } = await params;
-  const { user } = await getCurrentAuth();
+  const { user, profile } = await getCurrentAuth();
+
+  // Entitlement arrives as an HttpOnly cookie, not a URL parameter — so this
+  // page renders on a clean, shareable URL with nothing secret in the address
+  // bar, browser history or Referer header. The cookie is matched against the
+  // stored hash before anything customer-specific is rendered.
   const order = await prisma.order.findUnique({
-    where: { orderNumber: orderNumber.toUpperCase() },
+    where: { orderNumber: orderNumber.toUpperCase(), isDeleted: false },
     include: {
       items: {
         include: {
@@ -86,7 +177,25 @@ export default async function OrderSuccessPage({
     },
   });
 
+  // Soft-deleted orders are excluded by the query above, so they 404 here
+  // exactly like an unknown number — no separate "deleted" response that would
+  // confirm the order ever existed.
   if (!order) notFound();
+
+  const canPay = await canPayFromCookie(order.billingDetails);
+
+  // Must be the profile that owns THIS order: a signed-in stranger stays
+  // unauthorized, and a guest order (profileId null) is owned by nobody.
+  const ownedBySession = Boolean(
+    profile && order.profileId && profile.id === order.profileId,
+  );
+
+  // Same predicate as isEntitledToPay in lib/payments/pay-inline-core, so a
+  // token that can pay for an order is a token that can view it, and a session
+  // that can pay is a session that can view.
+  const authorized = canPay || ownedBySession;
+
+  if (!authorized) return <OrderUnverified />;
 
   const payment = order.payments[0];
   const paid = order.paymentStatus === "PAID";
@@ -208,14 +317,9 @@ export default async function OrderSuccessPage({
                       </span>
                       <span>{order.shippingAddress.country}</span>
                     </address>
-                    {(order.shippingAddress.phone || order.customerPhone) && (
-                      <div className="os-addr-contact">
-                        <span className="os-addr-contact-label">Phone</span>
-                        <span className="os-addr-contact-value">
-                          {order.shippingAddress.phone ?? order.customerPhone}
-                        </span>
-                      </div>
-                    )}
+                    {/* No phone. The customer just typed it into checkout, so
+                        echoing it adds no confirmation value while widening the
+                        PII on this URL. */}
                   </div>
                 </div>
               ) : (
@@ -232,12 +336,6 @@ export default async function OrderSuccessPage({
                       <dt>Email</dt>
                       <dd>{order.customerEmail}</dd>
                     </div>
-                    {order.customerPhone && (
-                      <div>
-                        <dt>Phone</dt>
-                        <dd>{order.customerPhone}</dd>
-                      </div>
-                    )}
                   </dl>
                 </div>
               )}
@@ -383,6 +481,11 @@ export default async function OrderSuccessPage({
                     <OrderPaymentSummary
                       orderNumber={order.orderNumber}
                       total={order.total}
+                      // Still gated on canPay alone: this branch is reachable
+                      // by an owning session that presented no cookie, and a
+                      // rejected cookie must never reach the payment client.
+                      canPay={canPay}
+                      ownedBySession={ownedBySession}
                     />
                   )}
                 </div>
@@ -438,10 +541,8 @@ export default async function OrderSuccessPage({
           </div>
           {!user && (
             <p className="os-cta-note">
-              <Link href="/auth/login" style={{ color: "var(--acc)" }}>
-                Sign in or create an account
-              </Link>{" "}
-              with this email to get the full order view.
+              Keep this order number for your records — you&apos;ll need it for
+              any support request.
             </p>
           )}
 

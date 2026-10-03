@@ -6,6 +6,11 @@ import { z } from "zod";
 import { calculateServiceOrder } from "@/lib/mods/pricing";
 import { loadActiveModConfigs } from "@/lib/mods/server";
 import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
+import {
   calculateShipping,
   calculateVolumetricWeight,
   cartWeightGrams,
@@ -24,8 +29,20 @@ import {
   type CouponEligible,
 } from "@/lib/checkout/coupons";
 import { ensureRazorpayCustomer } from "@/lib/payments/razorpay-customer";
+import {
+  PAY_COOKIE,
+  createOrderCapability,
+} from "@/lib/payments/order-capability";
+import { payCookieOptions } from "@/lib/payments/order-access";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Per client, per minute. This endpoint is guest-reachable and mints a Razorpay
+ * order plus an Order row per call, so it shares the payments create-order limit
+ * rather than being left as an unbounded path to the same paid API.
+ */
+const RATE_LIMIT = { limit: 15, windowMs: 60_000 };
 
 const bodySchema = z.object({
   deviceType: z.enum(["KEYBOARD", "MOUSE"]),
@@ -100,6 +117,13 @@ function getRazorpay() {
  */
 export async function POST(req: NextRequest) {
   try {
+    // First thing in the handler, before any parsing or database work.
+    const limit = checkRateLimit(
+      `services-create-order:ip:${clientIp(req)}`,
+      RATE_LIMIT,
+    );
+    if (!limit.allowed) return rateLimitResponse(limit, "services-create-order");
+
     const json = await req.json().catch(() => null);
     const parsed = bodySchema.safeParse(json);
     if (!parsed.success) {
@@ -313,6 +337,11 @@ export async function POST(req: NextRequest) {
 
     let rzpOrderId: string | null = null;
     let rzpCustomerId: string | null = null;
+    // Guest-payment capability, delivered to this browser as an HttpOnly cookie.
+    // Quote-only orders are never charged, so they get none; only the hash is
+    // persisted. No confirmation email is sent for service orders, so no
+    // exchange code is minted — the cookie is the only credential.
+    const capability = quoteOnly ? null : createOrderCapability();
     if (!quoteOnly) {
       const razorpay = getRazorpay();
       if (!razorpay) {
@@ -378,6 +407,9 @@ export async function POST(req: NextRequest) {
         ...(rzpOrderId
           ? {
               billingDetails: {
+                ...(capability
+                  ? { guestPaymentTokenHash: capability.hash }
+                  : {}),
                 razorpayOrderId: rzpOrderId,
                 razorpayOrderAmount: totals.total,
                 ...(rzpCustomerId ? { razorpayCustomerId: rzpCustomerId } : {}),
@@ -429,7 +461,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       orderNumber,
       orderId: order.id,
       razorpayOrderId: rzpOrderId,
@@ -438,6 +470,10 @@ export async function POST(req: NextRequest) {
       keyId:
         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
     });
+    if (capability) {
+      res.cookies.set(PAY_COOKIE, capability.token, payCookieOptions());
+    }
+    return res;
   } catch (error) {
     console.error("Create service order error:", error);
     return NextResponse.json(

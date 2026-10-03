@@ -6,9 +6,15 @@ export type CreateOrderResponse = {
   currency?: string;
   keyId?: string;
   requiresQuote?: boolean;
+  /** Present only on authenticated create-order responses, never pay-inline. */
   customerName?: string | null;
   customerEmail?: string | null;
   customerPhone?: string | null;
+  /**
+   * No credential is ever returned here. Order creation delivers the guest
+   * payment capability in an HttpOnly cookie; the confirmation email carries a
+   * separate short-lived exchange code.
+   */
   error?: string;
 };
 

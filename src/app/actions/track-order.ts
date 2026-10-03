@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_STAGES } from "@/lib/orders";
+import { outstandingBalance } from "@/lib/payments/refund-accounting";
 import { trackShipment, type TrackingResult } from "@/lib/shipping/delhivery";
 
 /**
@@ -50,6 +51,16 @@ export type TrackData = {
   progress: number;
   paymentStatus: string;
   total: number;
+  /**
+   * What is still owed, net of refunds. Computed server-side from the order's
+   * payment money columns so the figure on the button is the same one
+   * /api/payments/pay-inline will actually charge.
+   *
+   * Batch 5A. The tracking page used to label its pay button with the order
+   * TOTAL, so a partially paid order was invited to pay the whole amount while
+   * pay-inline charged only the remainder. It now shows the real balance.
+   */
+  outstandingAmount: number;
   items: TrackLine[];
   services: TrackLine[];
   repairs: TrackRepair[];
@@ -161,6 +172,21 @@ export async function trackOrder(
   const repairsRaw = asArray(row.repairs);
   const repairRows = repairsRaw.map((rp) => asRecord(rp));
 
+  // The one deliberate exception to "reads the cache, never the Order tables".
+  //
+  // The cache carries `paymentStatus` and `total` but nothing about how much of
+  // the total was actually paid, so the outstanding balance cannot be derived from
+  // it. Reading only money columns keeps the privacy property this file exists to
+  // protect — no email, phone, address or notes are selected, and nothing beyond
+  // three integer columns leaves the database — while letting the customer see the
+  // real balance instead of the order total.
+  //
+  // Indexed by orderId and at most a handful of rows per order.
+  const paymentMoney = await prisma.payment.findMany({
+    where: { orderId: row.orderId },
+    select: { amount: true, status: true, refundedAmount: true },
+  });
+
   return {
     ok: true,
     data: {
@@ -170,6 +196,10 @@ export async function trackOrder(
       progress: ORDER_STATUS_STAGES[row.status] ?? 0,
       paymentStatus: row.paymentStatus,
       total: row.total,
+      outstandingAmount: outstandingBalance({
+        total: row.total,
+        payments: paymentMoney,
+      }),
       items: asArray(row.items).map((it) => {
         const r = asRecord(it);
         return {
