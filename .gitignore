@@ -31,6 +31,9 @@ yarn-error.log*
 # env files 
 .env*
 !.env.example
+# Local-only database template. Dummy loopback values, safe to track.
+# The real file (.env.e2e.local) stays ignored via the .env* rule above.
+!.env.e2e.local.example
 
 # vercel
 .vercel

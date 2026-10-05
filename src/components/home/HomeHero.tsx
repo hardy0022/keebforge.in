@@ -48,7 +48,7 @@ function ServiceItem({ service }: { service: Service }) {
         <Icon />
       </span>
       <div>
-        <h3 className="hp-service-title">{service.title}</h3>
+        <h2 className="hp-service-title">{service.title}</h2>
         <p className="hp-service-desc">{service.desc}</p>
       </div>
     </div>

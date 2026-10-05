@@ -6,6 +6,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { syncTrackingCache } from "@/lib/orders/tracking";
+import {
+  derivePaymentStatus,
+  settledAmount,
+} from "@/lib/payments/payment-status";
+import { netCollectedAmount } from "@/lib/payments/refund-accounting";
 import { pickupSlotEndsAt } from "@/lib/shipping/pickup-slots";
 import {
   bookPickup,
@@ -253,15 +258,9 @@ const amountsSchema = z.object({
   total: z.coerce.number().int().min(0),
 });
 
-/** Derive paymentStatus from the sum of captured (PAID) payments vs total. */
-function paymentStatusFor(
-  paid: number,
-  total: number,
-): "PAID" | "PARTIALLY_PAID" | "PENDING" {
-  if (total > 0 && paid >= total) return "PAID";
-  if (paid > 0) return "PARTIALLY_PAID";
-  return "PENDING";
-}
+// Deriving the order's payment status now lives in @/lib/payments/payment-status
+// so the webhook, /verify and these admin actions cannot drift apart — they
+// previously each rolled their own and disagreed about refunded orders.
 
 export async function updateOrderAmounts(
   _prev: ActionState,
@@ -282,13 +281,28 @@ export async function updateOrderAmounts(
     where: { id: orderId },
     select: {
       orderNumber: true,
-      payments: { where: { status: "PAID" }, select: { amount: true } },
+      paymentStatus: true,
+      // REFUNDED rows included: a refunded payment is money that WAS collected,
+      // and leaving it out made this sum 0 for a refunded order — which then
+      // reset paymentStatus to PENDING and re-opened the order for collection.
+      payments: {
+        // REFUNDED rows count as collected money (the money WAS collected, then
+        // returned). refundedAmount comes along so the balance below can be net
+        // rather than gross.
+        where: { status: { in: ["PAID", "REFUNDED"] } },
+        select: { amount: true, status: true, refundedAmount: true },
+      },
     },
   });
   if (!order) return { error: "Order not found." };
 
-  const paid = order.payments.reduce((s, p) => s + p.amount, 0);
-  const paymentStatus = paymentStatusFor(paid, total);
+  // `current` is passed through so a REFUNDED order stays REFUNDED: editing the
+  // total is a pricing correction, not a reason to forget the money came back.
+  const paymentStatus = derivePaymentStatus(
+    settledAmount(order.payments),
+    total,
+    order.paymentStatus,
+  );
 
   try {
     await prisma.$transaction([
@@ -947,22 +961,33 @@ export async function recordManualPayment(
     select: {
       orderNumber: true,
       total: true,
-      payments: { where: { status: "PAID" }, select: { amount: true } },
+      paymentStatus: true,
+      // See updateOrderAmounts: REFUNDED rows count as collected money.
+      payments: {
+        // REFUNDED rows count as collected money (the money WAS collected, then
+        // returned). refundedAmount comes along so the balance below can be net
+        // rather than gross.
+        where: { status: { in: ["PAID", "REFUNDED"] } },
+        select: { amount: true, status: true, refundedAmount: true },
+      },
     },
   });
   if (!order) return { error: "Order not found." };
 
-  const existingPaid = order.payments.reduce((s, p) => s + p.amount, 0);
   const forcePaid = markPaid === "1";
   const total = forcePaid ? amount : order.total;
+  // Net of refunds. Gross would let an admin record a manual payment on top of
+  // money already returned to the customer, because the refund would be invisible
+  // to the amount covered so far.
+  const covered = netCollectedAmount(order.payments);
   const payAmount = forcePaid
     ? amount
-    : Math.min(amount, Math.max(0, order.total - existingPaid));
+    : Math.min(amount, Math.max(0, order.total - covered));
   if (payAmount <= 0)
     return { error: "Nothing left to pay — amount already covered." };
 
-  const paidAfter = forcePaid ? amount : existingPaid + payAmount;
-  const paymentStatus = paymentStatusFor(paidAfter, total);
+  const paidAfter = forcePaid ? amount : covered + payAmount;
+  const paymentStatus = derivePaymentStatus(paidAfter, total, order.paymentStatus);
 
   try {
     await prisma.$transaction([
@@ -997,20 +1022,41 @@ export async function deleteOrder(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requirePermission("order", "update");
+  await requirePermission("order", "delete");
   const orderId = formData.get("orderId");
   if (typeof orderId !== "string" || !orderId)
     return { error: "Invalid order." };
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { orderNumber: true },
+    select: { orderNumber: true, _count: { select: { refunds: true } } },
   });
   if (!order) return { error: "Order not found." };
 
+  // F3 — never destroy refund evidence. `Refund.orderId` is ON DELETE CASCADE, so
+  // deleting an order silently and permanently deletes every `rfnd_…` row for it.
+  // Razorpay keeps the authoritative record, so the local loss is recoverable only
+  // by re-deriving each refund from their API — and the per-refund amount, phase
+  // and Razorpay payment id held only on those rows are not all reproducible from
+  // a payment aggregate. This is a financial audit trail, so the delete is refused
+  // rather than repaired.
+  //
+  // Order rows that have never been refunded are unaffected, so the common case
+  // (tidying up a duplicate or test order) still works exactly as before.
+  if (order._count.refunds > 0) {
+    return {
+      error:
+        `This order has ${order._count.refunds} refund record${
+          order._count.refunds === 1 ? "" : "s"
+        } and cannot be deleted — the refund history would be destroyed. ` +
+        "Archive it instead.",
+    };
+  }
+
   try {
     // Children (items, services, repairs, payments, shipment, timeline,
-    // messages, warranty, tracking, couponUsage) cascade on delete.
+    // messages, warranty, tracking, couponUsage) cascade on delete. Refunds
+    // cascade too, which is why the guard above runs first.
     await prisma.order.delete({ where: { id: orderId } });
   } catch (e) {
     console.error("deleteOrder failed:", e);

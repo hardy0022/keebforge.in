@@ -7,6 +7,18 @@
  * fixed widths. c_limit never upscales an original, so small uploads aren't
  * enlarged to fill a srcset width.
  */
+/**
+ * Cloudinary draft-asset detection — drafts live under
+ * keebforge/products/drafts/ and must never surface in OG/Product schema,
+ * the sitemap image namespace, or any rendered gallery.
+ */
+export function isDraftImage(img: { url: string; publicId?: string | null }) {
+  return (
+    img.url.includes("/products/drafts/") ||
+    (img.publicId ?? "").includes("/products/drafts/")
+  );
+}
+
 export function cldUrl(url: string, width?: number): string {
   const marker = "/image/upload/";
   const at = url.indexOf(marker);

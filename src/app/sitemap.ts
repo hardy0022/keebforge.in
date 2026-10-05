@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { SITE_URL } from "@/lib/seo";
-import { cldUrl } from "@/lib/images/cloudinary-url";
+import { cldUrl, isDraftImage } from "@/lib/images/cloudinary-url";
 import { TAG, TTL } from "@/lib/caching/cache";
 
 const STATIC: {
@@ -38,8 +38,7 @@ const getDynamicUrls = unstable_cache(
           updatedAt: true,
           images: {
             where: { active: true, primary: true },
-            select: { url: true },
-            take: 1,
+            select: { url: true, publicId: true },
           },
         },
       }),
@@ -62,15 +61,16 @@ const getDynamicUrls = unstable_cache(
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { products, categories, work } = await getDynamicUrls();
 
-  const productUrls = products.map((p) => ({
-    url: `${SITE_URL}/product/${p.slug}`,
-    lastModified: p.updatedAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-    images: p.images[0]
-      ? [cldUrl(p.images[0].url, 800)]
-      : undefined,
-  }));
+  const productUrls = products.map((p) => {
+    const image = p.images.find((i) => !isDraftImage(i));
+    return {
+      url: `${SITE_URL}/product/${p.slug}`,
+      lastModified: p.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+      images: image ? [cldUrl(image.url, 800)] : undefined,
+    };
+  });
 
   const categoryUrls = categories.map((c) => ({
     url: `${SITE_URL}/shop/${c.slug}`,
@@ -86,9 +86,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
+  // No lastModified on static paths: these are hand-edited source pages, so a
+  // regeneration timestamp is a lie and makes Google re-crawl them constantly.
   const staticUrls = STATIC.map((p) => ({
     url: `${SITE_URL}${p.path}`,
-    lastModified: new Date(),
     changeFrequency: p.changeFrequency ?? ("monthly" as const),
     priority: p.priority ?? 0.5,
   }));

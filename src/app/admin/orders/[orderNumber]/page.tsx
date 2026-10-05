@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import type { OrderStatus, PaymentStatus } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/admin";
+import { requirePermission, getAdminContext } from "@/lib/auth/admin";
+import { canAction } from "@/lib/auth/roles";
 import { formatINR } from "@/lib/utils/money";
 import {
   ORDER_STATUS_LABELS,
@@ -193,6 +194,8 @@ export default async function AdminOrderDetail({
     order.services.length > 0 ||
     order.repairs.length > 0;
   const stage = ORDER_STATUS_STAGES[order.status];
+  const adminCtx = await getAdminContext();
+  const canDeleteOrder = adminCtx && canAction(adminCtx.profile.role, "order", "delete");
 
   const customerHref = order.profile
     ? "/admin/customers"
@@ -1136,35 +1139,37 @@ export default async function AdminOrderDetail({
       </div>
 
       {/* ── 7. Danger zone ─────────────────────────────────────────────── */}
-      <div
-        id="danger"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
-          padding: "12px 16px",
-          border: "1px dashed rgba(255, 107, 107, 0.35)",
-          borderRadius: "var(--r-md)",
-        }}
-      >
-        <div style={{ flex: "1 1 280px", minWidth: 220 }}>
-          <div
-            style={{
-              color: "var(--err)",
-              fontWeight: 700,
-              fontSize: "0.85rem",
-            }}
-          >
-            Danger zone
+      {canDeleteOrder && (
+        <div
+          id="danger"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            flexWrap: "wrap",
+            padding: "12px 16px",
+            border: "1px dashed rgba(255, 107, 107, 0.35)",
+            borderRadius: "var(--r-md)",
+          }}
+        >
+          <div style={{ flex: "1 1 280px", minWidth: 220 }}>
+            <div
+              style={{
+                color: "var(--err)",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+              }}
+            >
+              Danger zone
+            </div>
+            <p className="muted" style={{ margin: "2px 0 0" }}>
+              Permanently deletes this order and all related records. This cannot
+              be undone.
+            </p>
           </div>
-          <p className="muted" style={{ margin: "2px 0 0" }}>
-            Permanently deletes this order and all related records. This cannot
-            be undone.
-          </p>
+          <DeleteOrderForm orderId={order.id} orderNumber={order.orderNumber} />
         </div>
-        <DeleteOrderForm orderId={order.id} orderNumber={order.orderNumber} />
-      </div>
+      )}
     </div>
   );
 }

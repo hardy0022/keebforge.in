@@ -69,6 +69,19 @@ enum PaymentStatus {
   FAILED
 }
 
+/// Lifecycle of a single Razorpay refund. Mirrors Razorpay's own
+/// refund.created -> refund.processed | refund.failed progression.
+enum RefundStatus {
+  /// `refund.created` — initiated at Razorpay, money not yet returned.
+  CREATED
+  /// `refund.processed` — money returned to the customer. Only this status moves
+  /// `Payment.refundedAmount`.
+  PROCESSED
+  /// `refund.failed` — the refund did not happen. No money movement, and a later
+  /// `refund.created` for the same id may still settle.
+  FAILED
+}
+
 enum ShippingStatus {
   NOT_DISPATCHED
   DISPATCHED
@@ -160,18 +173,19 @@ enum MessageAuthor {
 // ─── Authentication (Better Auth 1.7.1 — generated schema) ─────────────────
 
 model User {
-  id            String    @id
+  id            String       @id
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean      @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   sessions      Session[]
   accounts      Account[]
   profile       Profile?
   members       Member[]
   invitations   Invitation[]
+
   @@unique([email])
   @@map("user")
 }
@@ -259,13 +273,13 @@ model Member {
 }
 
 model Invitation {
-  id             String   @id
+  id             String    @id
   organizationId String
   email          String
   role           String
-  status         String   @default("pending")
+  status         String    @default("pending")
   expiresAt      DateTime?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
   inviterId      String
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -281,24 +295,24 @@ model Invitation {
 
 /// KeebForge business data for a Better Auth user. `userId` = the auth identity.
 model Profile {
-  id        String   @id @default(cuid())
-  userId    String?  @unique
-  role      Role     @default(CUSTOMER)
-  name      String?
-  email     String   @unique
-  phone     String?
-  avatarUrl String?
-  username  String?  @unique
-  razorpayCustomerId String? @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String?  @unique
+  role               Role     @default(CUSTOMER)
+  name               String?
+  email              String   @unique
+  phone              String?
+  avatarUrl          String?
+  username           String?  @unique
+  razorpayCustomerId String?  @unique
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  user     User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  customer CustomerProfile?
-  addresses Address[]
-  orders    Order[]
-  reviews   Review[]
-  cart      Cart?
+  user               User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer           CustomerProfile?
+  addresses          Address[]
+  orders             Order[]
+  reviews            Review[]
+  cart               Cart?
   inventoryMovements InventoryMovement[]
 
   @@index([role])
@@ -352,17 +366,17 @@ model Category {
 }
 
 model Brand {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   name           String
-  slug           String    @unique
+  slug           String   @unique
   logoUrl        String?
   description    String?
   website        String?
   seoTitle       String?
   seoDescription String?
-  active         Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   products Product[]
 
@@ -370,56 +384,56 @@ model Brand {
 }
 
 model Product {
-  id                String        @id @default(cuid())
-  name              String
-  slug              String        @unique
-  type              ProductType
-  status            ProductStatus @default(ACTIVE)
-  productType       ShopSectionType @default(NEW)
-  condition         ProductCondition?
-  categoryId        String
-  brandId           String?
-  description       String?
-  features          Json? // list of strings
-  whatsIncluded     Json? // list of strings
-  warrantyInfo      String?
-  shippingInfo      String?
-  specifications    Json? // flexible key/value specs, e.g. {"Layout": "60%"}
-  cardFeatures      Json? // shop-card highlights, e.g. [{"icon":"mouse","label":"Sensor","value":"Focus Pro 30K"}]
-  price             Int // paise (selling price)
-  compareAtPrice    Int? // paise
-  costPrice         Int? // paise — NEVER exposed to customers
-  gstRate           Int         @default(0) // percent 0..100
-  sku               String?
-  barcode           String?
-  stock             Int         @default(0)
-  reservedQuantity  Int         @default(0)
-  lowStockThreshold Int         @default(5)
-  allowBackorders   Boolean     @default(false)
-  inventoryTracking Boolean     @default(true)
-  weight            Int? // grams
-  lengthCm          Float?
-  widthCm           Float?
-  heightCm          Float?
-  shippingClass     String?
-  freeShipping      Boolean     @default(false)
+  id                   String            @id @default(cuid())
+  name                 String
+  slug                 String            @unique
+  type                 ProductType
+  status               ProductStatus     @default(ACTIVE)
+  productType          ShopSectionType   @default(NEW)
+  condition            ProductCondition?
+  categoryId           String
+  brandId              String?
+  description          String?
+  features             Json? // list of strings
+  whatsIncluded        Json? // list of strings
+  warrantyInfo         String?
+  shippingInfo         String?
+  specifications       Json? // flexible key/value specs, e.g. {"Layout": "60%"}
+  cardFeatures         Json? // shop-card highlights, e.g. [{"icon":"mouse","label":"Sensor","value":"Focus Pro 30K"}]
+  price                Int // paise (selling price)
+  compareAtPrice       Int? // paise
+  costPrice            Int? // paise — NEVER exposed to customers
+  gstRate              Int               @default(0) // percent 0..100
+  sku                  String?
+  barcode              String?
+  stock                Int               @default(0)
+  reservedQuantity     Int               @default(0)
+  lowStockThreshold    Int               @default(5)
+  allowBackorders      Boolean           @default(false)
+  inventoryTracking    Boolean           @default(true)
+  weight               Int? // grams
+  lengthCm             Float?
+  widthCm              Float?
+  heightCm             Float?
+  shippingClass        String?
+  freeShipping         Boolean           @default(false)
   shippingRestrictions String?
-  seoTitle          String?
-  seoDescription    String?
-  seoKeywords       String?
-  canonicalUrl      String?
-  ogImageUrl        String?
-  active            Boolean     @default(false)
-  featured          Boolean     @default(false)
-  popular           Boolean     @default(false)
-  isNew             Boolean     @default(false)
-  ratingAverage     Float?
-  ratingCount       Int         @default(0)
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  seoTitle             String?
+  seoDescription       String?
+  seoKeywords          String?
+  canonicalUrl         String?
+  ogImageUrl           String?
+  active               Boolean           @default(false)
+  featured             Boolean           @default(false)
+  popular              Boolean           @default(false)
+  isNew                Boolean           @default(false)
+  ratingAverage        Float?
+  ratingCount          Int               @default(0)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
-  category           Category            @relation(fields: [categoryId], references: [id])
-  brand              Brand?              @relation(fields: [brandId], references: [id])
+  category           Category             @relation(fields: [categoryId], references: [id])
+  brand              Brand?               @relation(fields: [brandId], references: [id])
   variants           ProductVariant[]
   optionGroups       ProductOptionGroup[]
   images             ProductImage[]
@@ -437,22 +451,22 @@ model Product {
 }
 
 model ProductVariant {
-  id             String   @id @default(cuid())
-  productId      String
-  name           String
-  sku            String?
-  barcode        String?
-  price          Int? // paise; falls back to product price when null
-  compareAtPrice Int? // paise
-  stock          Int      @default(0)
-  reservedQuantity Int    @default(0)
-  weight         Int? // grams
-  active         Boolean  @default(true)
-  options        Json? // e.g. {"color": "Black", "layout": "ISO"}
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(cuid())
+  productId        String
+  name             String
+  sku              String?
+  barcode          String?
+  price            Int? // paise; falls back to product price when null
+  compareAtPrice   Int? // paise
+  stock            Int      @default(0)
+  reservedQuantity Int      @default(0)
+  weight           Int? // grams
+  active           Boolean  @default(true)
+  options          Json? // e.g. {"color": "Black", "layout": "ISO"}
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   images    ProductImage[]
   cartItems CartItem[]
   movements InventoryMovement[]
@@ -473,7 +487,7 @@ model ProductOptionGroup {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  product Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   options ProductOption[]
 
   @@index([productId])
@@ -522,9 +536,9 @@ model InventoryMovement {
   reason    String
   createdAt DateTime @default(now())
 
-  product Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  profile Profile?      @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profile Profile?        @relation(fields: [profileId], references: [id], onDelete: SetNull)
 
   @@index([productId, createdAt])
   @@index([productId, variantId, createdAt])
@@ -542,6 +556,7 @@ model Mods {
   createdAt DateTime @default(now())
 
   services Service[]
+
   @@index([device, active, sortOrder])
 }
 
@@ -568,7 +583,7 @@ model Service {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  group         Mods             @relation(fields: [groupId], references: [id])
+  group         Mods           @relation(fields: [groupId], references: [id])
   orderServices OrderService[]
   reviews       Review[]
 
@@ -599,12 +614,12 @@ model Order {
   currency String @default("INR")
 
   // Shipping snapshot — historical orders keep their original rate context.
-  shippingProvider            String?
-  shippingMode                String?
-  shippingWeightGrams         Int?
-  shippingOriginPincode       String?
-  shippingDestinationPincode  String?
-  shippingQuotedAt            DateTime?
+  shippingProvider           String?
+  shippingMode               String?
+  shippingWeightGrams        Int?
+  shippingOriginPincode      String?
+  shippingDestinationPincode String?
+  shippingQuotedAt           DateTime?
 
   billingDetails Json?
   summary        Json?
@@ -614,16 +629,17 @@ model Order {
 
   // Coupon usage snapshot — preserved on the order so history stays correct
   // even if the coupon is later edited or disabled.
-  couponId        String?
-  couponCode      String?
-  couponDiscount  Int? // paise actually applied at order time
+  couponId       String?
+  couponCode     String?
+  couponDiscount Int? // paise actually applied at order time
 
-  profile         Profile?       @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profile         Profile?        @relation(fields: [profileId], references: [id], onDelete: SetNull)
   shippingAddress OrderAddress?
   items           OrderItem[]
   services        OrderService[]
   repairs         OrderRepair[]
   payments        Payment[]
+  refunds         Refund[]
   shipment        Shipment?
   timeline        OrderTimeline[]
   messages        OrderMessage[]
@@ -666,8 +682,8 @@ model OrderItem {
   sku         String?
   unitPrice   Int // paise snapshot
   quantity    Int
-  discount    Int         @default(0) // paise snapshot
-  tax         Int         @default(0) // paise snapshot
+  discount    Int      @default(0) // paise snapshot
+  tax         Int      @default(0) // paise snapshot
   lineTotal   Int
   variantInfo Json?
   imageUrl    String?
@@ -714,27 +730,71 @@ model OrderRepair {
 }
 
 model Payment {
-  id                String        @id @default(cuid())
-  orderId           String
-  amount            Int // paise
-  currency          String        @default("INR")
-  status            PaymentStatus @default(PENDING)
-  method            String?
-  razorpayOrderId   String?
-  razorpayPaymentId String?       @unique
-  razorpaySignature String?
+  id                 String        @id @default(cuid())
+  orderId            String
+  amount             Int // paise
+  currency           String        @default("INR")
+  status             PaymentStatus @default(PENDING)
+  method             String?
+  razorpayOrderId    String?
+  razorpayPaymentId  String?       @unique
+  razorpaySignature  String?
   razorpayCustomerId String?
-  paidAt            DateTime?
-  failureReason     String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  paidAt             DateTime?
+  failureReason      String?
+  /// Cumulative paise returned to the customer on THIS payment, summed over every
+  /// settled Refund row. Gross collected is `amount`; net retained is
+  /// `amount - refundedAmount`. Kept on the payment rather than derived from
+  /// OrderTimeline notes because the note text is a display string, not a
+  /// figure: it cannot be summed, and matching it to find which refunds already
+  /// landed is how `rfnd_ABC` came to swallow `rfnd_ABCDEF`.
+  /// Never exceeds `amount` — Razorpay cannot return more than it captured.
+  refundedAmount     Int           @default(0)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refunds Refund[]
 
   @@index([orderId])
   @@index([razorpayOrderId])
   @@index([razorpayPaymentId])
   @@index([razorpayCustomerId])
+}
+
+/// One Razorpay refund, tracked from initiation to settlement.
+///
+/// The row is the idempotency key for refund processing. `razorpayRefundId` is
+/// unique, so a redelivered `refund.processed` resolves to the same row instead
+/// of adding the refund to the payment a second time. Timeline-note text matching
+/// was the previous key and it could only ever be a heuristic.
+model Refund {
+  id               String       @id @default(cuid())
+  orderId          String
+  /// Null when the capture that funded this refund was never recorded locally.
+  /// The refund is still tracked — it still happened, and the merchant still owes
+  /// the customer the money — but there is no Payment row to increment.
+  paymentId        String?
+  /// Razorpay's `rfnd_…`. The unique constraint here is what makes refund
+  /// processing idempotent.
+  razorpayRefundId String       @unique
+  /// Paise returned by THIS refund. Never summed into another refund's figure.
+  amount           Int
+  status           RefundStatus @default(CREATED)
+  reasonCode       String?
+  processedAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  /// The Razorpay payment id this refund applies to, if known. Preserved even
+  /// when no local Payment row exists for reconciliation purposes.
+  razorpayPaymentId String?
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@index([paymentId])
+  @@index([razorpayPaymentId])
 }
 
 model Shipment {
@@ -865,28 +925,28 @@ model CartServiceItem {
 // ─── Reviews & coupons ───────────────────────────────────────────────────────
 
 model Review {
-  id             String       @id @default(cuid())
-  profileId      String?
-  orderId        String?      @unique
-  productId      String?
-  serviceId      String?
-  type           ReviewType
-  rating         Int // 1..5
-  title          String?
-  body           String
-  authorName     String?
-  authorLocation String?
-  serviceLabel   String?
+  id                  String       @id @default(cuid())
+  profileId           String?
+  orderId             String?      @unique
+  productId           String?
+  serviceId           String?
+  type                ReviewType
+  rating              Int // 1..5
+  title               String?
+  body                String
+  authorName          String?
+  authorLocation      String?
+  serviceLabel        String?
   /// Product context preserved when the product is later deleted
   /// (productId → NULL via ON DELETE SET NULL). Always the name/slug at review
   /// creation time — never re-read from the live product.
   productNameSnapshot String?
   productSlugSnapshot String?
-  date           DateTime?
-  verified       Boolean      @default(false)
-  status         ReviewStatus @default(PENDING)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  date                DateTime?
+  verified            Boolean      @default(false)
+  status              ReviewStatus @default(PENDING)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   profile Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
   order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
@@ -934,13 +994,13 @@ model Coupon {
 /// snapshot, per-customer limits). Kept beyond the order so limits and
 /// history remain queryable without denormalising the order.
 model CouponUsage {
-  id             String   @id @default(cuid())
-  couponId       String
-  orderId        String   @unique
-  profileId      String?
-  customerEmail  String
-  discountPaise  Int
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  couponId      String
+  orderId       String   @unique
+  profileId     String?
+  customerEmail String
+  discountPaise Int
+  createdAt     DateTime @default(now())
 
   coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
   order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)

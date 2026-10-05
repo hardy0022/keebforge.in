@@ -17,6 +17,7 @@ import {
   delhiveryStatusLabel,
 } from "@/lib/shipping/track-phases";
 import { formatINR } from "@/lib/utils/money";
+import { paymentPromptFor } from "@/lib/payments/payment-status";
 import { RazorpayScript } from "@/components/payments/RazorpayScript";
 import {
   launchRazorpayPayment,
@@ -74,7 +75,18 @@ function fmtTime(v: string | null | undefined): string {
   });
 }
 
-export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
+export function TrackOrder({
+  initialOrder,
+  canPay = false,
+}: {
+  initialOrder?: string;
+  /**
+   * True when this browser's HttpOnly payment cookie matched the order named in
+   * the URL. Tracking status stays public by order number; this only enables the
+   * Pay button. The cookie itself never reaches this component.
+   */
+  canPay?: boolean;
+}) {
   const [state, formAction, pending] = useActionState<TrackState, FormData>(
     trackOrder,
     { ok: false, error: "" },
@@ -121,8 +133,6 @@ export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
     <section className="track-section">
       <div className="wrap">
         <div className="track-wrap">
-          <RazorpayScript />
-
           <form action={formAction} className="track-search">
             <div>
               <label
@@ -171,12 +181,13 @@ export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
             </div>
           )}
 
-          {state.ok && (
-            <TrackResult
-              data={state.data}
-              onPaid={() => reTrack(state.data.orderNumber)}
-            />
-          )}
+{state.ok && (
+              <TrackResult
+                data={state.data}
+                canPay={canPay}
+                onPaid={() => reTrack(state.data.orderNumber)}
+              />
+            )}
         </div>
       </div>
     </section>
@@ -185,20 +196,40 @@ export function TrackOrder({ initialOrder }: { initialOrder?: string }) {
 
 function PayNowInline({
   orderNumber,
-  total,
+  amountDue,
+  canPay = false,
+  ownedBySession = false,
   onPaid,
 }: {
   orderNumber: string;
-  total: number;
+  /**
+   * Paise still owed — the net outstanding balance, NOT the order total.
+   *
+   * Batch 5A. This prop used to be the order total, so the button on a partially
+   * paid order read "Pay ₹1,000.00 now" while /api/payments/pay-inline opened a
+   * Razorpay order for the remaining ₹400. It is a label only; the amount actually
+   * charged always comes from pay-inline's own server-side computation, so a
+   * stale value here cannot cause an incorrect charge.
+   */
+  amountDue: number;
+  /**
+   * True when the request's HttpOnly payment cookie matched this order.
+   * Tracking status is public by order number, but paying is not.
+   */
+  canPay?: boolean;
+  ownedBySession?: boolean;
   onPaid: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const entitled = canPay || ownedBySession;
 
   async function pay() {
     setError(null);
     setBusy(true);
     try {
+      // Same-origin POST, so the HttpOnly payment cookie rides along
+      // automatically. Nothing secret is in the body or the URL.
       const res = await fetch("/api/payments/pay-inline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -208,18 +239,18 @@ function PayNowInline({
         .json()
         .catch(() => null)) as CreateOrderResponse | null;
       if (!res.ok || !data) {
-        setError(data?.error ?? "Could not start payment.");
+        setError(
+          data?.error ??
+            "Could not start payment. Use the link in your confirmation email.",
+        );
         setBusy(false);
         return;
       }
       launchRazorpayPayment({
         order: data,
         description: `Payment for order ${data.orderNumber}`,
-        prefill: {
-          name: data.customerName ?? "",
-          email: data.customerEmail ?? "",
-          contact: data.customerPhone ?? "",
-        },
+        // pay-inline returns no customer PII; Razorpay collects it itself.
+        prefill: { name: "", email: "", contact: "" },
         onVerified: () => {
           setBusy(false);
           onPaid();
@@ -238,17 +269,31 @@ function PayNowInline({
 
   return (
     <>
-      <button
-        type="button"
-        className="btn-prime btn-sm"
-        onClick={() => void pay()}
-        disabled={busy}
-      >
-        {busy ? "Opening payment…" : `Pay ${formatINR(total)} now`}
-      </button>
-      {error && (
-        <span className="track-pay-error-inline" role="alert">
-          {error}
+      {/* Loaded here, not at the form: checkout.js is ~1.5 MB and PayNowInline
+          is the only consumer, so tracking an already-paid order (or just
+          searching) must not pay for it. */}
+      <RazorpayScript />
+      {entitled ? (
+        <>
+          <button
+            type="button"
+            className="btn-prime btn-sm"
+            onClick={() => void pay()}
+            disabled={busy}
+          >
+            {busy ? "Opening payment…" : `Pay ${formatINR(amountDue)} now`}
+          </button>
+          {error && (
+            <span className="track-pay-error-inline" role="alert">
+              {error}
+            </span>
+          )}
+        </>
+      ) : (
+        // Tracking is public; payment is not. Without a capability link,
+        // point at it instead of failing on click.
+        <span className="track-pay-error-inline">
+          Use the payment link in your confirmation email, or contact support.
         </span>
       )}
     </>
@@ -337,9 +382,11 @@ function LiveTracking({ waybill }: { waybill: string }) {
 
 function TrackResult({
   data,
+  canPay = false,
   onPaid,
 }: {
   data: TrackData;
+  canPay?: boolean;
   onPaid: () => void;
 }) {
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -355,8 +402,15 @@ function TrackResult({
       shipment.status ||
       shipment.estimatedDeliveryDate)
   );
-  const paid = data.paymentStatus === "PAID";
-  const amountNotSet = data.total <= 0;
+// F8. The eligibility rule is a pure function so it can be unit-tested: a pay
+  // control that appears for an order which cannot be paid is a correctness bug,
+  // not a styling choice. `outstandingAmount` is net of refunds and computed
+  // server-side, so the figure shown is the figure pay-inline will charge.
+  const prompt = paymentPromptFor({
+    paymentStatus: data.paymentStatus,
+    total: data.total,
+    outstanding: data.outstandingAmount,
+  });
   const messages = data.messages ?? [];
 
   useEffect(() => {
@@ -388,16 +442,28 @@ function TrackResult({
         <div className="track-status-head">
           <span className="os-section-title">Order Status</span>
           <div className="track-status-badges">
-            {paid ? (
-              <span className="badge badge-ok">Paid ✓</span>
-            ) : amountNotSet ? (
-              <span className="badge badge-warn">Payment Pending</span>
-            ) : (
+            {prompt.kind === "payable" ? (
               <PayNowInline
                 orderNumber={data.orderNumber}
-                total={data.total}
+                amountDue={prompt.amountDue}
+                canPay={canPay}
                 onPaid={onPaid}
               />
+            ) : (
+              // Every non-payable state renders a label and NO pay control, so a
+              // customer is never invited to submit a payment the server will
+              // refuse. A REFUNDED order in particular must not look unpaid.
+              <span
+                className={`badge ${
+                  prompt.kind === "refunded"
+                    ? "badge-err"
+                    : prompt.kind === "awaiting-pricing"
+                      ? "badge-warn"
+                      : "badge-ok"
+                }`}
+              >
+                {prompt.label}
+              </span>
             )}
           </div>
         </div>

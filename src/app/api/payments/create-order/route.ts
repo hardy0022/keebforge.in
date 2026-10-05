@@ -20,10 +20,31 @@ import {
   type CouponEligible,
 } from "@/lib/checkout/coupons";
 import { ensureRazorpayCustomer } from "@/lib/payments/razorpay-customer";
+import {
+  EXCHANGE_EXPIRY_KEY,
+  EXCHANGE_HASH_KEY,
+  EXCHANGE_STATE_KEY,
+  EXCHANGE_STATE_REDEEMABLE,
+  PAY_COOKIE,
+  createExchangeCode,
+  createOrderCapability,
+  verifyOrderPayCookie,
+} from "@/lib/payments/order-capability";
+import { payCookieOptions, readPayCookie } from "@/lib/payments/order-access";
+import { patchBillingDetails } from "@/lib/payments/billing-details";
+import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
+import { sendGuestOrderConfirmation } from "@/lib/payments/order-confirmation-email";
 import { Prisma } from "@prisma/client";
 import Razorpay from "razorpay";
 
 export const dynamic = "force-dynamic";
+
+/** Per client, per minute. See the POST handler for why. */
+const RATE_LIMIT = { limit: 15, windowMs: 60_000 };
 
 /**
  * Final product-order creation. The browser supplies ONLY the delivery
@@ -97,6 +118,16 @@ function getRazorpay() {
 
 export async function POST(req: NextRequest) {
   try {
+    // First thing in the handler: this endpoint mints a Razorpay order (a real
+    // paid API call) and writes an Order row, so an unbounded loop here is both a
+    // bill and a spam channel. Keyed per client, at 15/min — far above what
+    // someone assembling a cart and retrying a validation error will hit.
+    const limit = checkRateLimit(
+      `create-order:ip:${clientIp(req)}`,
+      RATE_LIMIT,
+    );
+    if (!limit.allowed) return rateLimitResponse(limit, "create-order");
+
     // Guests may order — the address travels with the order, not the account.
     const { user, profile } = await getCurrentAuth();
 
@@ -141,6 +172,18 @@ export async function POST(req: NextRequest) {
     // the Razorpay order already bound to this checkout instead of re-creating it.
     const replayCheckoutId = parsed.data.checkoutId;
     if (replayCheckoutId) {
+      // A checkoutId is a bearer id for the checkout session, not an order
+      // number, and the lookup below is by id alone. Scope it to the caller so
+      // that learning somebody else's checkoutId cannot hand over their order's
+      // PII or mint a payment capability for it:
+      //   - a signed-in customer may only replay an order bound to their profile;
+      //   - a guest must prove it is the same browser by presenting the payment
+      //     cookie for that order (the same test pay-inline uses), which only the
+      //     original checkout browser holds.
+      // A caller that fails either test is not told whether the checkoutId
+      // existed: it falls through and mints a fresh order, exactly as an unknown
+      // id does.
+      const replayToken = await readPayCookie();
       const prior = await prisma.order.findFirst({
         where: {
           billingDetails: { path: ["checkoutId"], equals: replayCheckoutId },
@@ -152,16 +195,33 @@ export async function POST(req: NextRequest) {
           customerEmail: true,
           customerPhone: true,
           total: true,
+          profileId: true,
           billingDetails: true,
         },
       });
-      if (prior) {
+      const ownsPrior =
+        prior !== null &&
+        (profile
+          ? prior.profileId === profile.id
+          : verifyOrderPayCookie(replayToken, prior.billingDetails));
+      if (ownsPrior && prior) {
         const b = (prior.billingDetails ?? {}) as { razorpayOrderId?: string };
         if (b.razorpayOrderId) {
+          // Only the hash was stored, so a replay cannot recover the original
+          // plaintext. Rotate the capability instead: this is the same browser
+          // retrying the same checkout, and the superseded token stops working.
+          // The emailed exchange code is untouched, so the recovery link the
+          // customer already has still works.
+          const replayed = createOrderCapability();
+          // Merge, not replace: replacing the document from the snapshot read
+          // above would revert a concurrent exchange redemption.
+          await patchBillingDetails(prior.id, {
+            guestPaymentTokenHash: replayed.hash,
+          });
           console.log(
             `[create-order] replay checkout ${replayCheckoutId} -> order ${prior.orderNumber}`,
           );
-          return NextResponse.json({
+          const res = NextResponse.json({
             orderId: prior.id,
             orderNumber: prior.orderNumber,
             razorpayOrderId: b.razorpayOrderId,
@@ -174,6 +234,8 @@ export async function POST(req: NextRequest) {
             customerEmail: prior.customerEmail,
             customerPhone: prior.customerPhone,
           });
+          res.cookies.set(PAY_COOKIE, replayed.token, payCookieOptions());
+          return res;
         }
         // Order created but Razorpay never returned an order id (gateway error):
         // fall through and mint a fresh order — the failed attempt is an orphan.
@@ -442,6 +504,14 @@ export async function POST(req: NextRequest) {
 
     const orderNumber = `KF${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+    // Guest-payment capability: the plaintext goes only into this browser's
+    // HttpOnly cookie below. Only the hash is persisted, and the response body
+    // carries no credential at all.
+    const capability = createOrderCapability();
+    // Separate short-lived code for the confirmation email, so the order can be
+    // paid from another browser without putting a capability in a URL.
+    const exchange = createExchangeCode();
+
     const order = await prisma.order.create({
       data: {
         orderNumber,
@@ -523,6 +593,10 @@ export async function POST(req: NextRequest) {
           ...(parsed.data.checkoutId
             ? { checkoutId: parsed.data.checkoutId }
             : {}),
+          guestPaymentTokenHash: capability.hash,
+          [EXCHANGE_HASH_KEY]: exchange.hash,
+          [EXCHANGE_EXPIRY_KEY]: exchange.expiresAt,
+          [EXCHANGE_STATE_KEY]: EXCHANGE_STATE_REDEEMABLE,
           razorpayOrderId: rzpOrder.id,
           razorpayOrderAmount: rzpOrder.amount,
           ...(razorpayCustomerId ? { razorpayCustomerId } : {}),
@@ -548,7 +622,18 @@ export async function POST(req: NextRequest) {
 
     if (couponEligible) await incrementCouponUsage(couponEligible.couponId);
 
-    return NextResponse.json({
+    // Guests get a recovery link: no session, no way back to this capability
+    // after the tab closes. Signed-in customers reach the order from their
+    // account, so they are not emailed.
+    if (!profile) {
+      await sendGuestOrderConfirmation({
+        to: email,
+        orderNumber,
+        exchangeCode: exchange.code,
+      });
+    }
+
+    const res = NextResponse.json({
       orderId: order.id,
       orderNumber,
       razorpayOrderId: rzpOrder.id,
@@ -560,6 +645,8 @@ export async function POST(req: NextRequest) {
       customerEmail: email,
       customerPhone: addr.phone,
     });
+    res.cookies.set(PAY_COOKIE, capability.token, payCookieOptions());
+    return res;
   } catch (error) {
     console.error("Create Razorpay order error:", error);
     return NextResponse.json(

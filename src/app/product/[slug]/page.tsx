@@ -16,6 +16,7 @@ import {
 } from "@/components/shop/skeletons";
 import { buildMetadata, JsonLd, breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 import { getProductBySlug } from "@/lib/catalog/data";
+import { isDraftImage } from "@/lib/images/cloudinary-url";
 import { availableQuantity } from "@/lib/cart";
 import { formatINR, formatINRRange } from "@/lib/utils/money";
 import { isPurchasable, CONDITION_LABELS } from "@/lib/catalog/shop";
@@ -27,15 +28,6 @@ const labelize = (k: string) =>
 
 function absUrl(u: string) {
   return u.startsWith("http") ? u : `${SITE_URL}${u}`;
-}
-
-/** Cloudinary draft-asset detection — drafts live under
- *  keebforge/products/drafts/ and must never surface in OG/Product schema. */
-function isDraftImage(img: { url: string; publicId?: string | null }) {
-  return (
-    img.url.includes("/products/drafts/") ||
-    (img.publicId ?? "").includes("/products/drafts/")
-  );
 }
 
 function getJsonList(value: unknown): string[] {
@@ -448,6 +440,10 @@ export default async function ProductPage({
               availability: buyable
                 ? "https://schema.org/InStock"
                 : "https://schema.org/OutOfStock",
+              // ponytail: no shippingDetails / hasMerchantReturnPolicy here.
+              // GSC asks for both, but /returns-refunds states the product-order
+              // refund policy is unpublished and shipping is threshold-conditional.
+              // Fill these in only once those policies are actually defined.
             },
             ...(product.ratingCount > 0 && product.ratingAverage
               ? {

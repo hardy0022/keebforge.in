@@ -348,7 +348,14 @@ ul {
   display: flex;
   align-items: center;
   gap: clamp(16px, 3vw, 40px);
+  position: relative;
 }
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 2vw, 12px);
+}
+
 .nav-logo {
   font-family: var(--ff-display);
   font-size: 1.15rem;
@@ -357,6 +364,28 @@ ul {
   color: var(--t1);
   display: inline-flex;
   align-items: baseline;
+}
+
+@media (max-width: 640px) {
+  .nav-inner {
+    justify-content: center;
+  }
+  .nav-toggle {
+    position: absolute;
+    left: clamp(20px, 4vw, 48px);
+    z-index: 1;
+  }
+  .nav-actions {
+    position: absolute;
+    right: clamp(20px, 4vw, 48px);
+    z-index: 1;
+  }
+  .nav-logo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 0;
+  }
 }
 .logo-dot {
   color: var(--acc);
@@ -408,8 +437,7 @@ ul {
 }
 /* Shared right-side action buttons: identical size, radius, border, hover */
 .nav-icon,
-.nav-profile-trigger,
-.nav-toggle {
+.nav-profile-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -426,6 +454,22 @@ ul {
     color 0.2s var(--ease-out),
     border-color 0.2s var(--ease-out),
     background-color 0.2s var(--ease-out);
+}
+
+.nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+  color: var(--t2);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: color 0.2s var(--ease-out);
 }
 .nav-cart {
   position: relative;
@@ -449,11 +493,15 @@ ul {
   box-shadow: 0 0 0 2px rgba(6, 6, 8, 0.9);
 }
 .nav-icon:hover,
-.nav-profile-trigger:hover,
-.nav-toggle:hover {
+.nav-profile-trigger:hover {
   color: var(--acc);
   background: var(--surf-h);
   border-color: var(--bdr-h);
+}
+
+.nav-toggle:hover {
+  color: var(--acc);
+  background: transparent;
 }
 @media (min-width: 901px) {
   .nav-toggle {
@@ -664,7 +712,8 @@ ul {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
+  /* 24px minimum tap target (the chevron itself stays 12px). */
+  width: 24px;
   height: 24px;
   padding: 0;
   background: none;
@@ -1187,13 +1236,69 @@ ul {
     font-size: 1.25rem;
   }
 }
+
+/* Mobile hero: the first viewport ends at the bottom of the keyboard card.
+   `.hp-hero-main` is given exactly the viewport height the fixed nav leaves
+   over — min-height, never height, so a short phone scrolls instead of
+   clipping — and the card's grid row is `minmax(floor, 1fr)`, so that height
+   is spent on the product visual rather than on blank space. Nothing here is
+   absolute or negative, and the frame has a floor but no ceiling.
+
+   Previously `min-height: 100dvh` + `flex: 1` + `height: 100%` +
+   `align-content: space-between` distributed the leftover viewport height
+   across the two stacked rows, while a dvh-locked .hp-hero-visual held
+   250–320px of empty wrapper under a much shorter .hp-hero-frame. Desktop is
+   untouched: the >640px rules keep min-height:100vh, flex:1 and the
+   clamp(520px,58vh,580px) card. */
+@media (max-width: 640px) {
+  .hp-hero {
+    min-height: auto;
+    padding-top: calc(var(--nav-h) + 4px);
+  }
+  .hp-hero-main {
+    flex: 0 0 auto;
+    align-items: stretch;
+    /* the 4px mirrors .hp-hero's own padding-top, so nav + hero == 100dvh */
+    min-height: calc(100dvh - var(--nav-h) - 4px);
+  }
+  .hp-hero-grid {
+    grid-template-columns: 1fr;
+    /* text keeps its natural height; the card takes every pixel left over,
+       never less than the width-derived floor */
+    grid-template-rows: auto minmax(clamp(200px, 46vw, 280px), 1fr);
+    /* the desktop rule centres items, which would leave the card at its own
+       height inside a taller row — exactly the gap this is meant to remove */
+    align-items: stretch;
+    gap: clamp(20px, 4vw, 28px);
+    padding: clamp(8px, 2vw, 16px) 0;
+  }
+  .hp-hero-text {
+    padding-top: clamp(4px, 2vw, 8px);
+  }
+  /* The wrapper carries no height of its own, so it can no longer be taller
+     than the card. Column flex lets the frame grow into the row instead of
+     resolving a percentage height against a stretched grid item. */
+  .hp-hero-visual {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .hp-hero-frame {
+    flex: 1 1 auto;
+    min-height: clamp(200px, 46vw, 280px);
+  }
+}
 @media (max-width: 480px) {
   .hp-feature-strip-inner {
     grid-template-columns: 1fr;
+    gap: 0;
   }
   .hp-feature-item,
   .hp-feature-item:nth-child(odd) {
     border-right: none;
+  }
+  .hp-feature-item {
+    border-left: none;
   }
   .hp-feature-item:not(:last-child) {
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
@@ -1615,28 +1720,40 @@ ul {
   gap: 10px;
   margin-top: clamp(16px, 2vh, 24px);
 }
+/* 24px tap target (WCAG 2.5.8) with an 8px visual dot: the button is a
+   transparent 24px box and ::before draws the visible dot centred in it. */
 .hp-feature-dot {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.hp-feature-dot::before {
+  content: "";
+  position: absolute;
+  inset: 50%;
   width: 8px;
   height: 8px;
-  padding: 0;
+  transform: translate(-50%, -50%);
   border-radius: 99px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
-    background-color 0.2s ease,
     transform 0.2s ease;
 }
-.hp-feature-dot:hover {
+.hp-feature-dot:hover::before {
   background: rgba(255, 255, 255, 0.85);
   border-color: rgba(255, 255, 255, 0.6);
 }
-.hp-feature-dot.is-active {
+.hp-feature-dot.is-active::before {
   background: var(--acc);
   border-color: var(--acc);
-  transform: scale(1.25);
+  transform: translate(-50%, -50%) scale(1.25);
 }
 .hp-feature-body {
   display: flex;
@@ -1841,36 +1958,9 @@ ul {
   .hp-hero {
     min-height: auto;
   }
-  .hp-pin {
-    height: auto;
-  }
-  .hp-pin-stage {
-    position: static;
-  }
   .hp-how {
     grid-template-columns: 1fr;
     gap: 30px;
-  }
-  .hp-how-side {
-    position: static;
-  }
-  .hp-how-step {
-    position: static;
-    min-height: auto;
-    margin-bottom: 48px;
-    padding-top: 24px;
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto;
-    transform: none;
-  }
-  .hp-how-steps {
-    height: auto;
-  }
-  .hp-how-viewport {
-    position: static;
-    height: auto;
-    padding-top: 0;
   }
   /* stacked reads text-first: give the extra copy room to breathe rather than
      shrinking it to protect the desktop crossfade frame */
@@ -1898,10 +1988,125 @@ ul {
   .hp-path--workshop .hp-path-body {
     order: -1;
   }
-  .hp-path-media {
+    .hp-path-media {
     min-height: 240px;
   }
 }
+
+/* ─── How We Work: where the pinned crossfade runs ───────────────────────────
+   The runway + sticky stage + absolutely-positioned crossfade frame is the
+   desktop design. It was previously switched off for EVERY width ≤1024px, which
+   is why phones showed all four steps stacked at once with a 04/04 counter
+   that no longer meant anything: the JS still measured runway progress, but
+   `.hp-pin { height: auto }` left no runway, so the number ran 01→04 over a
+   scroll range that had nothing to crossfade.
+
+   641–1024px keeps the stacked layout — there is not enough width for two
+   columns, and the stage plus a full-height frame does not fit one screen.
+   Phones re-enable the real thing in the block below, sized to one screen. */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .hp-pin {
+    height: auto;
+  }
+  .hp-pin-stage {
+    position: static;
+  }
+  .hp-how-side {
+    position: static;
+  }
+  .hp-how-step {
+    position: static;
+    min-height: auto;
+    margin-bottom: 48px;
+    padding-top: 24px;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+    transform: none;
+  }
+  .hp-how-steps {
+    height: auto;
+  }
+  .hp-how-viewport {
+    position: static;
+    height: auto;
+    padding-top: 0;
+  }
+}
+
+/* Phones: the sticky crossfade, with the pinned stage sized to one screen.
+
+   A sticky box taller than the viewport pins with its own bottom unreachable,
+   so the stage has to fit: at 375x812 that budget is 100dvh minus the nav and
+   the sticky offset (812 - 52 - 10 = 750px) against a measured stage of
+   statement 135 + intro 188 + frame 373 = 696px. The frame is a clamp(), not a
+   fixed height, and it has to clear the densest step (step 03, five ticks plus
+   a warranty note, 345px of content at 375 wide) or that step's tail would
+   render past the frame. Step typography is untouched — the budget is found by
+   dropping the stage's own padding and the intro block's rail margins, not by
+   shrinking any readable text. */
+@media (max-width: 640px) and (min-height: 761px) {
+  .hp-pin {
+    /* ~0.75 screen of runway per step; HowWeWork maps this span onto 01–04 */
+    height: 300svh;
+  }
+  .hp-pin-stage {
+    position: sticky;
+    /* 10px, not the desktop 16px: every pixel here is a pixel the frame gets */
+    top: calc(var(--nav-h) + 10px);
+  }
+  .hp-how {
+    padding-top: 0;
+    gap: 20px;
+  }
+  .hp-how-heading {
+    margin-bottom: 10px;
+  }
+  .hp-how-rail {
+    margin: 18px 0 10px;
+  }
+  /* the one fixed crossfade frame, again — steps go back to position:absolute */
+  .hp-how-viewport {
+    height: clamp(360px, 46svh, 440px);
+    padding-top: 0;
+  }
+}
+
+/* Two cases where the crossfade cannot run, both falling back to the stacked
+   layout so no step becomes unreachable behind a pinned frame:
+   - viewports under ~760px tall, where the statement + intro + a frame tall
+     enough for step 03 do not fit one screen;
+   - reduced motion, where HowWeWork deliberately pins progress at 1 and would
+     therefore leave only step 04 visible. */
+@media (max-width: 640px) and (max-height: 760px),
+  (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .hp-pin {
+    height: auto;
+  }
+  .hp-pin-stage {
+    position: static;
+  }
+  .hp-how-step {
+    position: static;
+    min-height: auto;
+    margin-bottom: 48px;
+    padding-top: 24px;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+    transform: none;
+  }
+  .hp-how-steps,
+  .hp-how-viewport {
+    height: auto;
+  }
+  .hp-how-viewport {
+    position: static;
+    padding-top: 0;
+  }
+}
+
+
 @media (max-width: 640px) {
   .hp-hero-title {
     font-size: clamp(2.4rem, 11vw, 3.4rem);
@@ -4949,6 +5154,10 @@ a.shop-pager-num:hover {
 
 .shop-count {
   margin: 0;
+  /* nowrap + no shrink, so a long "· page 1 of 2" count wraps the sort onto
+     its own row instead of squeezing it or overflowing */
+  flex: 0 0 auto;
+  white-space: nowrap;
   font-family: var(--ff-body);
   font-size: 0.8rem;
   color: var(--t2);
@@ -4972,23 +5181,41 @@ a.shop-pager-num:hover {
 .shop-toolbar .shop-select {
   min-width: 190px;
   height: 36px;
-  padding: 0 12px;
+  /* right padding has to clear the chevron, which .shop-select draws at
+     right:14px and is 10px wide (i.e. the outer 14–24px). `0 12px` let option
+     text run underneath it. */
+  padding: 0 24px 0 12px;
   font-size: 0.85rem;
   border-radius: 8px;
 }
 
-@media (max-width: 560px) {
+/* Phones and tablets: keep the count and the sort control on ONE row instead
+   of letting the 560px breakpoint push both to width:100%. */
+@media (max-width: 1024px) {
+  .shop-toolbar {
+    gap: 6px 10px;
+    margin-bottom: 12px;
+  }
   .shop-count {
-    width: 100%;
-    line-height: 1.4;
+    font-size: 0.9rem;
+    line-height: 1.3;
   }
   .shop-sort {
-    width: 100%;
-    justify-content: space-between;
+    /* auto margin right-aligns the sort block on the wrapped row too */
+    margin-left: auto;
+    gap: 8px;
   }
+  /* 140px is the narrowest width that still fits the longest option
+     ("Price: Low to High", 103px at this font) clear of the chevron: the
+     chevron moves to right:9px so its 10px width lands in the outer 19px, and
+     that leaves 140 - 10 - 19 - 2 ≈ 109px of text room. */
   .shop-toolbar .shop-select {
-    flex: 1;
-    min-width: 0;
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+    height: 40px;
+    padding: 0 19px 0 10px;
+    background-position: right 9px center;
   }
 }
 
@@ -6055,6 +6282,9 @@ a.shop-pager-num:hover {
 .qty-btn {
   width: 36px;
   height: 36px;
+  /* Without this the flex row shrinks the button below the 24px minimum
+     tap target inside a narrow mod card. */
+  flex: 0 0 auto;
   background: transparent;
   border: none;
   color: var(--t1);
@@ -12450,5 +12680,176 @@ body:has(.kf-dev-notice) {
 @media (prefers-reduced-motion: reduce) {
   .cart-toaster {
     animation: none;
+  }
+}
+
+/* ─── Mobile hero fit + mobile menu rows ─────────────────────────────────────
+   Goal: at 375–430px wide the whole hero — kicker, heading, description, both
+   CTAs, service meta and the keyboard visual — lands inside the first viewport,
+   with the fixed nav and the development notice included.
+
+   Everything here is inside a max-width media query, so the desktop hero keeps
+   its two-column grid, 60–82px type, clamp(520px,58vh,580px) card and spacing
+   untouched. Tablet (641–1024px) keeps its existing single-column rules.
+
+   Sizing is fluid (clamp/vw) rather than a fixed height, so a short phone
+   (e.g. 375×667) simply scrolls a little instead of clipping anything. */
+
+/* Chrome height: a shorter nav bar and notice are worth ~18px of the budget.
+   --nav-h also positions .kf-dev-notice and .mobile-menu, both of which are
+   fixed to it, so nav + notice + menu stay aligned automatically. */
+@media (max-width: 640px) {
+  :root {
+    --nav-h: 52px;
+    --notice-h: 52px;
+  }
+  .nav-inner {
+    padding-inline: 16px;
+    gap: 12px;
+  }
+  .kf-dev-notice {
+    padding: 5px 14px;
+    font-size: 0.68rem;
+    line-height: 1.25;
+  }
+}
+
+/* Mobile menu: the account and sign-out controls are <Link>/<button> pairs that
+   inherited the desktop .nav-cta lime pill, so "Sign out" (a button) missed the
+   `.mobile-menu > a` row styling entirely and rendered as a small pill against
+   a full-width "My Account" row. Both are now real nav rows, and the panel
+   scrolls instead of overflowing the viewport on short phones. */
+@media (max-width: 900px) {
+  .mobile-menu.open {
+    max-height: calc(100dvh - var(--nav-h));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .mobile-menu > a,
+  .mobile-menu > button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 4px;
+    font-family: var(--ff-display);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+    text-align: left;
+    color: var(--t2);
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--bdr);
+    border-radius: 0;
+    cursor: pointer;
+  }
+  .mobile-menu > a:hover,
+  .mobile-menu > button:hover {
+    color: var(--t1);
+  }
+  /* Undo the inherited pill so the row reads as navigation, not a CTA. */
+  .mobile-menu-extra {
+    margin-top: 0;
+    align-self: stretch;
+    padding: 12px 4px;
+    gap: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--t2);
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .mobile-menu-extra:hover {
+    transform: none;
+    box-shadow: none;
+    color: var(--t1);
+  }
+}
+
+@media (max-width: 640px) {
+  /* Vertical rhythm, measured from the bottom of one element to the top of the
+     next: header → kicker 26px (--nav-h + grid padding-top + text padding-top),
+     kicker → title 10px, title → sub 12px, sub → CTAs 18px, CTAs → meta 14px,
+     meta → card 26px (grid gap), card → services 26px (grid padding-bottom).
+     The card's own height is left to the 1fr grid row above, so it absorbs the
+     viewport rather than being pinned to a number. */
+  .hp-hero-grid {
+    padding-top: 14px;
+    padding-bottom: 26px;
+    gap: 26px;
+  }
+  .hp-kicker {
+    font-size: 0.64rem;
+    letter-spacing: 0.16em;
+    margin-bottom: 10px;
+  }
+  .hp-hero-title {
+    font-size: clamp(2.05rem, 8.8vw, 2.9rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+  }
+  .hp-hero-sub {
+    margin-top: 12px;
+    font-size: 0.94rem;
+    line-height: 1.5;
+  }
+  /* Both CTAs fit side by side at 375px once the padding and gap shrink. */
+  .hp-hero-cta {
+    margin-top: 18px;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+  .hp-hero-cta .btn-prime-lg,
+  .hp-hero-cta .btn-ghost {
+    padding: 12px 18px;
+    font-size: 0.9rem;
+    gap: 7px;
+    border-radius: 10px;
+  }
+  .hp-hero-meta {
+    margin-top: 14px;
+    font-size: 0.7rem;
+    line-height: 1.5;
+  }
+  /* The card grows into the viewport (see the 1fr row in the block above) and
+     keeps the width it has always had on mobile. The switch stays the focal
+     point: the image keeps object-fit:cover, and the asset's board occupies only
+     the central ~51% of the canvas, so a taller card crops margin, never the
+     product. Floor only, no ceiling — nothing can clip. */
+  .hp-hero-frame {
+    height: auto;
+    flex: 1 1 auto;
+    min-height: clamp(200px, 46vw, 280px);
+    border-radius: 16px;
+  }
+  .hp-hero-visual-frame {
+    margin: 10px;
+    border-radius: 12px;
+  }
+  .hp-hero-frame::before {
+    inset: -8% -12% -4%;
+    background-size: 22px 22px;
+  }
+  .hp-hero-note {
+    gap: 6px;
+  }
+  .hp-hero-note-tl {
+    top: 14px;
+    left: 14px;
+  }
+  .hp-hero-note-br {
+    bottom: 14px;
+    right: 14px;
+  }
+  .hp-note-text {
+    font-size: 0.5rem;
+    line-height: 1.5;
+    letter-spacing: 0.14em;
+  }
+  .hp-note-bracket {
+    width: 10px;
+    height: 9px;
   }
 }

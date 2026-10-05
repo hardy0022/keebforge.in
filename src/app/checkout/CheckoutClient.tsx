@@ -39,6 +39,15 @@ type Me = {
   profile?: { name?: string | null; phone?: string | null } | null;
 } | null;
 let mePromise: Promise<Me> | null = null;
+/**
+ * Post-checkout destination. Always a clean URL: the create-order response set
+ * the HttpOnly payment cookie for this browser, so there is nothing to carry in
+ * the query string. Signed-in buyers pay from their session instead.
+ */
+function successHref(order: { orderNumber: string }): string {
+  return `/order/success/${encodeURIComponent(order.orderNumber)}`;
+}
+
 function loadMe(): Promise<Me> {
   if (!mePromise) {
     mePromise = fetch("/api/auth/me")
@@ -401,8 +410,8 @@ export function ServiceCheckout({
         contact: form.phone,
       },
       onVerified: () => {
-        void clearServiceCartItem();
-        router.push(`/order/success/${orderData.orderNumber}`);
+void clearServiceCartItem();
+            router.push(successHref(orderData));
       },
       onDismissed: () => {
         setError("Payment was cancelled. You have not been charged.");
@@ -1318,7 +1327,7 @@ export function ProductCheckout({
             } catch {
               /* order already recorded; cart clearing is best-effort */
             }
-            router.push(`/order/success/${data.orderNumber}`);
+            router.push(successHref(data));
           })();
         },
         onDismissed: () => {
