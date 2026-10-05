@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import Module from "node:module";
 import path from "node:path";
+import type { Role } from "@prisma/client";
+import { canAction } from "@/lib/auth/roles";
 
 /**
  * Regression coverage for the refund-evidence guard on the admin order delete.
@@ -12,6 +14,25 @@ import path from "node:path";
  *
  * The action's own module graph (prisma, auth, delhivery, next/*) is stubbed;
  * the pure payment modules it imports are the real ones.
+ *
+ * ── On the authorization stub ────────────────────────────────────────────────
+ *
+ * This suite originally stubbed `requirePermission` as `async () => { count++ }` —
+ * always successful, asserting only that it was *called*. That cannot establish the
+ * role/action boundary for two reasons, both of which are now closed:
+ *
+ *   1. An always-successful stub cannot observe a DENIAL, so the suite passed
+ *      unchanged if the `requirePermission("order", "delete")` line were deleted
+ *      outright. A test that cannot fail when the guard is removed proves nothing.
+ *   2. It never consulted the permission matrix, so `canAction` — where the actual
+ *      role policy lives — was never executed by anything.
+ *
+ * So the stub now delegates to the REAL `canAction` (imported above; `roles.ts` is
+ * deliberately NOT stubbed) against a configurable role, and DENIAL THROWS the way
+ * `next/navigation`'s `redirect()` throws. That throw is load-bearing: `requirePermission`
+ * denies by redirecting, and in Next.js `redirect()` never returns. A stub that
+ * merely returned would let a denied request fall straight through into
+ * `prisma.order.delete` — exactly the outcome these tests must rule out.
  */
 
 const REPO = path.resolve(__dirname, "../../..");
@@ -27,8 +48,15 @@ const state = {
   } | null,
   /** Every write the action attempted, in order. */
   calls: [] as DeleteCall[],
-  /** Number of permission checks — a guard that runs before authorization leaks. */
-  permissionChecks: 0,
+  /**
+   * The permission checks the action asked for, in order. Recording the ARGUMENTS —
+   * not merely counting invocations — is what pins the resource/action pair, so a
+   * refactor that weakened `order:delete` to `order:update` (which STAFF and
+   * DEVELOPER both hold) would fail here instead of silently widening access.
+   */
+  permissionChecks: [] as Array<{ resource: string; action: string }>,
+  /** The role the REAL `canAction` matrix is evaluated against. */
+  role: "ADMIN" as Role,
 };
 
 const prismaStub = {
@@ -54,9 +82,24 @@ const prismaStub = {
   },
 };
 
+/**
+ * Mirrors `src/lib/auth/admin.ts:requirePermission`, and denies by THROWING.
+ *
+ * `requirePermission` is `requireAdminContext()` + `canAction()` + `redirect()`. The
+ * admin-context half (session lookup) is not what is under test, so it is elided; the
+ * `canAction` half — the actual role policy — is the real implementation, and the
+ * `redirect()` half is reproduced faithfully by throwing.
+ */
 const authStub = {
-  requirePermission: async () => {
-    state.permissionChecks += 1;
+  requirePermission: async (resource: string, action: string) => {
+    state.permissionChecks.push({ resource, action });
+    if (canAction(state.role, resource, action)) return;
+    // next/navigation's redirect() throws a NEXT_REDIRECT error that unwinds the
+    // action; it does not return. Reproducing that is what makes a denied call
+    // provably unable to continue into the database mutation.
+    throw Object.assign(new Error("NEXT_REDIRECT"), {
+      digest: `NEXT_REDIRECT;replace;/unauthorized;${resource}:${action}`,
+    });
   },
 };
 
@@ -100,12 +143,27 @@ void (async () => {
   // On success the action revalidates and calls `redirect()`, which in Next.js
   // throws and never returns — the stubbed no-op makes the promise resolve to
   // `undefined`. So an absent `error` is the success signal here.
+  //
+  // A denial also throws, and that is NOT an ActionState error: it is Next.js
+  // unwinding. `call` therefore separates the two, so a test can assert "refused
+  // with a message" and "refused by authorization" without conflating them.
   const call = async (orderId: unknown) => {
     state.calls = [];
-    state.permissionChecks = 0;
+    state.permissionChecks = [];
     const fd = new FormData();
     if (orderId !== undefined) fd.set("orderId", orderId as string);
-    return (await deleteOrder({}, fd)) ?? {};
+    try {
+      return {
+        denied: false as const,
+        result: ((await deleteOrder({}, fd)) ?? {}) as { error?: string },
+      };
+    } catch (e) {
+      const digest = (e as { digest?: string }).digest;
+      if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
+        return { denied: true as const, result: {} as { error?: string } };
+      }
+      throw e;
+    }
   };
 
   // ── 1. F3: an order with refund rows must not be deletable ────────────────
@@ -118,7 +176,7 @@ void (async () => {
     // trail for a financial transaction was being thrown away by an admin action
     // whose UI says only "delete".
     state.order = { orderNumber: "KFTEST0001", _count: { refunds: 1 } };
-    const res = await call("ord_1");
+    const { result: res } = await call("ord_1");
     assert.ok(res.error, "the delete is refused");
     assert.equal(
       state.calls.some((c) => c.op === "order.delete"),
@@ -131,7 +189,13 @@ void (async () => {
       "and it is not archived in place either — that would silently change an "
         + "order's visibility instead of telling the admin the delete was refused",
     );
-    assert.equal(state.permissionChecks, 1, "authorization still runs first");
+    assert.deepEqual(
+      state.permissionChecks,
+      [{ resource: "order", action: "delete" }],
+      "authorization still runs first, and asks for order:delete specifically — a "
+        + "weakened action pair would widen access to STAFF and DEVELOPER, who both "
+        + "hold order:update",
+    );
     pass("an order with refund records cannot be deleted");
   }
 
@@ -139,7 +203,7 @@ void (async () => {
     // Several refunds: still refused, and the message has to say how many, because
     // the admin's next question is "how bad is this".
     state.order = { orderNumber: "KFTEST0001", _count: { refunds: 4 } };
-    const res = await call("ord_1");
+    const { result: res } = await call("ord_1");
     assert.ok(res.error);
     assert.ok(
       /4/.test(res.error) && /refund/i.test(res.error),
@@ -174,7 +238,7 @@ void (async () => {
     // order is the overwhelmingly common reason this action is used, and it must
     // not be collateral damage of the refund fix.
     state.order = { orderNumber: "KFTEST0001", _count: { refunds: 0 } };
-    const res = await call("ord_1");
+    const { result: res } = await call("ord_1");
     assert.equal(res.error, undefined, `un-refunded orders still delete, got: ${res.error}`);
     assert.equal(
       state.calls.some((c) => c.op === "order.delete"),
@@ -187,7 +251,7 @@ void (async () => {
   {
     // A missing order is a validation error, not a crash — and still no delete.
     state.order = null;
-    const res = await call("ord_missing");
+    const { result: res } = await call("ord_missing");
     assert.ok(res.error);
     assert.equal(state.calls.some((c) => c.op === "order.delete"), false);
     pass("an unknown order is refused without issuing a delete");
@@ -196,7 +260,7 @@ void (async () => {
   {
     // Missing/blank input must be rejected before any database work at all.
     state.order = { orderNumber: "KFTEST0001", _count: { refunds: 0 } };
-    const blank = await call("");
+    const { result: blank } = await call("");
     assert.ok(blank.error, "a blank orderId is invalid input");
     assert.equal(
       state.calls.length,
@@ -206,6 +270,103 @@ void (async () => {
     pass("a blank order id is rejected without a database round trip");
   }
 
+  // ── 3. The role boundary ──────────────────────────────────────────────────
+  //
+  // The refund-evidence tests above all run as ADMIN and prove nothing about WHO may
+  // delete. These do, by driving the same action through the real `canAction` matrix.
+  {
+    // ADMIN is the wildcard, so it reaches the mutation. Positive control for the
+    // block below: without it, a `canAction` broken to always return false would
+    // make every denial test pass while making the action unusable.
+    state.role = "ADMIN";
+    state.order = { orderNumber: "KFTEST0001", _count: { refunds: 0 } };
+    const { denied, result: res } = await call("ord_1");
+    assert.equal(denied, false, "ADMIN is authorized and is not redirected");
+    assert.equal(res.error, undefined);
+    assert.equal(
+      state.calls.some((c) => c.op === "order.delete"),
+      true,
+      "ADMIN actually deletes an eligible order",
+    );
+    pass("ADMIN can delete an eligible order");
+  }
+
+  // The three roles the matrix denies. Each is asserted on the same eligible order
+  // ADMIN just deleted, so the only variable is the role.
+  for (const role of ["STAFF", "DEVELOPER", "CUSTOMER"] as const) {
+    state.role = role;
+    state.order = { orderNumber: "KFTEST0001", _count: { refunds: 0 } };
+    const { denied } = await call("ord_1");
+
+    assert.equal(
+      denied,
+      true,
+      `${role} must be denied — the matrix grants order:[view, update] and no delete`,
+    );
+    assert.deepEqual(
+      state.permissionChecks,
+      [{ resource: "order", action: "delete" }],
+      `${role} must still be asked for order:delete, so the denial is a policy `
+        + "decision rather than an unrelated crash",
+    );
+    // The load-bearing assertion. `requirePermission` runs before the lookup, so a
+    // denial must unwind BEFORE any database work — in particular before the DELETE.
+    assert.equal(
+      state.calls.length,
+      0,
+      `${role} must not reach the database at all: authorization is the first `
+        + "statement in the action, so nothing should have been read or written",
+    );
+    assert.equal(
+      state.calls.some((c) => c.op === "order.delete"),
+      false,
+      `${role} must never issue prisma.order.delete`,
+    );
+    pass(`${role} cannot delete an order`);
+  }
+
+  {
+    // Denying an order WITHOUT refund evidence is the case that matters: the
+    // refund guard returns an ActionState error, so an implementation that relied
+    // on it as its access control would appear to "refuse" a non-ADMIN delete while
+    // actually deleting anything that has no refunds. This pins that the refusal is
+    // authorization, not the refund guard.
+    state.role = "STAFF";
+    state.order = { orderNumber: "KFTEST0001", _count: { refunds: 0 } };
+    const { denied, result: res } = await call("ord_1");
+    assert.equal(denied, true, "refused by authorization");
+    assert.equal(
+      res.error,
+      undefined,
+      "a denial is a redirect, not an ActionState message — so the admin never sees "
+        + "the refund-evidence copy and cannot mistake it for a refund problem",
+    );
+    assert.equal(state.calls.length, 0);
+    pass("a denied delete is refused by authorization, not by the refund guard");
+  }
+
+  {
+    // DEVELOPER is denied for the same reason as STAFF, but that is a POLICY choice
+    // (the matrix gives staff and developers identical order permissions). Pin it so
+    // a future change that grants developers order:delete has to update this test
+    // consciously rather than silently widening destructive access.
+    assert.equal(
+      canAction("DEVELOPER", "order", "delete"),
+      false,
+      "DEVELOPER currently has no order:delete — update this test if that changes",
+    );
+    assert.equal(
+      canAction("STAFF", "order", "update"),
+      true,
+      "STAFF can update orders, which is why an order:delete check is a meaningful "
+        + "distinction here and not a blanket block",
+    );
+    assert.equal(canAction("ADMIN", "order", "delete"), true);
+    assert.equal(canAction("CUSTOMER", "order", "view"), false, "CUSTOMER has no admin access at all");
+    pass("the order:delete matrix is pinned: ADMIN only");
+  }
+
+  state.role = "ADMIN";
   console.log(`\nPASS all ${n} order refund evidence tests`);
 })().catch((error: unknown) => {
   console.error("FAIL", error);

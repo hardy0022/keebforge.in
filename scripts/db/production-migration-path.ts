@@ -63,6 +63,7 @@ export function planProductionDeploy(): ProductionPlan {
       "Applying migrations to production requires a documented mechanism with an explicit, " +
       "non-.env-derived target and an out-of-band confirmation. Neither exists in this repository, " +
       "and inventing one here is the risk this batch was created to remove. " +
-      "To validate migrations, use the disposable scratch database: npm run db:scratch:deploy -- deploy --database <approved-name>",
+      "To validate migrations, use the disposable scratch database: " +
+      "npm run db:scratch:deploy -- --database keebforge_e2e_fresh",
   };
 }

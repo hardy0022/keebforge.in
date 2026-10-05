@@ -848,6 +848,129 @@ console.log("PASS 18 timeline notes state the real amounts, and refunds defer to
     console.log("PASS 27 a full refund still resolves against the real paid amount");
   }
 
+
+
+  {
+    // Refund persists razorpayPaymentId even when no local Payment exists.
+    const p = plan({
+      classification: classifyRazorpayWebhook(REFUND_SETTLED_EVENT),
+      order: makeOrder({
+        paymentStatus: "PAID",
+        hasPaidPayment: true,
+        settledAmount: 100_000,
+      }),
+    });
+    assert.equal(p.kind, "REFUND");
+    assert.equal(p.kind === "REFUND" && p.refundId, "rfnd_REST1");
+    assert.equal(p.kind === "REFUND" && p.paymentId, "pay_CAPTURED1");
+    assert.equal(p.kind === "REFUND" && p.phase, "PROCESSED");
+    console.log("PASS 28 refund webhook plan carries payment id for persistence");
+  }
+
+  // ── A refund with no payment id is ACKed, not half-processed ────────────
+  //
+  // Phase 5B.1 added `Refund.razorpayPaymentId`, and the route guards that write
+  // with a conditional spread:
+  //
+  //   ...(plan.paymentId ? { razorpayPaymentId: plan.paymentId } : {})
+  //
+  // That spread is unreachable, and so is the planner guard it was assumed to sit
+  // behind. `planWebhookAction` reads:
+  //
+  //   if (c.action === "ACK") return ack("unhandled-event");   // line 336
+  //   if (!c.paymentId)      return ack("unparseable-payload"); // line 337
+  //
+  // but `classifyRazorpayWebhook` returns `action: "ACK"` from its `base` whenever
+  // the payment id is missing (line 232: `if (!paymentId) return base;`), and every
+  // branch that assigns a non-ACK action is downstream of that guard. So
+  // `!c.paymentId` is only ever true when `c.action` is already "ACK", and line 336
+  // returns first. Line 337 cannot execute.
+  //
+  // The audit that prompted this work assumed the ACK would read
+  // "unparseable-payload". It does not — it reads "unhandled-event". The protective
+  // outcome is the same (no plan, therefore no writes), but the diagnostic is
+  // misleading: it reports an unsupported event when the truth is a payload this
+  // code handles but cannot attribute. Nothing consumes either string today, so
+  // this is recorded rather than silently re-ordered; see the note below.
+  {
+    // "No payment ID" has to mean neither source carries one. The classifier reads
+    // `payment.entity.id ?? refund.entity.payment_id` (line 218) and treats either
+    // as sufficient — a deliberate fallback, since a refund payload normally
+    // carries both. Nulling only the refund's linkage would still resolve a payment
+    // id via the payment entity and would not exercise this path.
+    const noPaymentId = REFUND_SETTLED_EVENT
+      .replace('"id":"pay_CAPTURED1"', '"id":null')
+      .replace('"payment_id":"pay_CAPTURED1"', '"payment_id":null');
+    assert.ok(
+      !noPaymentId.includes("pay_CAPTURED1"),
+      "both payment-id sources must be gone, or this block is asserting against a "
+        + "payload that still resolves a payment id",
+    );
+    assert.ok(
+      noPaymentId.includes('"id":"rfnd_REST1"'),
+      "the refund id must survive, so this is specifically about the missing "
+        + "linkage rather than a wholly unparseable payload",
+    );
+
+    const c = classifyRazorpayWebhook(noPaymentId);
+    assert.equal(c.paymentId, null);
+    assert.equal(
+      c.action,
+      "ACK",
+      "the classifier short-circuits to ACK before it reaches the refund branch — "
+        + "this is the fact that makes the planner's payment-id guard unreachable",
+    );
+
+    const p = plan({
+      classification: c,
+      order: makeOrder({
+        paymentStatus: "PAID",
+        hasPaidPayment: true,
+        settledAmount: 100_000,
+      }),
+      existingPaymentStatus: "PAID",
+    });
+
+    // The load-bearing assertion, and the one that actually protects
+    // `razorpayPaymentId`: no REFUND plan means the route's `createMany`/`update`
+    // are never reached, so no write is issued — null or otherwise.
+    assert.equal(p.kind, "ACK", "a refund with no payment id must not plan a refund");
+    assert.equal(
+      (p as { reason?: string }).reason,
+      "unhandled-event",
+      "documented current behaviour: line 336 returns before the payment-id guard "
+        + "at line 337, so this ACKs as unhandled-event rather than "
+        + "unparseable-payload. If webhook-core is ever re-ordered to check the "
+        + "payment id first, this assertion is the tripwire that must be updated.",
+    );
+    assert.equal("refundAmount" in p, false);
+    assert.equal("refundId" in p, false);
+    assert.equal("paymentId" in p, false);
+    console.log(
+      "PASS 29 a refund with no payment id ACKs with no refund plan, so the route "
+        + "never issues a razorpayPaymentId write",
+    );
+  }
+
+  {
+    // Positive control for the block above: the identical payload WITH a payment id
+    // must still plan a real refund. Without this, "ACK" would also pass if the
+    // planner had simply stopped handling refunds.
+    const p = plan({
+      classification: classifyRazorpayWebhook(REFUND_SETTLED_EVENT),
+      order: makeOrder({
+        paymentStatus: "PAID",
+        hasPaidPayment: true,
+        settledAmount: 100_000,
+      }),
+      existingPaymentStatus: "PAID",
+    });
+    assert.equal(p.kind, "REFUND");
+    assert.equal(p.kind === "REFUND" && p.paymentId, "pay_CAPTURED1");
+    assert.equal(p.kind === "REFUND" && p.refundId, "rfnd_REST1");
+    console.log("PASS 30 the same payload with a payment id still plans the refund");
+  }
+
   console.log("\nPASS all Razorpay webhook tests");
 })().catch((e) => {
   console.error("FAIL", e);

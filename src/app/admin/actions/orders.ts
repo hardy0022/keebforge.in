@@ -1022,7 +1022,7 @@ export async function deleteOrder(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requirePermission("order", "update");
+  await requirePermission("order", "delete");
   const orderId = formData.get("orderId");
   if (typeof orderId !== "string" || !orderId)
     return { error: "Invalid order." };

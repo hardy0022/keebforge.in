@@ -138,6 +138,37 @@ export function SiteHeader() {
         aria-label="Main navigation"
       >
         <div className="nav-inner">
+          <button
+            type="button"
+            className="nav-toggle"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+              {menuOpen ? (
+                <path
+                  d="M3 3l10 10M13 3L3 13"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              ) : (
+                <path
+                  d="M2 4h12M2 8h12M2 12h12"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              )}
+            </svg>
+          </button>
           <Link href="/" className="nav-logo" aria-label="KeebForge.in Home">
             <span>KeebForge</span>
             <span className="logo-dot">.</span>
@@ -380,37 +411,6 @@ export function SiteHeader() {
                 <UserPlusIcon ref={signInIconRef} size={20} strokeWidth={1.6} />
               </Link>
             )}
-            <button
-              type="button"
-              className="nav-toggle"
-              aria-expanded={menuOpen}
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden="true"
-              >
-                {menuOpen ? (
-                  <path
-                    d="M3 3l10 10M13 3L3 13"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                ) : (
-                  <path
-                    d="M2 4h12M2 8h12M2 12h12"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                )}
-              </svg>
-            </button>
           </div>
         </div>
       </nav>
@@ -439,27 +439,7 @@ export function SiteHeader() {
                 ))}
             </Fragment>
           ))}
-          {session ? (
-            <>
-              <Link
-                href="/account/profile"
-                className="nav-cta mobile-menu-extra"
-                onClick={closeMenu}
-              >
-                My Account
-              </Link>
-              <button
-                onClick={() => {
-                  handleSignOut();
-                  closeMenu();
-                }}
-                className="nav-cta mobile-menu-extra"
-                type="button"
-              >
-                Sign out
-              </button>
-            </>
-          ) : (
+          {!session && (
             <Link
               href="/auth/login"
               className="nav-cta mobile-menu-extra"

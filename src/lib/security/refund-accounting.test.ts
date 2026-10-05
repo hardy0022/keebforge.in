@@ -809,3 +809,19 @@ const paid = (
 }
 
 console.log(`\nPASS all ${n} refund accounting tests`);
+// ── 14. Reconciliation when local payment missing ────────────────────────
+{
+  const plan = planRefundAccounting({
+    refundId: "rfnd_MISSING_PAY",
+    refundAmount: 3000,
+    phase: "PROCESSED",
+    payment: null,
+    existing: null,
+  });
+  assert.equal(plan.kind, "REFUND");
+  if (plan.kind === "REFUND") {
+    assert.equal(plan.paymentId, null, "no local payment => paymentId null");
+    assert.equal(plan.refundDelta, 0, "no local payment => no delta applied");
+  }
+  pass("refund processed without local payment records intent without moving money");
+}

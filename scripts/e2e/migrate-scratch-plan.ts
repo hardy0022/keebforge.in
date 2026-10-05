@@ -26,6 +26,11 @@ import {
 /**
  * Prisma subcommands a scratch validation is allowed to run.
  *
+ * These are the subcommands of the `migrate` group, named without it: the
+ * wrapper supplies `prisma migrate` itself, so a caller passes `deploy` and not
+ * `migrate deploy`. Passing the group name is refused, because `migrate` is not
+ * a subcommand of `migrate`.
+ *
  * `dev` is excluded because it needs a shadow database and this project's setup
  * cannot build one. `reset` is never permitted. `resolve` is never permitted —
  * it rewrites the migration ledger without applying anything, which is how a
@@ -73,6 +78,80 @@ export function buildConnectionUrl(parts: {
 }): string {
   const auth = `${encodeURIComponent(parts.user)}:${encodeURIComponent(parts.password)}`;
   return `postgresql://${auth}@${parts.host}:${parts.port}/${encodeURIComponent(parts.database)}`;
+}
+
+/**
+ * The Supabase auth functions that migration 20260819150000 needs to exist.
+ *
+ * That migration creates 16 RLS policies calling `auth.uid()` or `auth.jwt()`,
+ * and PostgreSQL resolves function calls during parsing, so on a vanilla
+ * postgres:16 container the migration aborts at parse time. The functions come
+ * from the Supabase platform in production and from an explicit, guarded
+ * pre-flight on the scratch container.
+ */
+export const AUTH_PREREQUISITE_FUNCTIONS: readonly string[] = ["auth.uid()", "auth.jwt()"];
+
+/** The operator-facing command that creates them. Named so a refusal can be acted on. */
+export const AUTH_PREREQUISITE_HINT = "npm run db:scratch:auth-preflight";
+
+/**
+ * The read-only existence probe.
+ *
+* `to_regprocedure` is the non-raising counterpart of `regprocedure`: it yields
+ * NULL for an absent schema or an absent function rather than erroring, which
+ * is exactly what a precondition wants. It performs no writes and takes no locks beyond a
+ * catalog read, and it names no table, so
+ * running it cannot create or modify anything.
+ *
+ * No schema is qualified in the argument beyond `auth`, so a missing `auth`
+ * schema is reported as "both missing" instead of aborting the query.
+ */
+export const AUTH_PREREQUISITE_SQL =
+  "SELECT to_regprocedure('auth.uid()') IS NOT NULL AS \"hasUid\", " +
+  "to_regprocedure('auth.jwt()') IS NOT NULL AS \"hasJwt\"";
+
+/** What the probe reported. Deliberately booleans, never identifiers or URLs. */
+export type AuthPrerequisiteProbe = { hasUid: boolean; hasJwt: boolean };
+
+export type AuthPrerequisite = { ok: true } | { ok: false; code: string; message: string };
+
+/**
+ * Decide whether the verified target can run `migrate deploy`.
+ *
+ * Pure: the executor supplies the probe result and this decides. Kept separate
+ * from the query so the decision is testable with no database, and so the rule
+ * "refuse rather than warn" is stated in one place.
+ *
+ * Only `deploy` is gated. `status` and `diff` read the migration ledger and the
+ * catalog; neither applies migration 2, so neither can fail on a missing
+ * `auth` schema, and forcing a connection for them would make the read-only
+ * commands depend on a DDL step they do not need.
+ */
+export function evaluateAuthPrerequisite(found: AuthPrerequisiteProbe): AuthPrerequisite {
+  const missing = AUTH_PREREQUISITE_FUNCTIONS.filter((fn) =>
+    fn === "auth.uid()" ? !found.hasUid : !found.hasJwt,
+  );
+  if (missing.length === 0) return { ok: true };
+
+  const isAll = missing.length === AUTH_PREREQUISITE_FUNCTIONS.length;
+  // Distinct wording, because the operator's diagnosis differs: "both missing"
+  // means the shim was never applied, while "one missing" means the schema is
+  // present but a function is missing or was replaced by something else.
+  const symptom = isAll
+    ? "an error reporting that the auth schema does not exist"
+    : `an error reporting that ${missing.join(" and ")} is missing while the other resolves`;
+
+  return {
+    ok: false,
+    code: "MISSING_AUTH_FUNCTIONS",
+    message:
+      `The verified scratch database is missing ${missing.join(" and ")}. ` +
+      "Migration 20260819150000_rls_defense_in_depth calls these inside CREATE POLICY, and " +
+      "PostgreSQL resolves function calls while parsing, so `prisma migrate deploy` would abort " +
+      `at migration 2 of 41 with ${symptom}. ` +
+      `Run \`${AUTH_PREREQUISITE_HINT}\` first, then retry. ` +
+      "This check is read-only and changed nothing.",
+  };
 }
 
 /**
@@ -238,6 +317,12 @@ export function planMigrationRun(argv: readonly string[], env: ScratchEnv): Plan
     // from .env is overwritten rather than consulted.
     childEnv: { DATABASE_URL: url, DIRECT_URL: url },
     command: "npx",
-    args: ["prisma", subcommand, ...rest],
+    // The `migrate` group is not optional. Prisma registers deploy, status and
+    // diff *beneath* `migrate`; there is no top-level `prisma deploy`. Asked for
+    // a bare `prisma deploy`, the CLI treats the word as a dynamically
+    // installable subcommand and tries to `npm install @prisma/cli-deploy`,
+    // which reaches the network and fails. Naming the group here is what makes
+    // the emitted command a command the CLI actually has.
+    args: ["prisma", "migrate", subcommand, ...rest],
   };
 }

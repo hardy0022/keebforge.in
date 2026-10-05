@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { settledAmount } from "@/lib/payments/payment-status";
+import { settleOrderInTransaction } from "@/lib/payments/settle-order";
 import {
   applyRefundToPayments,
   planRefundAccounting,
@@ -154,41 +155,120 @@ export async function POST(req: NextRequest) {
     const customerId = plan.customerId;
 
     if (plan.kind === "CAPTURE") {
-      await prisma.$transaction(async (tx) => {
-        await tx.payment.upsert({
-          where: { razorpayPaymentId: plan.paymentId },
-          update: {
-            status: "PAID",
-            method: plan.method,
-            paidAt: new Date(),
-            ...(customerId ? { razorpayCustomerId: customerId } : {}),
-          },
-          create: {
-            orderId: order!.id,
-            amount: plan.amount,
-            currency: "INR",
-            status: "PAID",
-            method: plan.method,
-            razorpayOrderId: plan.razorpayOrderId,
+      const capture = await prisma.$transaction(async (tx) => {
+        // ── Write the capture, refusing to move returned money ────────────────
+        //
+        // `createMany … skipDuplicates` is ON CONFLICT DO NOTHING: its count is
+        // "did I insert", and unlike a unique violation it does not abort the
+        // transaction, so a redelivery that loses the insert race can carry on.
+        //
+        // The `updateMany` is the claim, and the predicate is the whole point. A
+        // REFUNDED payment is terminal — its money went back to the customer — so
+        // Postgres taking the row lock and THEN re-evaluating `status != REFUNDED`
+        // against the committed version is what makes the refusal hold under
+        // concurrency. A read-then-branch could not: a refund settling between the
+        // read and this write was silently overwritten, which is precisely the race
+        // /api/payments/verify documents at its F9 comment.
+        //
+        // `refundedAmount` is absent from `data` deliberately. Nothing in capture
+        // processing may reset or reduce it — the returned figure is a fact about
+        // the payment, and the refund path owns it exclusively.
+        await tx.payment.createMany({
+          data: [
+            {
+              orderId: order!.id,
+              amount: plan.amount,
+              currency: "INR",
+              status: "PAID",
+              method: plan.method,
+              razorpayOrderId: plan.razorpayOrderId,
+              razorpayPaymentId: plan.paymentId,
+              razorpaySignature: "",
+              ...(customerId ? { razorpayCustomerId: customerId } : {}),
+              paidAt: new Date(),
+            },
+          ],
+          skipDuplicates: true,
+        });
+
+        const claimed = await tx.payment.updateMany({
+          where: {
             razorpayPaymentId: plan.paymentId,
-            razorpaySignature: "",
-            ...(customerId ? { razorpayCustomerId: customerId } : {}),
+            status: { not: "REFUNDED" },
+          },
+          data: {
+            status: "PAID",
+            method: plan.method,
             paidAt: new Date(),
+            ...(customerId ? { razorpayCustomerId: customerId } : {}),
           },
         });
 
-        await tx.order.update({
-          where: { id: order!.id },
-          data: {
-            paymentStatus: plan.paymentStatus,
-            status: plan.orderStatus,
-          },
+        // Zero rows means a refund settled this payment while this transaction was
+        // deciding. Leave the payment AND the order exactly as the refund left
+        // them: re-settling here is what would let money the customer already
+        // returned be collected a second time.
+        if (claimed.count === 0) {
+          return { kind: "ACK" as const, reason: "already-refunded" as const };
+        }
+
+        // ── Settle the order from rows read inside this transaction ───────────
+        //
+        // `plan.paymentStatus` and `plan.orderStatus` were derived from a
+        // `settledAmount()` read taken BEFORE this transaction opened. Two captures
+        // for two different payments on one order both read the same list, both
+        // derive PARTIALLY_PAID, and the last absolute write wins — leaving a fully
+        // paid order marked PARTIALLY_PAID and, because neither plan saw `fullyPaid`,
+        // an order status that never reaches PAYMENT_RECEIVED. The helper
+        // recomputes from current rows and writes under a compare-and-swap, so a
+        // lost attempt is retried against the winner's committed state.
+        const settled = await settleOrderInTransaction(tx, {
+          orderId: order!.id,
+          amount: plan.amount,
+          razorpayPaymentId: plan.paymentId,
         });
+
+        if (settled.kind === "LOST") {
+          // The Payment row is already written and this transaction is about to
+          // COMMIT, so the money IS recorded — reporting this as an ignored event
+          // would be a lie, and skipping the tracking refresh would leave the
+          // customer-facing cache describing pre-capture state. The order is left
+          // unsettled for reconciliation, loudly.
+          console.warn(
+            `Capture ${plan.paymentId} recorded but order ${order!.id} could not be settled ` +
+              `after ${settled.attempts} attempts; it stays unsettled for reconciliation.`,
+          );
+          return { kind: "APPLIED" as const, settledOrder: false, attempts: settled.attempts };
+        }
 
         await tx.orderTimeline.create({
           data: { orderId: order!.id, status: "PAYMENT_RECEIVED", note: planNote },
         });
+
+        return {
+          kind: "APPLIED" as const,
+          settledOrder: true,
+          paymentStatus: settled.paymentStatus,
+          orderStatus: settled.orderStatus,
+          attempts: settled.attempts,
+        };
       });
+
+      if (capture.kind === "ACK") {
+        // Always 200, like every other ignore path: a non-2xx makes Razorpay
+        // redeliver an event that must never apply.
+        console.log(
+          `[razorpay-webhook] ${classification.event} ignored (${capture.reason}) payment=${plan.paymentId}`,
+        );
+        return NextResponse.json({ received: true });
+      }
+
+      if (capture.attempts > 1 && capture.settledOrder) {
+        console.warn(
+          `[razorpay-webhook] capture ${plan.paymentId} lost the order settlement race and ` +
+            `settled on attempt ${capture.attempts}`,
+        );
+      }
       await refreshTrackingCache(order!.id);
       return NextResponse.json({ received: true });
     }
@@ -332,6 +412,7 @@ export async function POST(req: NextRequest) {
             paymentId: accounting.paymentId,
             razorpayRefundId: accounting.refundId,
             amount: accounting.amount,
+            razorpayPaymentId: plan.paymentId ?? null,
             // A ledger row always opens at CREATED and is advanced by the claim.
             // Writing the incoming phase here would make a duplicate delivery
             // indistinguishable from the real one before the claim ever runs.
@@ -349,6 +430,9 @@ export async function POST(req: NextRequest) {
         data: {
           orderId: order!.id,
           paymentId: accounting.paymentId,
+          ...(plan.paymentId !== undefined && plan.paymentId !== null
+            ? { razorpayPaymentId: plan.paymentId }
+            : {}),
         },
       });
 

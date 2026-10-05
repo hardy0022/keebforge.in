@@ -4,10 +4,9 @@ import { getCurrentAuth } from "@/lib/auth/session";
 import { syncTrackingCache } from "@/lib/orders/tracking";
 import {
   capturedAmount,
-  derivePaymentStatus,
-  orderStatusAfterCapture,
   settledAmount,
 } from "@/lib/payments/payment-status";
+import { settleOrderInTransaction } from "@/lib/payments/settle-order";
 import { verifyRazorpayCheckoutSignature } from "@/lib/payments/razorpay-signature";
 import {
   checkRateLimit,
@@ -288,24 +287,45 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      const settledAfter = settledBefore + amount;
-      await tx.order.update({
-        where: { id: order.id },
-        data: {
-          // Derived, not hardcoded: a capture that only covers part of the order
-          // leaves it PARTIALLY_PAID so the balance stays payable.
-          paymentStatus: derivePaymentStatus(
-            settledAfter,
-            order.total,
-            order.paymentStatus,
-          ),
-          status: orderStatusAfterCapture(
-            order.status,
-            order.total > 0 && settledAfter >= order.total,
-          ),
-          ...(profileId ? { profileId } : {}),
-        },
+      // Settle the order from rows read INSIDE this transaction.
+      //
+      // `settledBefore` above was computed from the read at the top of the route,
+      // before this transaction opened, and writing `settledBefore + amount` back as
+      // an absolute `Order.paymentStatus` made this a lost update: two captures for
+      // two different payments both read the same payment list, both derived
+      // PARTIALLY_PAID, and the last write won — so a fully paid order could sit at
+      // PARTIALLY_PAID with an order status that never reaches PAYMENT_RECEIVED.
+      // That is the same arithmetic the webhook just had fixed, so both routes call
+      // the one helper that recomputes under a compare-and-swap.
+      //
+      // Bounded retry is safe here because the attempt is idempotent: it writes
+      // absolute values derived from rows read in that same attempt, and the payment
+      // row was already claimed above.
+      const settled = await settleOrderInTransaction(tx, {
+        orderId: order.id,
+        amount,
+        razorpayPaymentId: razorpay_payment_id,
       });
+
+      if (settled.kind === "LOST") {
+        console.error(
+          `Payment ${razorpay_payment_id} was recorded but order ${order.id} could not be ` +
+            `settled after ${settled.attempts} attempts; it stays unsettled for reconciliation.`,
+        );
+        return;
+      }
+
+      // Claim-by-email above still has to land. `profileId` is a foreign key and so
+      // is absent from Prisma's `updateMany` input, which means it cannot ride the
+      // conditional write — it stays its own statement, exactly as it was before
+      // this route gained the CAS. It is identity, not money state, so it carries no
+      // concurrency hazard of its own.
+      if (profileId) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: { profileId },
+        });
+      }
 
       await tx.orderTimeline.create({
         data: {

@@ -142,6 +142,43 @@ export function parseConnectionString(raw: string | undefined, label: string): T
     throw new ScratchTargetError("BAD_SCHEME", `${label} must use a postgresql:// scheme`);
   }
 
+  // Strict empty-query-and-empty-fragment policy.
+  //
+  // Everything above validates the host and port that appear in the authority
+  // component. A query string is a second, independent way to steer a
+  // connection, and libpq-style parameters such as `host`, `port` and
+  // `socket_path` can override where the driver actually dials. A URL like
+  //
+  //   postgresql://u:p@127.0.0.1:55432/keebforge_e2e?host=elsewhere
+  //
+  // therefore passes every host and port check in this file — the authority says
+  // loopback — while describing a different destination. Percent-encoding the
+  // parameter name (`%68ost=`) hides it from a naive reader but not from the
+  // driver, so an allowlist of known-bad names would be the wrong shape here.
+  //
+  // Nothing this harness needs is set that way: the wrapper rebuilds its URL
+  // from parsed components, and the pre-flight has no reason to route by
+  // parameter. So any query or fragment is refused, by both DATABASE_URL and
+  // DIRECT_URL, before a socket can be opened.
+  // A bare `?` or `#` with nothing after it parses to an empty search and an
+  // empty hash, so the checks above would accept it. There is no legitimate way
+  // for one to appear here: WHATWG URL parsing terminates userinfo at the first
+  // `?` or `#`, so a literal one is always the query delimiter — a `?` inside a
+  // password must be percent-encoded, which this harness requires anyway. So the
+  // raw string is checked too, and only ever tested, never echoed.
+  if (url.search !== "" || url.hash !== "" || /[?#]/.test(raw)) {
+    // Names only, never values: a value can carry a password.
+    const names = [...url.searchParams.keys()].join(", ");
+    throw new ScratchTargetError(
+      "UNAPPROVED_URL_PARAMS",
+      `${label} carries a query string or fragment, which this harness does not accept` +
+        (names === "" ? "" : ` (parameter${names.includes(",") ? "s" : ""}: ${names})`) +
+        ". Connection-routing parameters such as host, port and socket_path can redirect a " +
+        "connection that otherwise looks like loopback, and the host and port checks above do " +
+        "not see them. Remove the query string from the URL in .env.e2e.local. Refusing.",
+    );
+  }
+
   // URL.hostname keeps the brackets around an IPv6 literal.
   const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   const database = decodeURIComponent(url.pathname.replace(/^\//, ""));

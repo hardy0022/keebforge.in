@@ -14,7 +14,17 @@
  *
  *   - To validate migrations against a disposable database (safe, guarded, both
  *     DATABASE_URL and DIRECT_URL pinned to a loopback target):
- *       SCRATCH_DB_PASSWORD=... npm run db:scratch:deploy -- deploy --database <approved-name>
+ *       npm run db:scratch:deploy -- --database keebforge_e2e_fresh
+ *     There is no environment-variable prefix to supply. The target and the
+ *     password both come from `.env.e2e.local`, read through the shared
+ *     `local-env` guard, which refuses a missing file, a remote host, an
+ *     unapproved database name, or a DATABASE_URL that disagrees with
+ *     DIRECT_URL. Credentials are never read from `.env`, which is the
+ *     production file and the root of the incident above.
+ *
+ *     Related read-only commands: `npm run db:scratch:status -- --database
+ *     keebforge_e2e_fresh` for what is pending, and `npm run db:scratch:check`
+ *     for the connection identity gate.
  *
  *   - To apply migrations to production: there is currently no command for this.
  *     See scripts/db/production-migration-path.ts for what is missing and why

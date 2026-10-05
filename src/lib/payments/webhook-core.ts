@@ -360,6 +360,21 @@ export function planWebhookAction(args: {
   });
 
   if (c.action === "CAPTURE") {
+    // A REFUNDED payment is terminal. Its money went back to the customer, so a
+    // late or redelivered `payment.captured` for that same payment must not put it
+    // back on the books as money the customer still holds.
+    //
+    // This is not the same as the ORDER being REFUNDED, and the difference is the
+    // whole bug. An order closes as REFUNDED only when it ever held its full worth
+    // (see shouldCloseOrderAfterRefund), so an order that was only ever partially
+    // captured keeps its status when that capture is returned — leaving a
+    // REFUNDED payment sitting on a PARTIALLY_PAID order. The order-level guard
+    // below cannot see that case, and /api/payments/verify had to grow three
+    // separate layers of defence against it (verify route, the F9 comment).
+    if (args.existingPaymentStatus === "REFUNDED") {
+      return ack("already-refunded");
+    }
+
     // Idempotency: the order-level PAID guard makes the transition run at most
     // once even when identical events arrive back to back, and an already-PAID
     // payment row for this id means we already recorded this exact capture.

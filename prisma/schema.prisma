@@ -785,12 +785,16 @@ model Refund {
   processedAt      DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
+  /// The Razorpay payment id this refund applies to, if known. Preserved even
+  /// when no local Payment row exists for reconciliation purposes.
+  razorpayPaymentId String?
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@index([orderId, createdAt])
   @@index([paymentId])
+  @@index([razorpayPaymentId])
 }
 
 model Shipment {
