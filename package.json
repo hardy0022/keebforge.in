@@ -26,11 +26,12 @@
     "check:refund-accounting": "tsx src/lib/security/refund-accounting.test.ts",
     "check:payment-endpoints": "tsx src/lib/security/payment-endpoints.test.ts",
     "check:order-refund-evidence": "tsx src/lib/security/order-refund-evidence.test.ts",
+    "check:claim-guest-orders": "tsx src/lib/auth/claim-guest-orders.test.ts",
     "check:scratch-db": "tsx scripts/e2e/scratch-guard.test.ts",
     "e2e:seed": "tsx scripts/e2e/seed.ts",
     "e2e:server": "tsx scripts/e2e/e2e-server.ts",
     "e2e:order-success-page": "tsx scripts/e2e/run-order-success-page.ts",
-    "check:security": "npm run check:rate-limit && npm run check:payment-signature && npm run check:webhook && npm run check:payment-status && npm run check:refund-accounting && npm run check:payment-endpoints && npm run check:order-refund-evidence",
+    "check:security": "npm run check:rate-limit && npm run check:payment-signature && npm run check:webhook && npm run check:payment-status && npm run check:refund-accounting && npm run check:payment-endpoints && npm run check:order-refund-evidence && npm run check:claim-guest-orders",
     "architecture:map": "node scripts/architecture/architecture-map.mjs"
   },
   "dependencies": {

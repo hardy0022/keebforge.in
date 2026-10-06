@@ -7,7 +7,6 @@ import { Resend } from "resend";
 import { prisma } from "@/lib/db/prisma";
 import { isStrongPassword } from "@/lib/utils/password";
 import { getOrCreateProfileFromUser } from "@/lib/auth/profile";
-import { claimGuestOrdersForVerifiedProfile } from "@/lib/orders/claim-guest-orders";
 
 /**
  * KeebForge authentication — Better Auth (sole auth authority).
@@ -90,14 +89,10 @@ export const auth = betterAuth({
     // than aborting an already-successful verification.
     afterEmailVerification: async (user) => {
       try {
-        const profile = await getOrCreateProfileFromUser(user);
-        const claimed = await claimGuestOrdersForVerifiedProfile(
-          profile.id,
-          user.email,
-        );
-        if (claimed > 0) {
-          console.log(`[auth] linked ${claimed} guest order(s) to ${user.email}`);
-        }
+        // getOrCreateProfileFromUser provisions the profile AND claims this
+        // account's unowned guest orders, so the order attach happens on the
+        // very first authenticated request too, not only on this click.
+        await getOrCreateProfileFromUser(user);
       } catch (e) {
         console.error("Failed to link guest orders after verification:", e);
       }
