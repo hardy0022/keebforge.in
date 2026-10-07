@@ -8,7 +8,30 @@ import { formatINR } from "@/lib/utils/money";
 
 const BASE_URL =
   process.env.DELHIVERY_API_URL ?? "https://staging-express.delhivery.com";
-const ORIGIN_PINCODE = process.env.DELHIVERY_ORIGIN_PINCODE ?? "";
+
+/**
+ * The pincode Delhivery physically collects a parcel from — the address EVERY
+ * rate must be quoted FROM, and the address shipment booking already uses
+ * (`buildCreateShipmentBody` prefers `DELHIVERY_PICKUP_PIN` too).
+ *
+ * `DELHIVERY_PICKUP_PIN` is the registered ClientWarehouse pin and therefore
+ * authoritative; `DELHIVERY_ORIGIN_PINCODE` is only the legacy fallback. Quoting
+ * from a pin the courier never visits prices a lane that does not exist — that
+ * was the origin of the KeebForge rate discrepancy (575002 quoted where the
+ * workshop actually ships from 181206).
+ *
+ * Pure and parameterised so the resolution rule is testable offline; the module
+ * constant below binds it to the server environment at import time.
+ */
+export function ratingOriginPincode(
+  pickupPin: string | undefined = process.env.DELHIVERY_PICKUP_PIN,
+  originPin: string | undefined = process.env.DELHIVERY_ORIGIN_PINCODE,
+): string {
+  const pin = (pickupPin ?? "").trim() || (originPin ?? "").trim();
+  return /^[1-9]\d{5}$/.test(pin) ? pin : "";
+}
+
+const ORIGIN_PINCODE = ratingOriginPincode();
 
 export const PAYMENT_MODES = ["Pre-paid", "COD"] as const;
 export type PaymentMode = (typeof PAYMENT_MODES)[number];
@@ -38,22 +61,30 @@ export function enabledShippingModes(): ShippingMode[] {
   return modes.length ? Array.from(new Set(modes)) : [DEFAULT_SHIPPING_MODE];
 }
 
+/** Last-resort display-only days. Never provider data — see estimatedDaysFor. */
+const HARDCODED_DAYS: Record<ShippingMode, number> = { surface: 5, express: 2 };
+
 /**
- * Display-only delivery-day estimates per mode. The kinko charges endpoint
- * returns no ETD field, so these are storefront estimates (env-overridable),
- * clearly not provider data.
+ * Explicit ops override (DELHIVERY_SURFACE_DAYS / DELHIVERY_EXPRESS_DAYS).
+ * Null when unset/invalid, meaning "no pinned value — use provider data".
  */
-export function estimatedDaysFor(mode: ShippingMode): number {
+export function envDaysFor(mode: ShippingMode): number | null {
   const raw =
     mode === "surface"
       ? process.env.DELHIVERY_SURFACE_DAYS
       : process.env.DELHIVERY_EXPRESS_DAYS;
   const n = Number(raw);
-  return Number.isFinite(n) && n > 0
-    ? Math.round(n)
-    : mode === "surface"
-      ? 5
-      : 2;
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+}
+
+/**
+ * Delivery-day FALLBACK used when the provider TAT is unavailable: the env
+ * override above, otherwise a hardcoded storefront estimate. The kinko charges
+ * endpoint carries no ETD, so this is clearly not provider data — quotes prefer
+ * expectedTatDays() (Delhivery's own Expected TAT API) whenever it responds.
+ */
+export function estimatedDaysFor(mode: ShippingMode): number {
+  return envDaysFor(mode) ?? HARDCODED_DAYS[mode];
 }
 
 /** Free-shipping subtotal threshold in PAISE (env value is rupees). Unset/0/invalid → disabled. */
@@ -203,7 +234,12 @@ export type ShippingQuote = {
   estimatedDays?: number;
   provider: "delhivery";
   /** Which response field the amount came from — distinguishes all-in totals from base freight. */
-  amountBasis: "total_amount" | "freight_charge" | "charge_DL";
+  amountBasis:
+    | "total_amount"
+    | "freight_charge"
+    | "charge_DL"
+    | "charge_DTO"
+    | "charge_RTO";
 };
 
 /**
@@ -392,14 +428,18 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 // ponytail: single-process in-memory cache; move to Redis if we ever run multi-instance
 const cache = new Map<string, CacheEntry>();
 
-function cacheKey(
+export function cacheKey(
   oPin: string,
   dPin: string,
   cgm: number,
   pt: string,
   md: ShippingMode,
+  ss: string,
 ) {
-  return `${oPin}|${dPin}|${cgm}|${pt}|${md}`;
+  // `ss` (Delivered / RTO / DTO) selects a different rate card for the SAME
+  // lane, so it must be part of the key — forward and reverse-pickup quotes for
+  // one lane would otherwise collide and return each other's price.
+  return `${oPin}|${dPin}|${cgm}|${pt}|${md}|${ss}`;
 }
 
 /**
@@ -478,7 +518,12 @@ export function calculateShippingParams(opts: {
 function buildQuote(
   amountPaise: number,
   basis: ShippingQuote["amountBasis"],
-  ctx: { destinationPincode: string; mode: ShippingMode; weightGrams: number },
+  ctx: {
+    destinationPincode: string;
+    mode: ShippingMode;
+    weightGrams: number;
+    originPincode: string;
+  },
   zone?: string,
 ): ShippingResult {
   const quote: ShippingQuote = {
@@ -486,7 +531,7 @@ function buildQuote(
     currency: "INR",
     mode: ctx.mode,
     weightGrams: ctx.weightGrams,
-    originPincode: ORIGIN_PINCODE,
+    originPincode: ctx.originPincode,
     destinationPincode: ctx.destinationPincode,
     ...(zone ? { zone } : {}),
     provider: "delhivery",
@@ -512,17 +557,28 @@ function buildQuote(
  *      variant observed in production. The serviceability "status" field does
  *      NOT mean unavailability; any valid charge-bearing payload means SUCCESS.
  *
- * Amount policy: prefer total_amount (all-in) → freight_charge → charge_DL.
- * charge_DL alone is the BASE FREIGHT component — the Delhivery One dashboard
- * adds LM/peak/diesel surcharges + 18% GST that this endpoint does not return,
- * so a charge_DL-based quote may understate the dashboard total. That gap is
- * surfaced via quote.amountBasis instead of inventing a formula.
+ * Amount policy: prefer total_amount → freight_charge → charge_DTO →
+ * charge_RTO → charge_DL, and only ever accept a POSITIVE amount (an `ss=DTO`
+ * record reports charge_DL: 0, so DL cannot price a reverse pickup, and a 0
+ * must never be read as "free").
+ *
+ * `total_amount` is the all-in figure — freight + peak + diesel + 18% GST —
+ * and it reproduces the Delhivery One rate calculator to the paisa. Verified
+ * 2026-10-06 for the 181206↔575002 lane at cgm=1400:
+ *   ss=Delivered ₹229.93 / ₹304.47  = dashboard "Forward"
+ *   ss=RTO       ₹457.49 / ₹583.43  = dashboard "Return (RTO)"
+ *   ss=DTO       ₹344.94 / ₹403.57  = dashboard "Reverse Pickup (RVP)"
+ * So no surcharge/GST formula may be applied on top — that would double-count.
  */
 export function parseShippingResponse(
   destinationPincode: string,
   httpStatus: number,
   bodyText: string,
-  ctx: { mode: ShippingMode; weightGrams: number } = {
+  ctx: {
+    mode: ShippingMode;
+    weightGrams: number;
+    originPincode?: string;
+  } = {
     mode: DEFAULT_SHIPPING_MODE,
     weightGrams: 0,
   },
@@ -568,19 +624,33 @@ export function parseShippingResponse(
     destinationPincode,
     mode: ctx.mode,
     weightGrams: ctx.weightGrams,
+    originPincode: ctx.originPincode ?? ORIGIN_PINCODE,
   };
   const zoneOf = (item: Record<string, unknown>) =>
     typeof item.zone === "string" && item.zone ? item.zone : undefined;
   const quoteFromItem = (
     item: Record<string, unknown>,
   ): ShippingResult | null => {
-    const total = rupees(item.total_amount);
-    if (total !== null)
-      return buildQuote(total, "total_amount", fullCtx, zoneOf(item));
-    const freight = rupees(item.freight_charge);
+    // Every fallback below is a BASE component, and any of them can legitimately
+    // be 0 for the wrong sub-service (an `ss=DTO` record reports charge_DL: 0).
+    // A 0 must therefore mean "this field carries no charge", never a ₹0 quote —
+    // otherwise a payload missing total_amount would sell shipping for free.
+    const positive = (field: string): number | null => {
+      const n = rupees(item[field]);
+      return n !== null && n > 0 ? n : null;
+    };
+    const total = positive("total_amount");
+    if (total !== null) return buildQuote(total, "total_amount", fullCtx, zoneOf(item));
+    const freight = positive("freight_charge");
     if (freight !== null)
       return buildQuote(freight, "freight_charge", fullCtx, zoneOf(item));
-    const dl = rupees(item.charge_DL);
+    // Sub-service-specific base freight. DTO (reverse pickup) reports its charge
+    // in charge_DTO and leaves charge_DL at 0, so DL alone cannot price it.
+    const dto = positive("charge_DTO");
+    if (dto !== null) return buildQuote(dto, "charge_DTO", fullCtx, zoneOf(item));
+    const rto = positive("charge_RTO");
+    if (rto !== null) return buildQuote(rto, "charge_RTO", fullCtx, zoneOf(item));
+    const dl = positive("charge_DL");
     if (dl !== null) return buildQuote(dl, "charge_DL", fullCtx, zoneOf(item));
     return null;
   };
@@ -646,6 +716,152 @@ export function parseShippingResponse(
   return fail("UPSTREAM_ERROR");
 }
 
+// ── Expected TAT (provider delivery days) ───────────────────────────────────
+
+/** Delhivery Expected TAT `mot` letter for a mode. */
+export function motFor(mode: ShippingMode): "S" | "E" {
+  return mode === "surface" ? "S" : "E";
+}
+
+/**
+ * Path for the documented B2C Expected TAT API (same host + Token auth as the
+ * charges call; rate-limited separately at 750 req/5 min/IP, so callers cache).
+ * `pdt=B2C` matches the storefront; Delhivery defaults to B2C when omitted.
+ */
+export function buildExpectedTatPath(opts: {
+  originPincode: string;
+  destinationPincode: string;
+  mode: ShippingMode;
+}): string {
+  const q = new URLSearchParams({
+    origin_pin: opts.originPincode,
+    destination_pin: opts.destinationPincode,
+    mot: motFor(opts.mode),
+    pdt: "B2C",
+  });
+  return `/api/dc/expected_tat?${q.toString()}`;
+}
+
+/**
+ * Pure parser for the Expected TAT endpoint — exported so the self-check can
+ * regression-test exact payloads offline. Returns whole days, or null when the
+ * HTTP status or body carries no usable TAT.
+ *
+ * TAT is DISPLAY-ONLY: null must never become a shipping error code. Callers
+ * fall back to estimatedDaysFor(), so a TAT outage can never block checkout,
+ * and the INVALID_CREDENTIALS / PINCODE_UNAVAILABLE / RATE_LIMITED /
+ * UPSTREAM_ERROR taxonomy stays reserved for the charges call that actually
+ * prices the order.
+ *
+ * Known shapes (both observed against production):
+ *   {"success":true,"msg":"","data":{"tat":6}}   — documented B2C payload
+ *   {"tat":6}                                    — bare variant
+ */
+export function parseExpectedTatResponse(
+  httpStatus: number,
+  bodyText: string,
+): number | null {
+  if (httpStatus < 200 || httpStatus >= 300) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const read = (o: Record<string, unknown>): number | null => {
+    const raw = o.tat;
+    const n = typeof raw === "string" ? Number(raw.trim()) : raw;
+    return typeof n === "number" && Number.isFinite(n) && n > 0
+      ? Math.round(n)
+      : null;
+  };
+
+  const o = parsed as Record<string, unknown>;
+  if (o.success === false) return null;
+  const direct = read(o);
+  if (direct !== null) return direct;
+  const data = o.data;
+  if (data && typeof data === "object") {
+    return read(data as Record<string, unknown>);
+  }
+  return null;
+}
+
+interface TatCacheEntry {
+  days: number | null;
+  expiresAt: number;
+}
+/** Provider TAT changes rarely; a lane+mode is good for an hour. */
+const TAT_CACHE_TTL_MS = 60 * 60 * 1000;
+/** After an outage, stop retrying the lane long enough to spare the 750/5min limit. */
+const TAT_FAILURE_TTL_MS = 5 * 60 * 1000;
+const tatCache = new Map<string, TatCacheEntry>();
+
+/**
+ * Live Delhivery TAT in whole days, or null when unavailable. Never throws,
+ * never surfaces a shipping error code, never runs when an ops override is
+ * pinned. Failures are negative-cached so an outage cannot burn the rate limit.
+ */
+export async function expectedTatDays(opts: {
+  originPincode?: string;
+  destinationPincode: string;
+  mode: ShippingMode;
+}): Promise<number | null> {
+  const oPin =
+    opts.originPincode && isValidPincode(opts.originPincode)
+      ? opts.originPincode
+      : ORIGIN_PINCODE;
+  if (!oPin || !isValidPincode(oPin)) return null;
+  if (!isValidPincode(opts.destinationPincode)) return null;
+  if (!process.env.DELHIVERY_API_TOKEN) return null;
+  // Pinned by ops — provider data would contradict an explicit instruction.
+  if (envDaysFor(opts.mode) !== null) return null;
+
+  const key = `${oPin}|${opts.destinationPincode}|${opts.mode}`;
+  const hit = tatCache.get(key);
+  if (hit && hit.expiresAt > Date.now()) return hit.days;
+
+  try {
+    const res = await fetch(
+      `${BASE_URL}${buildExpectedTatPath({
+        originPincode: oPin,
+        destinationPincode: opts.destinationPincode,
+        mode: opts.mode,
+      })}`,
+      {
+        headers: {
+          Authorization: `Token ${process.env.DELHIVERY_API_TOKEN}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(5_000),
+      },
+    );
+    const bodyText = await res.text();
+    const days = parseExpectedTatResponse(res.status, bodyText);
+    if (days === null) {
+      // Raw status only — the body stays out of client-facing responses.
+      console.error(
+        `[shipping] delhivery tat unavailable status=${res.status} origin=${oPin} destination=${opts.destinationPincode} mode=${opts.mode}`,
+      );
+    }
+    tatCache.set(key, {
+      days,
+      expiresAt: Date.now() + (days === null ? TAT_FAILURE_TTL_MS : TAT_CACHE_TTL_MS),
+    });
+    return days;
+  } catch (err) {
+    console.error("[shipping] Delhivery TAT request failed:", err);
+    tatCache.set(key, {
+      days: null,
+      expiresAt: Date.now() + TAT_FAILURE_TTL_MS,
+    });
+    return null;
+  }
+}
+
 /**
  * Fetches the Delhivery shipping charge. Results are cached by
  * origin|destination|weight|payment-mode|mode so identical requests don't
@@ -657,10 +873,16 @@ export async function calculateShipping(opts: {
   weightGrams: number;
   mode?: ShippingMode;
   originPincode?: string;
+  /**
+   * Delhivery sub-service. Defaults to "forward" (ss=Delivered). Use "dto" for
+   * a reverse pickup (customer → workshop); "rto" is a failed forward delivery
+   * and is NOT the same thing as a customer returning a device.
+   */
+  quoteType?: QuoteType;
 }): Promise<ShippingResult> {
   if (!ORIGIN_PINCODE || !process.env.DELHIVERY_API_TOKEN) {
     console.error(
-      "[shipping] DELHIVERY_API_TOKEN / DELHIVERY_ORIGIN_PINCODE not configured",
+      "[shipping] DELHIVERY_API_TOKEN / Delhivery origin pincode not configured",
     );
     return {
       ok: false,
@@ -670,12 +892,13 @@ export async function calculateShipping(opts: {
   }
 
   const { cgm, mode, path } = calculateShippingParams(opts);
+  const ss = ssValueFor(opts.quoteType ?? "forward");
   const oPin =
     opts.originPincode && isValidPincode(opts.originPincode)
       ? opts.originPincode
       : ORIGIN_PINCODE;
   console.log(
-    `[shipping] quote request origin=${oPin} destination=${opts.destinationPincode} weight=${cgm}g mode=${mode}`,
+    `[shipping] quote request origin=${oPin} destination=${opts.destinationPincode} weight=${cgm}g mode=${mode} ss=${ss}`,
   );
   const key = cacheKey(
     oPin,
@@ -683,31 +906,48 @@ export async function calculateShipping(opts: {
     cgm,
     opts.paymentMode,
     mode,
+    ss,
   );
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now())
     return { ok: true, quote: hit.quote, fromCache: true };
 
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      headers: {
-        Authorization: `Token ${process.env.DELHIVERY_API_TOKEN}`,
-        Accept: "application/json",
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
+    // Pricing and TAT are independent calls on the same host — run them
+    // together so the provider TAT never adds a second round-trip to checkout.
+    const [res, tatDays] = await Promise.all([
+      fetch(`${BASE_URL}${path}`, {
+        headers: {
+          Authorization: `Token ${process.env.DELHIVERY_API_TOKEN}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(10_000),
+      }),
+      expectedTatDays({
+        originPincode: oPin,
+        destinationPincode: opts.destinationPincode,
+        mode,
+      }),
+    ]);
     const bodyText = await res.text();
     const result = parseShippingResponse(
       opts.destinationPincode,
       res.status,
       bodyText,
-      { mode, weightGrams: cgm },
+      { mode, weightGrams: cgm, originPincode: oPin },
     );
     if (result.ok) {
+      // Ops-pinned days win over provider data; otherwise the provider TAT.
+      // Leaving estimatedDays unset makes callers fall back to
+      // estimatedDaysFor() — a TAT outage must never fail a quote.
+      const days = envDaysFor(mode) ?? tatDays;
+      const quote: ShippingQuote =
+        days !== null ? { ...result.quote, estimatedDays: days } : result.quote;
       cache.set(key, {
-        quote: result.quote,
+        quote,
         expiresAt: Date.now() + CACHE_TTL_MS,
       });
+      return { ok: true, quote, fromCache: false };
     }
     return result;
   } catch (err) {
@@ -1584,6 +1824,89 @@ function runSelfCheck() {
     prCod.path.includes("pt=COD") && prCod.path.includes("cod=1"),
     "COD payment → cod=1 by default",
   );
+
+  // ── Expected TAT (provider delivery days) ─────────────────────────────────
+  t(motFor("surface") === "S" && motFor("express") === "E", "mot letters");
+  const tatPath = buildExpectedTatPath({
+    originPincode: "560102",
+    destinationPincode: "181206",
+    mode: "surface",
+  });
+  t(
+    tatPath.startsWith("/api/dc/expected_tat?") &&
+      tatPath.includes("origin_pin=560102") &&
+      tatPath.includes("destination_pin=181206") &&
+      tatPath.includes("mot=S") &&
+      tatPath.includes("pdt=B2C"),
+    "expected_tat path shape",
+  );
+  t(
+    buildExpectedTatPath({
+      originPincode: "560102",
+      destinationPincode: "181206",
+      mode: "express",
+    }).includes("mot=E"),
+    "express → mot=E",
+  );
+  // Documented production payload for the exact calculator lane.
+  t(
+    parseExpectedTatResponse(
+      200,
+      '{"success":true,"msg":"","data":{"tat":6}}',
+    ) === 6,
+    "documented TAT payload → 6",
+  );
+  t(
+    parseExpectedTatResponse(
+      200,
+      '{"success":true,"msg":"","data":{"tat":3}}',
+    ) === 3,
+    "express TAT payload → 3",
+  );
+  t(parseExpectedTatResponse(200, '{"tat":6}') === 6, "bare tat shape");
+  t(
+    parseExpectedTatResponse(200, '{"data":{"tat":"6"}}') === 6,
+    "numeric-string tat coerced",
+  );
+  t(
+    parseExpectedTatResponse(200, '{"success":false,"msg":"no lane","data":null}') ===
+      null,
+    "success=false → null",
+  );
+  t(
+    parseExpectedTatResponse(200, '{"data":{"tat":0}}') === null,
+    "zero tat → null",
+  );
+  t(
+    parseExpectedTatResponse(200, '{"data":{"tat":-4}}') === null,
+    "negative tat → null",
+  );
+  t(parseExpectedTatResponse(200, '{"data":{"tat":"n/a"}}') === null, "NaN tat → null");
+  t(parseExpectedTatResponse(200, "{}") === null, "empty object → null");
+  t(parseExpectedTatResponse(200, "[]") === null, "array body → null");
+  t(parseExpectedTatResponse(200, '"6"') === null, "scalar body → null");
+  t(parseExpectedTatResponse(200, "<html>err</html>") === null, "non-JSON → null");
+  t(parseExpectedTatResponse(200, "") === null, "empty body → null");
+  t(parseExpectedTatResponse(401, '{"data":{"tat":6}}') === null, "401 → null");
+  t(parseExpectedTatResponse(429, '{"data":{"tat":6}}') === null, "429 → null");
+  t(parseExpectedTatResponse(500, '{"data":{"tat":6}}') === null, "500 → null");
+  t(parseExpectedTatResponse(404, '{"data":{"tat":6}}') === null, "404 → null");
+
+  // Fallback chain: pinned env wins, unset env falls back to the estimate.
+  t(
+    estimatedDaysFor("surface") === 5 && estimatedDaysFor("express") === 2,
+    "hardcoded fallback days",
+  );
+  process.env.DELHIVERY_SURFACE_DAYS = "6";
+  process.env.DELHIVERY_EXPRESS_DAYS = "3";
+  t(envDaysFor("surface") === 6 && envDaysFor("express") === 3, "env days parsed");
+  t(estimatedDaysFor("surface") === 6, "env overrides hardcoded days");
+  process.env.DELHIVERY_SURFACE_DAYS = "not-a-number";
+  t(envDaysFor("surface") === null, "invalid env → null (not a bogus day count)");
+  t(estimatedDaysFor("surface") === 5, "invalid env → hardcoded fallback");
+  delete process.env.DELHIVERY_SURFACE_DAYS;
+  delete process.env.DELHIVERY_EXPRESS_DAYS;
+  t(envDaysFor("express") === null, "unset env → null");
 
   // ── Parser regression matrix (#6, #15, §31/§32) ────────────────────────────
   // The exact production payload from §32 — array-wrapped object with a

@@ -1,0 +1,30 @@
+# Vercel CLI upload exclusions.
+#
+# A `vercel deploy` from this working tree on 2026-10-06 uploaded .env, and
+# ADMIN_PANEL_PRODUCTION_ENABLED=false inside it flipped the admin kill switch
+# in src/proxy.ts — https://keebforge.in/admin returned an empty 404 until the
+# next Git deploy. Git deploys never ship these files, so CLI deploys must not
+# either. Built-in exclusions (.git, .next, node_modules, .vercel) are listed
+# explicitly in case this file replaces them.
+
+# local secrets / env
+.env
+.env.local
+.env.*.local
+.env.e2e
+
+# tooling / local-only state
+.git
+.gitignore
+.next
+node_modules
+.vercel
+.opencode/
+coverage
+*.tsbuildinfo
+next-env.d.ts
+opencode.json
+deploy-checklist.md
+
+# archived audit report copies
+docs/MD-FILES/

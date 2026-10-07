@@ -140,6 +140,7 @@ const cartPageSelect = {
             select: {
               id: true,
               name: true,
+              selectionMode: true,
               required: true,
               enabled: true,
               options: {

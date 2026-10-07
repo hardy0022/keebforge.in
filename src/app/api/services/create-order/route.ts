@@ -16,6 +16,7 @@ import {
   cartWeightGrams,
   enabledShippingModes,
   isValidPincode,
+  ratingOriginPincode,
   toShippingMode,
 } from "@/lib/shipping/delhivery";
 import { deriveLegs } from "@/lib/shipping/shipping-estimate";
@@ -181,7 +182,9 @@ export async function POST(req: NextRequest) {
         );
       }
       const pin = mods.address.pincode || cfg.shippingAddress.postalCode;
-      const origin = process.env.DELHIVERY_ORIGIN_PINCODE ?? "";
+      // The pin Delhivery actually collects from — must match the address
+      // shipment booking uses, or the quote prices a lane that does not exist.
+      const origin = ratingOriginPincode();
       if (!isValidPincode(pin) || !isValidPincode(origin)) {
         return NextResponse.json(
           { error: "Enter a valid PIN code to calculate shipping." },
@@ -217,18 +220,50 @@ export async function POST(req: NextRequest) {
           },
         ]) ?? 0,
       );
-      const fwd = await calculateShipping({
+      // ── Return leg: workshop → customer (ss=Delivered) ───────────────────
+      const ret = await calculateShipping({
         destinationPincode: pin,
         paymentMode: "Pre-paid",
         weightGrams,
         mode,
+        quoteType: "forward",
       });
-      if (!fwd.ok)
+      if (!ret.ok)
         return NextResponse.json(
-          { error: fwd.message, errorCode: fwd.errorCode },
+          { error: ret.message, errorCode: ret.errorCode },
           { status: 422 },
         );
-      const legs = deriveLegs(fwd.quote.amountPaise, mods.method);
+      let pickupPaise: number | null = null;
+      // ── Pickup leg: customer → workshop (reverse pickup, ss=DTO) ─────────
+      // Only charged when KeebForge collects the device; a customer shipping it
+      // themselves never owes a forward pickup.
+      if (mods.method === "pickup") {
+        const pu = await calculateShipping({
+          destinationPincode: origin,
+          originPincode: pin,
+          paymentMode: "Pre-paid",
+          weightGrams,
+          mode,
+          quoteType: "dto",
+        });
+        if (!pu.ok)
+          return NextResponse.json(
+            { error: pu.message, errorCode: pu.errorCode },
+            { status: 422 },
+          );
+        pickupPaise = pu.quote.amountPaise;
+      }
+      const legs = deriveLegs(
+        { pickupPaise, returnPaise: ret.quote.amountPaise },
+        mods.method,
+      );
+      if (!legs) {
+        // Never silently price a real collection at ₹0 — fail closed instead.
+        return NextResponse.json(
+          { error: "Unable to calculate shipping right now.", errorCode: "UPSTREAM_ERROR" },
+          { status: 422 },
+        );
+      }
       shipPaise = legs.totalPaise;
       shipMeta = {
         method: mods.method,

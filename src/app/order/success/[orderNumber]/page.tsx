@@ -384,41 +384,78 @@ export default async function OrderSuccessPage({
                       </li>
                     );
                   })}
-                  {order.items.map((item) => (
-                    <li key={item.id} className="os-line">
-                      <div className="os-line-main">
-                        {item.product?.images?.[0] ? (
-                          <Image
-                            src={item.product.images[0].url}
-                            alt={item.product.name}
-                            width={46}
-                            height={46}
-                            className="os-line-thumb"
-                            sizes="46px"
-                          />
-                        ) : (
-                          <span
-                            className="os-line-thumb os-line-thumb-fallback"
-                            aria-hidden="true"
-                          >
-                            ⌨
-                          </span>
-                        )}
-                        <div className="min-w-0">
-                          <p className="os-line-name">
-                            {item.product?.name ?? item.name}
-                          </p>
-                          <p className="os-line-meta">
-                            Qty {item.quantity} · {formatINR(item.unitPrice)}{" "}
-                            each
-                          </p>
+                  {order.items.map((item) => {
+                    const vi = item.variantInfo as
+                      | {
+                          kind?: string;
+                          selections?: Array<{
+                            groupName?: string;
+                            optionName?: string;
+                            addon?: number;
+                          }>;
+                        }
+                      | null
+                      | undefined;
+                    const optionSelections =
+                      vi?.kind === "options" && Array.isArray(vi.selections)
+                        ? vi.selections
+                        : [];
+                    const optionId = (o: number) => `opt-${item.id}-${o}`;
+                    return (
+                      <li key={item.id} className="os-line">
+                        <div className="os-line-main">
+                          {item.product?.images?.[0] ? (
+                            <Image
+                              src={item.product.images[0].url}
+                              alt={item.product.name}
+                              width={46}
+                              height={46}
+                              className="os-line-thumb"
+                              sizes="46px"
+                            />
+                          ) : (
+                            <span
+                              className="os-line-thumb os-line-thumb-fallback"
+                              aria-hidden="true"
+                            >
+                              ⌨
+                            </span>
+                          )}
+                          <div className="min-w-0">
+                            <p className="os-line-name">
+                              {item.product?.name ?? item.name}
+                            </p>
+                            <p className="os-line-meta">
+                              Qty {item.quantity} · {formatINR(item.unitPrice)}{" "}
+                              each
+                            </p>
+                            {optionSelections.length > 0 && (
+                              <ul className="os-line-options">
+                                {optionSelections.map((s, i) => (
+                                  <li key={optionId(i)}>
+                                    <span className="os-line-option-group">
+                                      {s.groupName}:
+                                    </span>{" "}
+                                    {s.optionName}
+                                    {typeof s.addon === "number" &&
+                                      s.addon > 0 && (
+                                        <span className="os-line-option-addon">
+                                          {" "}
+                                          (+{formatINR(s.addon)})
+                                        </span>
+                                      )}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <span className="os-line-total">
-                        {formatINR(item.lineTotal)}
-                      </span>
-                    </li>
-                  ))}
+                        <span className="os-line-total">
+                          {formatINR(item.lineTotal)}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
                 <dl className="os-totals">
                   <div className="os-total-row">

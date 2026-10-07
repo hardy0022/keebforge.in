@@ -55,6 +55,7 @@ export default async function EditProductPage({
         optionGroups={product.optionGroups.map((g) => ({
           id: g.id,
           name: g.name,
+          selectionMode: g.selectionMode,
           required: g.required,
           options: g.options.map((o) => ({
             id: o.id,

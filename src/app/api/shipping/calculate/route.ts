@@ -141,7 +141,10 @@ export async function POST(req: NextRequest) {
         carrier: "Delhivery",
         amountPaise: r.ok ? r.quote.amountPaise : 0,
         currency: "INR" as const,
-        estimatedDays: estimatedDaysFor(mode),
+        // Provider TAT when the quote got one; otherwise the display fallback.
+        estimatedDays: r.ok
+          ? (r.quote.estimatedDays ?? estimatedDaysFor(mode))
+          : estimatedDaysFor(mode),
       }));
     if (options.length > 0) {
       return NextResponse.json({

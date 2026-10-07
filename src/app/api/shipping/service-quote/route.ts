@@ -5,29 +5,50 @@ import {
   calculateVolumetricWeight,
   enabledShippingModes,
   isValidPincode,
+  ratingOriginPincode,
   SHIPPING_ERROR_MESSAGES,
   toShippingMode,
   type ShippingErrorCode,
 } from "@/lib/shipping/delhivery";
+import {
+  type ServiceShippingMethod,
+} from "@/lib/shipping/shipping-estimate";
 import { PACKAGE_LIMITS, isValidPackage } from "@/lib/shipping/package-limits";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/shipping/service-quote
- * Body: { pincode, lengthCm, widthCm, heightCm, weightKg, mode? }
+ * Body: { pincode, lengthCm, widthCm, heightCm, weightKg, mode?, method? }
  *
- * Quotes the standard FORWARD leg (DELHIVERY_ORIGIN_PINCODE → customer PIN)
- * for a mods order. There is no reverse-pickup rate in the Delhivery API, so
- * callers derive the pickup estimate from this one number via deriveLegs()
- * — never a second API call. Origin/credentials never come from the browser;
- * amounts are integer paise.
+ * Quotes the two physically distinct legs of a mods order, each against
+ * Delhivery's real rate card (see shipping-estimate.ts for the mapping):
+ *
+ *   return  workshop → customer, `ss=Delivered`  (the "Forward" dashboard tab)
+ *   pickup  customer → workshop, `ss=DTO`        (the "Reverse Pickup (RVP)"
+ *                                                 dashboard tab), quoted only
+ *                                                 when method === "pickup"
+ *
+ * Origin/credentials never come from the browser; amounts are integer paise.
+ * `forwardPaise` is kept as an alias of `returnPaise` for older callers.
  */
 function fail(status: number, errorCode: ShippingErrorCode) {
   return NextResponse.json(
     { success: false, errorCode, message: SHIPPING_ERROR_MESSAGES[errorCode] },
     { status },
   );
+}
+
+const SHIPPING_METHODS: ServiceShippingMethod[] = [
+  "customer_shipping",
+  "pickup",
+];
+
+function toServiceMethod(v: unknown): ServiceShippingMethod | null {
+  return typeof v === "string" &&
+    (SHIPPING_METHODS as readonly string[]).includes(v)
+    ? (v as ServiceShippingMethod)
+    : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -90,22 +111,64 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const fwd = await calculateShipping({
+  // Which legs the customer is charged for. Absent → legacy single-leg callers
+  // (the return leg only), which is what the old contract always priced.
+  const method =
+    body.method == null ? "customer_shipping" : toServiceMethod(body.method);
+  if (method === null) {
+    return NextResponse.json(
+      {
+        success: false,
+        errorCode: "INVALID_PACKAGE",
+        message: "Unsupported shipping method.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const workshopPin = ratingOriginPincode();
+  if (!isValidPincode(workshopPin)) return fail(502, "NOT_CONFIGURED");
+
+  // ── Return leg: workshop → customer ──────────────────────────────────────
+  const ret = await calculateShipping({
     destinationPincode: pincode as string,
     paymentMode: "Pre-paid",
     weightGrams,
     ...(requestedMode ? { mode: requestedMode } : {}),
+    quoteType: "forward",
   });
-  if (!fwd.ok)
+  if (!ret.ok)
     return NextResponse.json(
-      { success: false, errorCode: fwd.errorCode, message: fwd.message },
+      { success: false, errorCode: ret.errorCode, message: ret.message },
       { status: 502 },
     );
 
+  // ── Pickup leg: customer → workshop (reverse pickup, ss=DTO) ─────────────
+  let pickupPaise: number | null = null;
+  if (method === "pickup") {
+    const pu = await calculateShipping({
+      destinationPincode: workshopPin,
+      originPincode: pincode as string,
+      paymentMode: "Pre-paid",
+      weightGrams,
+      ...(requestedMode ? { mode: requestedMode } : {}),
+      quoteType: "dto",
+    });
+    if (!pu.ok)
+      return NextResponse.json(
+        { success: false, errorCode: pu.errorCode, message: pu.message },
+        { status: 502 },
+      );
+    pickupPaise = pu.quote.amountPaise;
+  }
+
+  const returnPaise = ret.quote.amountPaise;
   return NextResponse.json({
     success: true,
-    forwardPaise: fwd.quote.amountPaise,
-    mode: fwd.quote.mode,
+    forwardPaise: returnPaise,
+    returnPaise,
+    pickupPaise,
+    mode: ret.quote.mode,
     weightGrams,
   });
 }

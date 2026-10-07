@@ -82,11 +82,13 @@ function toCardFeatures(
   return out;
 }
 
-const MAX_OPTION_GROUPS = 3;
+const MAX_OPTION_GROUPS = 5;
 
 export type OptionConfigGroup = {
   id?: string;
   name: string;
+  /** SINGLE = exactly one (radio). MULTIPLE = zero or more (checkbox). */
+  selectionMode: "SINGLE" | "MULTIPLE";
   required: boolean;
   options: { id?: string; name: string; addon: number }[]; // addon in paise
 };
@@ -169,6 +171,12 @@ function toOptionConfig(v: FormDataEntryValue | null): {
     groups.push({
       id: typeof r.id === "string" && r.id ? r.id : undefined,
       name,
+      selectionMode:
+        r.selectionMode === "MULTIPLE"
+          ? "MULTIPLE"
+          : r.selectionMode === "SINGLE"
+            ? "SINGLE"
+            : "SINGLE",
       required: r.required !== false,
       options,
     });
@@ -194,6 +202,7 @@ async function syncOptionGroups(
       where: { id: g.id ?? "__new__" },
       update: {
         name: g.name,
+        selectionMode: g.selectionMode,
         required: g.required,
         sortOrder: gi,
         enabled: true,
@@ -201,6 +210,7 @@ async function syncOptionGroups(
       create: {
         productId,
         name: g.name,
+        selectionMode: g.selectionMode,
         required: g.required,
         sortOrder: gi,
         enabled: true,
@@ -674,6 +684,7 @@ export async function duplicateProduct(
       optionGroups: {
         create: src.optionGroups.map((g) => ({
           name: g.name,
+          selectionMode: g.selectionMode,
           required: g.required,
           sortOrder: g.sortOrder,
           enabled: g.enabled,

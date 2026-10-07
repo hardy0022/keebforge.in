@@ -4,7 +4,13 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addToCart } from "@/app/actions/cart";
 import { formatINR } from "@/lib/utils/money";
-import { defaultOptionId, type OptionGroupLike } from "@/lib/catalog/product-options";
+import {
+  defaultOptionId,
+  optionControlKind,
+  selectionModeOf,
+  sumSelectedAddons,
+  type OptionGroupLike,
+} from "@/lib/catalog/product-options";
 import CartIcon from "@/components/icons/cart-icon";
 import type { AnimatedIconHandle } from "@/components/icons/types";
 
@@ -13,9 +19,14 @@ import type { AnimatedIconHandle } from "@/components/icons/types";
  * (ProductOptionGroup / ProductOption). Price = base + Σ addons; the server
  * action recomputes it from live data on submit.
  *
- * The base option of every required group is selected automatically on mount,
- * so the product is immediately purchasable and the price reflects it, without
- * the customer having to pick the default manually.
+ * SINGLE groups render as radio cards; the base option of every required SINGLE
+ * group is auto-selected on mount so the product is immediately purchasable.
+ * MULTIPLE groups render as checkbox cards — zero or more, at least one when
+ * required — and never auto-select, so the customer's accessories are their own
+ * choice.
+ *
+ * `selectionMode` is a property of each group (e.g. an "Accessories" group can
+ * be MULTIPLE); nothing here keyed off a group name or product type.
  */
 export function ProductConfigurator({
   productId,
@@ -32,12 +43,14 @@ export function ProductConfigurator({
 }) {
   const router = useRouter();
   const active = groups.filter((g) => g.enabled);
-  const [picks, setPicks] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {};
+  const [picks, setPicks] = useState<Record<string, string[]>>(() => {
+    const init: Record<string, string[]> = {};
     for (const g of active) {
-      if (g.required) {
+      if (selectionModeOf(g) === "SINGLE" && g.required) {
         const def = defaultOptionId(g);
-        if (def) init[g.id] = def;
+        init[g.id] = def ? [def] : [];
+      } else {
+        init[g.id] = [];
       }
     }
     return init;
@@ -60,14 +73,27 @@ export function ProductConfigurator({
     prevPendingRef.current = pending;
   }, [pending, state]);
 
-  const complete = active.every((g) => !g.required || picks[g.id]);
-  const optionIds = Object.values(picks);
-  const addons = active.reduce((sum, g) => {
-    const opt = g.options.find((o) => o.id === picks[g.id]);
-    return sum + (opt?.priceAddon ?? 0);
-  }, 0);
-  const configuredPrice = basePrice + addons;
+  const complete = active.every(
+    (g) => !g.required || (picks[g.id]?.length ?? 0) > 0,
+  );
+  const optionIds = active.flatMap((g) => picks[g.id] ?? []);
+  const configuredPrice = basePrice + sumSelectedAddons(active, optionIds);
   const out = baseAvailable <= 0;
+
+  const toggle = (g: OptionGroupLike, optionId: string) => {
+    setPicks((p) => {
+      const current = p[g.id] ?? [];
+      if (selectionModeOf(g) === "MULTIPLE") {
+        const next = current.includes(optionId)
+          ? current.filter((id) => id !== optionId)
+          : [...current, optionId];
+        return { ...p, [g.id]: next };
+      }
+      return { ...p, [g.id]: [optionId] };
+    });
+    // Only SINGLE picks reset quantity — the pre-existing radio behaviour.
+    if (selectionModeOf(g) === "SINGLE") setQty(1);
+  };
 
   const makeAvailabilityText = () => {
     if (out) return "Out of stock";
@@ -96,59 +122,71 @@ export function ProductConfigurator({
       </div>
 
       <div className="option-groups">
-        {active.map((g) => (
-          <fieldset className="product-optgroup" key={g.id}>
-            <legend className="product-optgroup-head">
-              <span className="product-option-label">{g.name}</span>
-            </legend>
-            <div className="option-cards" role="radiogroup" aria-label={g.name}>
-              {g.options
-                .filter((o) => o.enabled)
-                .map((o) => {
-                  const selected = picks[g.id] === o.id;
-                  const isBase = o.priceAddon === 0;
-                  return (
-                    <button
-                      key={o.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      className={`option-card${selected ? " selected" : ""}`}
-                      onClick={() => {
-                        setPicks((p) => ({ ...p, [g.id]: o.id }));
-                        setQty(1);
-                      }}
-                    >
-                      <span className="option-card-radio" aria-hidden="true">
-                        {selected && (
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        )}
-                      </span>
-                      <span className="option-card-body">
-                        <span className="option-card-name">{o.name}</span>
+        {active.map((g) => {
+          const multi = optionControlKind(g) === "checkbox";
+          const selected = picks[g.id] ?? [];
+          return (
+            <fieldset className="product-optgroup" key={g.id}>
+              <legend className="product-optgroup-head">
+                <span className="product-option-label">{g.name}</span>
+              </legend>
+              <div
+                className="option-cards"
+                role={multi ? "group" : "radiogroup"}
+                aria-label={g.name}
+              >
+                {g.options
+                  .filter((o) => o.enabled)
+                  .map((o) => {
+                    const isSelected = selected.includes(o.id);
+                    const isBase = o.priceAddon === 0;
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        role={multi ? "checkbox" : "radio"}
+                        aria-checked={isSelected}
+                        className={`option-card${isSelected ? " selected" : ""}`}
+                        onClick={() => toggle(g, o.id)}
+                      >
                         <span
-                          className={`option-card-price${isBase ? " base" : ""}`}
+                          className={
+                            multi
+                              ? "option-card-checkbox"
+                              : "option-card-radio"
+                          }
+                          aria-hidden="true"
                         >
-                          {isBase ? "Base" : `+${formatINR(o.priceAddon)}`}
+                          {isSelected && (
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M20 6 9 17l-5-5" />
+                            </svg>
+                          )}
                         </span>
-                      </span>
-                    </button>
-                  );
-                })}
-            </div>
-          </fieldset>
-        ))}
+                        <span className="option-card-body">
+                          <span className="option-card-name">{o.name}</span>
+                          <span
+                            className={`option-card-price${isBase ? " base" : ""}`}
+                          >
+                            {isBase ? "Base" : `+${formatINR(o.priceAddon)}`}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </fieldset>
+          );
+        })}
       </div>
 
       <div className="product-buy-actions">

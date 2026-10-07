@@ -16,9 +16,14 @@ export type ResolvedOption = {
   addon: number; // paise snapshot at time of resolution
 };
 
+/** How a group is selected: exactly one (radio) or zero-or-more (checkbox). */
+export type SelectionMode = "SINGLE" | "MULTIPLE";
+
 export type OptionGroupLike = {
   id: string;
   name: string;
+  /** Absent = legacy row: behaves as SINGLE (radio). */
+  selectionMode?: SelectionMode;
   required: boolean;
   enabled: boolean;
   options: {
@@ -39,6 +44,48 @@ export function configKey(optionIds: string[]): string {
 }
 
 /**
+ * Effective selection mode of a group. A group with no explicit mode is a
+ * legacy SINGLE group — that is the pre-existing behaviour and the default.
+ */
+export function selectionModeOf(
+  group: Pick<OptionGroupLike, "selectionMode">,
+): SelectionMode {
+  return group.selectionMode === "MULTIPLE" ? "MULTIPLE" : "SINGLE";
+}
+
+/**
+ * Rendered input control for a group: radio for SINGLE, checkbox for MULTIPLE.
+ * Drives the product-page configurator markup; kept here so the radio/checkbox
+ * decision is a tested pure function.
+ */
+export function optionControlKind(
+  group: Pick<OptionGroupLike, "selectionMode">,
+): "radio" | "checkbox" {
+  return selectionModeOf(group) === "MULTIPLE" ? "checkbox" : "radio";
+}
+
+/**
+ * Display-side price: base + sum of add-ons of every selected, enabled option.
+ * No validation — the server resolver below is the authoritative gate. Shared
+ * by the product-page configurator so "changing selections updates the price
+ * immediately" is a tested pure function rather than inline JSX math.
+ */
+export function sumSelectedAddons(
+  groups: OptionGroupLike[],
+  optionIds: string[],
+): number {
+  const wanted = new Set(optionIds);
+  let total = 0;
+  for (const g of groups) {
+    if (!g.enabled) continue;
+    for (const o of g.options) {
+      if (o.enabled && wanted.has(o.id)) total += o.priceAddon;
+    }
+  }
+  return total;
+}
+
+/**
  * The base/default option for a group, i.e. the one that defines the baseline
  * configuration. There is no explicit "isDefault" flag in the model, so the
  * safest convention is the first enabled option (options arrive pre-sorted by
@@ -52,8 +99,13 @@ export function defaultOptionId(group: OptionGroupLike): string | null {
 
 /**
  * Recomputes the configured unit price from live group/option data.
- * Validates that every required group has exactly one selection, every
- * selected option belongs to this product and is enabled.
+ * Validates that every required group has a selection, every selected option
+ * belongs to this product and is enabled.
+ *
+ * - SINGLE (default): exactly one selection per group; a required group must
+ *   have one, an optional group may have none but never more than one.
+ * - MULTIPLE: zero or more selections; a required group must have at least
+ *   one. Selected add-ons are summed.
  */
 export function resolveConfiguredPrice(
   groups: OptionGroupLike[],
@@ -71,6 +123,24 @@ export function resolveConfiguredPrice(
 
   for (const g of activeGroups) {
     const chosen = g.options.filter((o) => o.enabled && wanted.has(o.id));
+    if (selectionModeOf(g) === "MULTIPLE") {
+      if (chosen.length === 0 && g.required) {
+        return { ok: false, error: `Choose at least one option for "${g.name}".` };
+      }
+      for (const c of chosen) {
+        total += c.priceAddon;
+        selections.push({
+          groupId: g.id,
+          groupName: g.name,
+          optionId: c.id,
+          optionName: c.name,
+          addon: c.priceAddon,
+        });
+        wanted.delete(c.id);
+      }
+      continue;
+    }
+    // SINGLE — pre-existing radio behaviour, unchanged.
     if (chosen.length > 1) {
       return { ok: false, error: `Multiple selections in "${g.name}".` };
     }
@@ -177,6 +247,42 @@ if (process.argv[1]?.endsWith("product-options.ts")) {
     defaultOptionId(groups[1]) === "o4",
     "default falls back to only option",
   );
+
+  // MULTIPLE groups: zero-or-more, summed add-ons.
+  const multi: OptionGroupLike[] = [
+    {
+      id: "g4",
+      name: "Accessories",
+      selectionMode: "MULTIPLE",
+      required: false,
+      enabled: true,
+      options: [
+        { id: "o5", name: "Carrying Case", priceAddon: 50000, enabled: true },
+        { id: "o6", name: "Coiled Cable", priceAddon: 80000, enabled: true },
+        { id: "o7", name: "Wrist Rest", priceAddon: 60000, enabled: true },
+      ],
+    },
+  ];
+  const multiRes = resolveConfiguredPrice(multi, 849900, ["o5", "o6"]);
+  console.assert(
+    multiRes.ok &&
+      multiRes.unitPrice === 979900 &&
+      multiRes.selections.length === 2,
+    "multiple: selections summed",
+  );
+  const multiNone = resolveConfiguredPrice(multi, 849900, []);
+  console.assert(
+    multiNone.ok && multiNone.unitPrice === 849900,
+    "multiple: optional group allows zero selections",
+  );
+  const multiRequired = resolveConfiguredPrice(
+    [{ ...multi[0], required: true }],
+    849900,
+    [],
+  );
+  console.assert(!multiRequired.ok, "multiple: required group needs a selection");
+  const singleMultiError = resolveConfiguredPrice(groups, base, ["o1", "o2"]);
+  console.assert(!singleMultiError.ok, "single: two selections rejected");
 
   console.log("product-options self-check passed");
 }

@@ -681,7 +681,13 @@ export function ModConfigurator({
   type QuoteState =
     | { s: "idle" }
     | { s: "calc" }
-    | { s: "ok"; forwardPaise: number }
+    | {
+        s: "ok";
+        /** Legacy alias of returnPaise — kept so older callers keep working. */
+        forwardPaise: number;
+        pickupPaise: number | null;
+        returnPaise: number;
+      }
     | { s: "fail"; msg: string };
   const [quote, setQuote] = useState<QuoteState>({ s: "idle" });
   /** Input snapshot the current quote was computed for — any change invalidates it. */
@@ -689,14 +695,16 @@ export function ModConfigurator({
   const [quoting, setQuoting] = useState(false);
 
   /**
-   * Anything that affects the shipping quote — PIN, package, delivery speed,
-   * or the selected services. The ship METHOD is deliberately excluded: both
-   * methods price off the same forward quote, so legs re-derive instantly on
-   * switch. A quote computed for a different key is stale and its amounts
-   * are hidden until the customer recalculates.
+   * Anything that affects the shipping quote — method, PIN, package, delivery
+   * speed, or the selected services. The method IS part of the key: the two
+   * methods now quote physically different legs (a "Need pickup" order costs an
+   * extra reverse-pickup leg), so a quote taken under one method is not valid
+   * under the other. A quote computed for a different key is stale and its
+   * amounts are hidden until the customer recalculates.
    */
   const shipInputKeyOf = () =>
     JSON.stringify([
+      shipMethod,
       shipMode,
       addr.pincode.trim(),
       pkg.L,
@@ -750,15 +758,23 @@ export function ModConfigurator({
           heightCm: pkgNums.H,
           weightKg: pkgNums.g / 1000,
           mode: shipMode,
+          method: shipMethod,
         }),
       });
       const data = (await res.json().catch(() => null)) as {
         success: boolean;
         forwardPaise?: number;
+        returnPaise?: number | null;
+        pickupPaise?: number | null;
         errorCode?: string;
         message?: string;
       } | null;
-      if (!res.ok || !data?.success || data.forwardPaise == null) {
+      if (
+        !res.ok ||
+        !data?.success ||
+        data.forwardPaise == null ||
+        data.returnPaise == null
+      ) {
         const msg =
           data?.errorCode === "PINCODE_UNAVAILABLE"
             ? "Shipping is currently unavailable for this PIN code."
@@ -767,7 +783,12 @@ export function ModConfigurator({
         setQuote({ s: "fail", msg });
         return;
       }
-      setQuote({ s: "ok", forwardPaise: data.forwardPaise });
+      setQuote({
+        s: "ok",
+        forwardPaise: data.forwardPaise,
+        returnPaise: data.returnPaise,
+        pickupPaise: data.pickupPaise ?? null,
+      });
     } catch {
       setQuote({
         s: "fail",
@@ -958,10 +979,20 @@ export function ModConfigurator({
   const shipInputKey = shipInputKeyOf();
   const quoteStale = calcKey !== null && calcKey !== shipInputKey;
   const qOk = !quoteStale && quote.s === "ok";
-  /** Legs derived from the single forward quote — recomputed instantly when the method switches. */
+  /**
+   * Legs selected from the server-quoted amounts. This is pure selection — the
+   * client never derives one leg from the other, so what is displayed is
+   * exactly what the server will charge.
+   */
   const legs =
     qOk && quote.s === "ok" && shipMethod !== "undecided"
-      ? deriveLegs(quote.forwardPaise, shipMethod)
+      ? deriveLegs(
+          {
+            pickupPaise: quote.pickupPaise,
+            returnPaise: quote.returnPaise,
+          },
+          shipMethod,
+        )
       : null;
 
   const shipTotalPaise: number | null = legs ? legs.totalPaise : null;

@@ -5,6 +5,7 @@ import {
   detectEnvironment,
   MAINTENANCE_KEY,
 } from "@/lib/config/environment";
+import { decideAuthErrorHandling } from "@/lib/auth/auth-error";
 
 // Next.js redirect() matches sources case-insensitively, so case-variant old
 // URLs are handled here instead of next.config to avoid shadowing real routes.
@@ -71,19 +72,14 @@ export async function proxy(request: NextRequest) {
   // /auth/error: Better Auth appends ?error=<code>&error_description=<raw
   // provider text> on OAuth failures. Only known-safe codes may reach the
   // page — everything else is stripped so raw upstream error text never
-  // enters the rendered HTML/RSC payload.
+  // enters the rendered HTML/RSC payload. The allow list and the reasoning
+  // for each entry live in src/lib/auth/auth-error.ts.
   if (pathname === "/auth/error") {
-    const sp = request.nextUrl.searchParams;
-    const code = sp.get("error");
-    if (
-      sp.has("error_description") ||
-      sp.size > 1 ||
-      (code !== null && !SAFE_AUTH_ERROR_CODES.has(code))
-    ) {
+    const decision = decideAuthErrorHandling(request.nextUrl.searchParams);
+    if (decision.action === "redirect") {
       const url = request.nextUrl.clone();
       url.search = "";
-      if (code && SAFE_AUTH_ERROR_CODES.has(code))
-        url.searchParams.set("error", code);
+      if (decision.code) url.searchParams.set("error", decision.code);
       return NextResponse.redirect(url, 307);
     }
   }
@@ -102,12 +98,6 @@ export async function proxy(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-const SAFE_AUTH_ERROR_CODES = new Set([
-  "access_denied",
-  "state_mismatch",
-  "state_invalid",
-]);
 
 export const config = {
   matcher: [

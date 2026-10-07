@@ -7,6 +7,7 @@ import { Resend } from "resend";
 import { prisma } from "@/lib/db/prisma";
 import { isStrongPassword } from "@/lib/utils/password";
 import { getOrCreateProfileFromUser } from "@/lib/auth/profile";
+import { sendVerificationEmailMessage } from "@/lib/auth/send-verification-email";
 
 /**
  * KeebForge authentication — Better Auth (sole auth authority).
@@ -57,32 +58,18 @@ export const auth = betterAuth({
   // creation; clicking it flips emailVerified and fires the claim hook below.
   // Deliberately NOT `requireEmailVerification` — existing unverified accounts
   // must keep signing in.
+  //
+  // Unlike `sendResetPassword` below, this one REJECTS when Resend fails.
+  // Sign-up/sign-in are unaffected (Better Auth wraps those calls in
+  // runInBackgroundOrAwait, which logs and carries on), but /send-verification
+  // -email awaits it directly — so the resend action on /auth/error only
+  // reports success when the provider actually accepted the message. See
+  // src/lib/auth/send-verification-email.ts for the full reasoning.
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      try {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const { data, error } = await resend.emails.send({
-          from: "KeebForge <no-reply@keebforge.in>",
-          to: user.email,
-          subject: "Verify your KeebForge email",
-          html:
-            `<h2>Verify your email — KeebForge.in</h2>` +
-            `<p>Hi ${user.name.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!)},</p>` +
-            `<p>Confirm your email to secure your account and link any past guest orders to it.</p>` +
-            `<p style="margin:24px 0"><a href="${url}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;border-radius:10px;text-decoration:none;font-weight:600">Verify email</a></p>` +
-            `<p>This link expires in 1 hour. If you didn't create an account, you can ignore this email.</p>`,
-        });
-        if (error) {
-          console.error("Resend error (email verification):", error);
-          return;
-        }
-        console.log(`[auth] verification email sent to ${user.email} (id=${data?.id})`);
-      } catch (e) {
-        // Must never fail sign-up (and leak that the email didn't send).
-        console.error("Resend error (email verification):", e);
-      }
+      await sendVerificationEmailMessage({ user, url });
     },
     // Runs after `emailVerified: true` is persisted, before auto-sign-in. It is
     // awaited by the endpoint, so a failure here is caught and logged rather

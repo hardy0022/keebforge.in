@@ -41,6 +41,8 @@ type CardFeature = { icon: string; label: string; value: string };
 type OptionGroupState = {
   id?: string;
   name: string;
+  /** SINGLE = exactly one (radio). MULTIPLE = zero or more (checkbox). */
+  selectionMode: "SINGLE" | "MULTIPLE";
   required: boolean;
   options: { id?: string; name: string; addon: string }[];
 };
@@ -226,6 +228,7 @@ export function ProductForm({
       .map((g) => ({
         id: g.id,
         name: g.name.trim(),
+        selectionMode: g.selectionMode,
         required: g.required,
         options: g.options
           .filter((o) => o.name.trim())
@@ -1011,6 +1014,50 @@ export function ProductForm({
                 style={{ flex: "1 1 180px" }}
                 aria-label={`Group ${gi + 1} name`}
               />
+              <fieldset
+                className="flex items-center gap-3"
+                style={{ fontSize: "0.78rem", border: 0, margin: 0, padding: 0 }}
+              >
+                <legend
+                  className="muted"
+                  style={{ fontSize: "0.68rem", textTransform: "uppercase" }}
+                >
+                  Selection
+                </legend>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    name={`group-${gi}-mode`}
+                    checked={g.selectionMode === "SINGLE"}
+                    onChange={() =>
+                      setGroup(gi, { selectionMode: "SINGLE" })
+                    }
+                    disabled={pending}
+                  />{" "}
+                  Single
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    name={`group-${gi}-mode`}
+                    checked={g.selectionMode === "MULTIPLE"}
+                    onChange={() =>
+                      setGroup(gi, { selectionMode: "MULTIPLE" })
+                    }
+                    disabled={pending}
+                  />{" "}
+                  Multiple
+                </label>
+              </fieldset>
+              {g.selectionMode === "MULTIPLE" && (
+                <span
+                  className="muted"
+                  style={{ fontSize: "0.68rem", flexBasis: "100%" }}
+                >
+                  Multiple-select: customer may pick any number of options
+                  (0 if optional, 1+ if Required). Add-ons are summed.
+                </span>
+              )}
               <label
                 className="flex items-center gap-2"
                 style={{ fontSize: "0.78rem" }}
@@ -1110,17 +1157,18 @@ export function ProductForm({
                 ...rows,
                 {
                   name: "",
+                  selectionMode: "SINGLE",
                   required: true,
                   options: [{ name: "", addon: "" }],
                 },
               ])
             }
-            disabled={pending || optGroups.length >= 3}
+            disabled={pending || optGroups.length >= 5}
           >
             + Add option group
           </button>
           <span className="muted" style={{ fontSize: "0.7rem" }}>
-            {optGroups.length}/3 groups — incomplete rows are ignored.
+            {optGroups.length}/5 groups — incomplete rows are ignored.
           </span>
         </div>
       </Section>

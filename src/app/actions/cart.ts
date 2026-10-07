@@ -22,9 +22,10 @@ const optionIdsSchema = z
     if (!v) return undefined;
     try {
       const arr = JSON.parse(v);
+      // An empty array is valid: a MULTIPLE group (or all-optional groups)
+      // may legitimately have zero selections.
       if (
         Array.isArray(arr) &&
-        arr.length > 0 &&
         arr.length <= 10 &&
         arr.every((x) => typeof x === "string")
       )
@@ -150,6 +151,7 @@ const [product, cart] = await Promise.all([
         select: {
           id: true,
           name: true,
+          selectionMode: true,
           required: true,
           enabled: true,
           options: {
@@ -187,6 +189,10 @@ if (optionIds) {
   );
   if (!resolved.ok) return { error: resolved.error };
   config = configSnapshot(resolved);
+  // Base configuration (every group optional and nothing picked) is stored as
+  // no config at all — it is the plain base product. Never store an empty
+  // option set as a distinct line.
+  if (config.optionIds.length === 0) config = null;
 }
 
 const check = checkQuantity(product, variantId ?? null, qty);

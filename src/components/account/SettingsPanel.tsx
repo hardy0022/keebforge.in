@@ -134,11 +134,7 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
       <section className="account-section">
         <header className="account-section-header">
           <div>
-            <span className="account-kicker">{"// Account Preferences"}</span>
             <h2 className="account-section-title">Preferences</h2>
-            <p className="account-section-desc">
-              How KeebForge keeps you in the loop
-            </p>
           </div>
         </header>
 
@@ -185,11 +181,7 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
       <section className="account-section">
         <header className="account-section-header">
           <div>
-            <span className="account-kicker">{"// Account Security"}</span>
             <h2 className="account-section-title">Security</h2>
-            <p className="account-section-desc">
-              Your password and connected sign-in methods
-            </p>
           </div>
         </header>
 

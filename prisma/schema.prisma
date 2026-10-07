@@ -91,6 +91,12 @@ enum ShippingStatus {
   RETURNED
 }
 
+/// How a customer selects options within a ProductOptionGroup.
+enum ProductOptionSelectionMode {
+  SINGLE
+  MULTIPLE
+}
+
 enum ProductType {
   KEYBOARD
   MOUSE
@@ -477,15 +483,19 @@ model ProductVariant {
 
 /// Generic configurable-product option groups (e.g. "Case Color", "Switch
 /// Choice"). Price = product base price + sum of selected options' addons.
+/// `selectionMode` decides radio (SINGLE: exactly one) vs checkbox (MULTIPLE:
+/// zero or more, or at least one when `required`) behaviour — it is a property
+/// of the group, never hardcoded to a product type or name.
 model ProductOptionGroup {
-  id        String   @id @default(cuid())
-  productId String
-  name      String
-  required  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String                     @id @default(cuid())
+  productId     String
+  name          String
+  selectionMode ProductOptionSelectionMode @default(SINGLE)
+  required      Boolean                    @default(true)
+  sortOrder     Int                        @default(0)
+  enabled       Boolean                    @default(true)
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
 
   product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   options ProductOption[]

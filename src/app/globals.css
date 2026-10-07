@@ -544,32 +544,40 @@ ul {
   top: var(--nav-h);
   left: 0;
   right: 0;
-  background: rgba(6, 6, 8, 0.96);
+  background: rgba(6, 6, 8, 0.98);
   backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--bdr);
-  padding: 10px var(--pad-x) 24px;
+  padding: 6px var(--pad-x) 16px;
   z-index: 499;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  box-shadow: 0 16px 40px -20px rgba(0, 0, 0, 0.6);
 }
 .mobile-menu > a {
-  font-size: 1rem;
+  font-size: 0.98rem;
   color: var(--t2);
-  padding: 12px 4px;
-  border-bottom: 1px solid var(--bdr);
+  padding: 10px 4px;
+  border-bottom: none;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  min-height: 44px;
+  justify-content: center;
+  align-items: center;
+  display: flex;
 }
 .mobile-menu > a:hover {
   color: var(--t1);
+  background: rgba(255, 255, 255, 0.02);
 }
 .mobile-menu > a.active {
-  box-shadow: inset 2px 0 0 var(--acc);
-  padding-left: 12px;
   color: var(--acc);
+  background: var(--acc-dim);
 }
 .mobile-menu-extra {
-  margin-top: 14px;
-  align-self: flex-start;
+  margin-top: 6px;
+  align-self: stretch;
+  width: 100%;
 }
 
 /* ─── Nav Profile Dropdown ─────────────────────────────────────────────────── */
@@ -666,7 +674,7 @@ ul {
   transition:
     color 0.15s,
     background-color 0.15s;
-  text-align: left;
+  text-align: center;
   text-decoration: none;
 }
 
@@ -782,12 +790,20 @@ ul {
   line-height: 1.35;
 }
 .mobile-menu-sub {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   color: var(--t3);
-  padding-left: 18px;
+  padding: 8px 4px 8px 24px;
+  min-height: 40px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1px 0;
 }
 .mobile-menu-sub:hover {
   color: var(--t1);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 /* ─── Buttons ──────────────────────────────────────────────────────────────── */
@@ -795,6 +811,8 @@ ul {
 .btn-prime {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 7px;
   font-family: var(--ff-display);
   font-size: 0.8rem;
@@ -823,6 +841,8 @@ ul {
 .btn-ghost {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   font-family: var(--ff-display);
   font-size: 0.8rem;
   font-weight: 600;
@@ -4849,7 +4869,7 @@ a.shop-pager-num:hover {
   align-items: center;
   gap: 12px;
   width: 100%;
-  text-align: left;
+  text-align: center;
   padding: 13px 15px;
   background: var(--bg1);
   border: 1px solid var(--bdr);
@@ -4881,12 +4901,33 @@ a.shop-pager-num:hover {
     background-color 0.18s;
 }
 
+/* MULTIPLE groups: square checkbox indicator (visually distinct from radio). */
+.option-card-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--bdr-h);
+  color: #000;
+  transition:
+    border-color 0.18s,
+    background-color 0.18s;
+}
+
 .option-card.selected {
   border-color: var(--acc);
   background: var(--acc-dim);
 }
 
 .option-card.selected .option-card-radio {
+  border-color: var(--acc);
+  background: var(--acc);
+}
+
+.option-card.selected .option-card-checkbox {
   border-color: var(--acc);
   background: var(--acc);
 }
@@ -5655,7 +5696,7 @@ a.shop-pager-num:hover {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--t3);
-  text-align: left;
+  text-align: center;
   padding: 8px 10px;
   border-bottom: 1px solid var(--bdr);
   white-space: nowrap;
@@ -6991,6 +7032,8 @@ a.shop-pager-num:hover {
   margin-top: 8px;
   padding: 14px 24px;
   font-size: 0.95rem;
+  justify-content: center;
+  text-align: center;
 }
 
 .auth-links {
@@ -7626,8 +7669,8 @@ a.shop-pager-num:hover {
 /* Compact editorial empty state — no oversized box, no 48px icon.
    Scoped under .account-empty--plain so these beat the base `.account-empty p`. */
 .account-empty--plain {
-  align-items: flex-start;
-  text-align: left;
+  align-items: center;
+  text-align: center;
   padding: 22px 0 4px;
   gap: 5px;
 }
@@ -7805,11 +7848,17 @@ a.shop-pager-num:hover {
 .btn-sm {
   padding: 8px 14px !important;
   font-size: 0.75rem !important;
+  justify-content: center;
+  text-align: center;
 }
 
 .btn-danger {
   color: var(--err);
   border-color: rgba(255, 107, 107, 0.4) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .btn-danger:hover {
@@ -8389,7 +8438,8 @@ a.shop-pager-num:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  text-align: left;
+  align-items: center;
+  text-align: center;
   background: var(--bg1);
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
@@ -10983,8 +11033,8 @@ a.reviews-page:hover {
   }
   .track-step {
     flex-direction: row;
-    align-items: flex-start;
-    text-align: left;
+    align-items: center;
+    text-align: center;
     gap: 14px;
     padding: 1px 0 8px;
   }
@@ -11253,6 +11303,25 @@ a.reviews-page:hover {
   font-size: 0.76rem;
   color: var(--t3);
   margin-top: 3px;
+}
+.os-line-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.os-line-options li {
+  font-size: 0.74rem;
+  color: var(--t2);
+}
+.os-line-option-group {
+  font-weight: 600;
+  color: var(--t1);
+}
+.os-line-option-addon {
+  color: var(--acc);
 }
 .os-line-total {
   font-family: var(--ff-display);
@@ -12724,47 +12793,71 @@ body:has(.kf-dev-notice) {
     max-height: calc(100dvh - var(--nav-h));
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding: 4px 10px 10px;
+    gap: 2px;
+    border-radius: 0 0 12px 12px;
   }
   .mobile-menu > a,
   .mobile-menu > button {
     display: flex;
     align-items: center;
     width: 100%;
-    padding: 12px 4px;
+    padding: 9px 6px;
     font-family: var(--ff-display);
-    font-size: 1rem;
+    font-size: 0.98rem;
     font-weight: 600;
     letter-spacing: normal;
     text-transform: none;
-    text-align: left;
+    justify-content: center;
+    text-align: center;
     color: var(--t2);
     background: none;
     border: 0;
-    border-bottom: 1px solid var(--bdr);
-    border-radius: 0;
+    border-radius: 10px;
+    min-height: 44px;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
   .mobile-menu > a:hover,
   .mobile-menu > button:hover {
     color: var(--t1);
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .mobile-menu > a.active,
+  .mobile-menu > button.active {
+    color: var(--acc);
+    background: var(--acc-dim);
   }
   /* Undo the inherited pill so the row reads as navigation, not a CTA. */
   .mobile-menu-extra {
-    margin-top: 0;
+    margin-top: 4px;
     align-self: stretch;
-    padding: 12px 4px;
+    padding: 9px 6px;
     gap: 0;
-    font-size: 1rem;
+    font-size: 0.98rem;
     font-weight: 600;
     color: var(--t2);
     background: none;
-    border-radius: 0;
+    border-radius: 10px;
     box-shadow: none;
+    min-height: 44px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: none;
+    -webkit-tap-highlight-color: transparent;
   }
   .mobile-menu-extra:hover {
     transform: none;
     box-shadow: none;
     color: var(--t1);
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .mobile-menu-sub {
+    font-size: 0.82rem;
+    padding: 7px 6px 7px 12px;
+    min-height: 40px;
+    border-radius: 8px;
+    justify-content: center;
   }
 }
 
