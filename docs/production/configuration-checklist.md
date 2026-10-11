@@ -54,6 +54,20 @@ Verified present in the Production scope on 2026-10-11 (presence check only, val
   (`"crons"`, `0 3 * * *`; Hobby allows once-per-day only). Verify: project cron list shows
   `/api/cron/reconcile-paid-notifications`. VERIFIED (registered, 2026-10-11).
 
+## On-demand cache revalidation (Preview/Production share one database)
+Preview and Production share one `DATABASE_URL`, but each deployment has its own Next.js data
+cache. An admin edit made on localhost/Preview cannot purge Production's cache with the in-process
+tag invalidation, so the cache helpers forward the changed tags to `POST /api/revalidate` on
+`REVALIDATE_PRODUCTION_URL`. The route accepts only allow-listed tags and absolute paths.
+- [ ] REVALIDATE_SECRET — Purpose: authenticates `POST /api/revalidate`
+  (`Authorization: Bearer $REVALIDATE_SECRET`). Config: the deployment environment (Production
+  included, so the route accepts the caller). The route fails closed (HTTP 500) when unset and
+  returns 401 on a bad/absent header. Verify: present; never commit or print the value. UNVERIFIED.
+- [ ] REVALIDATE_PRODUCTION_URL — Purpose: base URL the cache-invalidation helpers forward to
+  (e.g. `https://keebforge.in`). Config: localhost/Preview only. Leave unset in Production, which
+  skips the forward so it never calls back into itself. Verify: set locally, unset in Production.
+  UNVERIFIED.
+
 ## Outbound email safety (optional, server-only)
 All unset in production, which leaves every send going to its real recipient as before.
 - [ ] EMAIL_SEND_DISABLED — when truthy, every outbound email is suppressed. Verify: unset in prod.

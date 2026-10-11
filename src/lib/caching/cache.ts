@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { unstable_cache, updateTag } from "next/cache";
+import { notifyExternalRevalidation } from "@/lib/caching/external-revalidate";
 
 /**
  * Central caching config + data-cache wrapper for DB-backed public reads.
@@ -111,45 +112,52 @@ export function defineCached<A extends unknown[], R>(
  * can only run inside a Server Action — every call site here is one. (Plain
  * revalidateTag(tag) is deprecated in Next 16; revalidatePath continues to
  * handle the route cache, see src/app/admin/actions/*.)
+ *
+ * `purge` also forwards the tags to the deployment named by
+ * `REVALIDATE_PRODUCTION_URL` (best-effort, fire-and-forget), because Preview
+ * and Production share one database: without it an edit made on localhost would
+ * only invalidate the local cache and production would stay stale until its TTL.
  */
+function purge(tags: string[]) {
+  for (const tag of tags) updateTag(tag);
+  void notifyExternalRevalidation(tags);
+}
 
 /** A product row changed (edit, images, inventory, status, variant, import).
  *  unstable_cache tags are static per wrapper, so a single product edit
  *  revalidates the whole products slice (listings + detail + related + home)
  *  rather than one per-slug entry. */
 export function invalidateProducts() {
-  updateTag(TAG.products);
+  purge([TAG.products]);
 }
 
 /** A category changed — also invalidates product payloads that embed it. */
 export function invalidateCategories() {
-  updateTag(TAG.categories);
-  updateTag(TAG.products);
+  purge([TAG.categories, TAG.products]);
 }
 
 /** A brand changed (admin only; brand pickers re-render from this slice). */
 export function invalidateBrands() {
-  updateTag(TAG.brands);
+  purge([TAG.brands]);
 }
 
 /** Mods/services pricing or availability changed. */
 export function invalidateServices() {
-  updateTag(TAG.services);
+  purge([TAG.services]);
 }
 
 /** Portfolio project created/edited/published/deleted/reordered. */
 export function invalidateWork() {
-  updateTag(TAG.work);
+  purge([TAG.work]);
 }
 
 /** Review moderation or a customer editing/deleting their review changed
  *  public reviews AND the underlying product rating fields. */
 export function invalidateReviews() {
-  updateTag(TAG.reviews);
-  updateTag(TAG.products);
+  purge([TAG.reviews, TAG.products]);
 }
 
 /** A siteSetting (acceptingOrders, maintenance flag, pickup) changed. */
 export function invalidateSiteSettings() {
-  updateTag(TAG.siteSettings);
+  purge([TAG.siteSettings]);
 }
