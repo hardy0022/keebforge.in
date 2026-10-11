@@ -13,12 +13,36 @@ import {
   uploadBuffer,
 } from "@/lib/images/cloudinary";
 import {
-  IMAGE_TYPES_MESSAGE,
-  sniffImageType,
+  BOUNDED_IMAGE_TYPES_MESSAGE,
+  isNonEmptyFile,
+  sniffBoundedImageType,
 } from "@/lib/images/validation";
+import { MAX_IMAGE_DIM, readImageDimensions } from "@/lib/images/read-dimensions";
+import {
+  actionRateLimited,
+  RATE_LIMIT_ACTION_MESSAGE,
+} from "@/lib/rate-limit/action";
+import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
+import {
+  logSuppressedDelivery,
+  resolveOutboundRecipient,
+} from "@/lib/email/outbound";
+import { workTypesField } from "@/lib/validation/customer-input";
+import {
+  PREVIEW_OPERATION_DISABLED_MESSAGE,
+  previewOperationsAllowed,
+} from "@/lib/config/deployment";
+import {
+  MAX_ADDRESS_LINE,
+  MAX_EMAIL,
+  MAX_PHOTO_BYTES,
+  MAX_REPAIR_TOTAL_IMAGE_BYTES,
+} from "@/lib/utils/limits";
 
 const MAX_PHOTOS = 3;
-const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+
+/** Submissions are cheap to loop and guest-reachable. */
+const RATE_LIMIT = { limit: 5, windowMs: 60 * 60 * 1000 };
 
 export type RepairRequestState = {
   ok?: boolean;
@@ -31,10 +55,7 @@ const schema = z.object({
   deviceType: z.enum(["KEYBOARD", "MOUSE", "OTHER"]),
   brand: z.string().trim().min(1, "Please tell us the brand.").max(80),
   model: z.string().trim().min(2, "Please enter the model / PCB.").max(120),
-  workTypes: z
-    .array(z.string().trim().min(1).max(60))
-    .min(1, "Select at least one type of work.")
-    .max(12),
+  workTypes: workTypesField(),
   description: z
     .string()
     .trim()
@@ -54,11 +75,11 @@ const schema = z.object({
     .string()
     .trim()
     .email("Please enter a valid email address.")
-    .max(120),
+    .max(MAX_EMAIL),
   contactNotes: z.string().trim().max(200).optional().default(""),
   shippingMethod: z.enum(["SHIP", "PICKUP", "UNSURE"]),
   useAddressId: z.string().trim().max(40).optional().default(""),
-  street: z.string().trim().max(280).optional().default(""),
+  street: z.string().trim().max(MAX_ADDRESS_LINE).optional().default(""),
   city: z.string().trim().max(80).optional().default(""),
   state: z.string().trim().max(80).optional().default(""),
   postalCode: z.string().trim().max(10).optional().default(""),
@@ -78,6 +99,20 @@ export async function submitRepairRequest(
   _prev: RepairRequestState,
   formData: FormData,
 ): Promise<RepairRequestState> {
+  // Preview isolation: an optional photo is uploaded to the shared Cloudinary
+  // account BEFORE the Order row is created, so the database guard (which only
+  // fires when prisma is first used) is not guaranteed to run first — a guest
+  // submission with a manual/UNSURE shipping address reaches Cloudinary with no
+  // prior prisma call at all. Refuse the whole action up front so a blocked
+  // Preview request performs no upload, no provider call and no write.
+  if (!previewOperationsAllowed()) {
+    return { error: PREVIEW_OPERATION_DISABLED_MESSAGE };
+  }
+
+  if (await actionRateLimited("repair-request", RATE_LIMIT)) {
+    return { error: RATE_LIMIT_ACTION_MESSAGE };
+  }
+
   const parsed = schema.safeParse({
     serviceType: formData.get("serviceType"),
     deviceType: formData.get("deviceType"),
@@ -158,7 +193,7 @@ export async function submitRepairRequest(
   // Cloudinary folder after the row exists, mirrored in review.ts.
   const rawPhotos = formData
     .getAll("photos")
-    .filter((f): f is File => f instanceof File);
+    .filter(isNonEmptyFile);
   if (rawPhotos.length > MAX_PHOTOS)
     return { error: `You can attach at most ${MAX_PHOTOS} photos.` };
   if (rawPhotos.length > 0 && !cloudinaryConfigured()) {
@@ -173,15 +208,27 @@ export async function submitRepairRequest(
       buffer: Buffer.from(await f.arrayBuffer()),
     })),
   );
+  let totalBytes = 0;
   for (const img of photos) {
     if (img.buffer.length > MAX_PHOTO_BYTES)
       return {
         error: `Each photo must be under 3 MB — "${img.name}" is too large.`,
       };
-    if (!sniffImageType(img.buffer))
+    totalBytes += img.buffer.length;
+    if (totalBytes > MAX_REPAIR_TOTAL_IMAGE_BYTES)
       return {
-        error: `"${img.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}`,
+        error: "Total photo size must stay under 8 MB.",
       };
+    if (!sniffBoundedImageType(img.buffer))
+      return {
+        error: `"${img.name}" isn't a valid image. ${BOUNDED_IMAGE_TYPES_MESSAGE}`,
+      };
+    const dims = readImageDimensions(img.buffer);
+    if (dims && (dims.width > MAX_IMAGE_DIM || dims.height > MAX_IMAGE_DIM)) {
+      return {
+        error: `"${img.name}" is too large (images must be under ${MAX_IMAGE_DIM}px on each side).`,
+      };
+    }
   }
 
   // Upload into the per-order folder now so a Cloudinary hiccup is surfaced
@@ -304,6 +351,13 @@ export async function submitRepairRequest(
   }
 
   try {
+    // Test/suppression policy: redirect or skip. The request is already
+    // persisted, and suppression is intentional, so it still reports success.
+    const plan = resolveOutboundRecipient("contact@keebforge.in");
+    if (plan.action === "skip") {
+      logSuppressedDelivery(plan.reason);
+      return { ok: true, orderNumber };
+    }
     const resend = new Resend(process.env.RESEND_API_KEY);
     const rows: Array<[string, string]> = [
       ["Reference", orderNumber],
@@ -330,9 +384,9 @@ export async function submitRepairRequest(
         ? ["Photos", uploaded.map((u) => u.url).join("\n")]
         : ["Photos", "None"],
     ];
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>",
-      to: ["contact@keebforge.in"],
+      to: [plan.to],
       replyTo: d.email,
       subject: `[${orderNumber}] Custom Work & Repair Request — ${d.brand} ${d.model}`,
       html:
@@ -346,9 +400,18 @@ export async function submitRepairRequest(
           .join("") +
         `</table>`,
     });
+    if (error) {
+      // Resend surfaces API-level rejections in the response (it does not throw).
+      // The `{error}` can echo the payload (recipient addresses, request text), so
+      // only the sanitized diagnostic is logged.
+      console.error(
+        "Resend error (repair request):",
+        resendErrorDiagnostic(error),
+      );
+    }
   } catch (e) {
     // The order is already persisted — an email hiccup must not fail the request.
-    console.error("Resend error (repair request):", e);
+    console.error("Resend error (repair request):", resendErrorDiagnostic(e));
   }
 
   return { ok: true, orderNumber };

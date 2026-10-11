@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import Module from "node:module";
 import path from "node:path";
 import { APIError } from "better-auth";
 import { RESEND_FAILURE_MESSAGE, RESEND_SUCCESS_MESSAGE, VERIFICATION_RESEND_PATH, resendVerificationEmail } from "@/lib/auth/resend-verification";
-import { sendVerificationEmailMessage } from "@/lib/auth/send-verification-email";
 
 /**
  * The resend action on /auth/error exists because an unverified local account
@@ -26,10 +26,41 @@ const pass = (msg: string) => {
 
 const REPO = path.resolve(__dirname, "../../..");
 
+/**
+ * `send-verification-email.ts` now resolves its recipient through the
+ * server-only outbound policy (`@/lib/email/outbound`). `server-only` is
+ * supplied by Next.js and has no node resolution, so tsx cannot load the module
+ * unless we answer it with an empty object — which is what it resolves to on the
+ * server anyway. Same approach as payment-endpoints.test.ts.
+ */
+function installServerOnlyStub() {
+  const mod = Module as unknown as {
+    _load: (
+      this: unknown,
+      request: string,
+      parent: { filename?: string } | null,
+      main: boolean,
+    ) => unknown;
+    __rvStubbed?: boolean;
+  };
+  if (mod.__rvStubbed) return;
+  const orig = mod._load;
+  mod._load = function (request, parent, main) {
+    if (request === "server-only") return {};
+    return orig.call(this, request, parent, main);
+  };
+  mod.__rvStubbed = true;
+}
+installServerOnlyStub();
+
 /** Provider text that must never appear in anything user-facing. */
 const LEAKY = "Invalid API key: re_sentinel_do_not_leak. Contact support at api@resend.com";
 
 (async () => {
+  const { sendVerificationEmailMessage } = await import(
+    "@/lib/auth/send-verification-email"
+  );
+
   // ── G. success state ──────────────────────────────────────────────────────
   {
     const outcome = await resendVerificationEmail(

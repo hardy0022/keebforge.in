@@ -1,5 +1,10 @@
 import { APIError } from "better-auth";
 import { Resend } from "resend";
+import {
+  logSuppressedDelivery,
+  resolveOutboundRecipient,
+} from "@/lib/email/outbound";
+import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
 
 /**
  * Verification-email delivery for Better Auth's `emailVerification.
@@ -84,18 +89,30 @@ export async function sendVerificationEmailMessage(
     });
   };
 
+  // Test/suppression policy: an env override redirects this to a single test
+  // address and EMAIL_SEND_DISABLED suppresses it entirely. Neither is a
+  // delivery failure, so a suppressed send resolves quietly — the caller is
+  // not told anything different, and no real recipient is ever contacted.
+  const plan = resolveOutboundRecipient(args.user.email);
+  if (plan.action === "skip") {
+    logSuppressedDelivery(plan.reason);
+    return;
+  }
+
   let result: SendResult;
   try {
     result = await deliver({
-      to: args.user.email,
+      to: plan.to,
       subject: VERIFICATION_EMAIL_SUBJECT,
       html: verificationEmailHtml(args.user.name, args.url),
     });
   } catch (e) {
     // Transport/SDK failure. Log server-side only — the caller gets `rejected`.
+    // Only the sanitized diagnostic is logged; a provider message can echo the
+    // recipient address.
     console.error(
       "Resend error (email verification):",
-      e instanceof Error ? e.message : e,
+      resendErrorDiagnostic(e),
     );
     throw rejected();
   }
@@ -105,12 +122,15 @@ export async function sendVerificationEmailMessage(
     // Resend does NOT throw for these, so this is the common failure path.
     console.error(
       "Resend error (email verification):",
-      result.error.message ?? "rejected",
+      resendErrorDiagnostic(result.error),
     );
     throw rejected();
   }
 
+  // No recipient address is logged — success is recorded by id only.
   console.log(
-    `[auth] verification email sent to ${args.user.email} (id=${result.data?.id})`,
+    `[auth] verification email sent${
+      plan.redirected ? " (redirected to test recipient)" : ""
+    } (id=${result.data?.id})`,
   );
 }

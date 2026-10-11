@@ -1672,8 +1672,13 @@ const LOCAL_SCRATCH_URL = `postgresql://keebforge:keebforge@localhost:${SCRATCH_
     //
     // This count is a tripwire, not a style preference: it exists so that adding a
     // migration is a deliberate, reviewed act rather than a side effect. It was 41
-    // through the Phase 5B audit and is 42 since Phase 5B.1 added
-    // `20261002120001_refund_razorpay_payment_id` (Refund.razorpayPaymentId).
+    // through the Phase 5B audit, 42 when Phase 5B.1 added
+    // `20261002120001_refund_razorpay_payment_id` (Refund.razorpayPaymentId), and is
+    // 44 since `20261007000000_add_product_option_selection_mode`
+    // (ProductOptionSelectionMode on ProductOptionGroup) and
+    // `20261010120000_order_paid_notifications` (the OrderNotification outbox) were
+    // added. The two newest are recorded as pending in migration-history.md and their
+    // application to production is NOT verified by the production ledger.
     //
     // The expected set is spelled out rather than counted alone, because a bare
     // count cannot distinguish "the audited migration I reviewed" from "a migration
@@ -1723,6 +1728,8 @@ const LOCAL_SCRATCH_URL = `postgresql://keebforge:keebforge@localhost:${SCRATCH_
       "20260930120000_add_general_review_unique_index",
       "20261002120000_refund_accounting",
       "20261002120001_refund_razorpay_payment_id",
+      "20261007000000_add_product_option_selection_mode",
+      "20261010120000_order_paid_notifications",
     ];
     const migrations = readdirSync(migrationDir, { withFileTypes: true })
       .filter((e) => e.isDirectory())

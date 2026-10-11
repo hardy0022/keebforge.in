@@ -4,8 +4,10 @@
  * UI and the Delhivery quoting endpoint can never drift apart.
  */
 export const PACKAGE_LIMITS = {
-  /** Max side length in cm (~60 in courier norm). */
-  MAX_DIM_CM: 152,
+  /** Max side length in cm — consumer keyboard/mouse parcels never need more. */
+  MAX_DIM_CM: 100,
+  /** Max combined L+W+H in cm, bounding the volumetric abuse a single side cap cannot. */
+  MAX_COMBINED_CM: 250,
   /** Max packed weight in kg for consumer keyboard/mouse parcels. */
   MAX_WEIGHT_KG: 30,
 } as const;
@@ -16,17 +18,14 @@ export function isValidPackage(p: {
   heightCm: number;
   weightKg: number;
 }): boolean {
-  const { MAX_DIM_CM, MAX_WEIGHT_KG } = PACKAGE_LIMITS;
+  const { MAX_DIM_CM, MAX_COMBINED_CM, MAX_WEIGHT_KG } = PACKAGE_LIMITS;
+  const side = (v: number) =>
+    Number.isFinite(v) && v > 0 && v <= MAX_DIM_CM;
   return (
-    Number.isFinite(p.lengthCm) &&
-    p.lengthCm > 0 &&
-    p.lengthCm <= MAX_DIM_CM &&
-    Number.isFinite(p.widthCm) &&
-    p.widthCm > 0 &&
-    p.widthCm <= MAX_DIM_CM &&
-    Number.isFinite(p.heightCm) &&
-    p.heightCm > 0 &&
-    p.heightCm <= MAX_DIM_CM &&
+    side(p.lengthCm) &&
+    side(p.widthCm) &&
+    side(p.heightCm) &&
+    p.lengthCm + p.widthCm + p.heightCm <= MAX_COMBINED_CM &&
     Number.isFinite(p.weightKg) &&
     p.weightKg > 0 &&
     p.weightKg <= MAX_WEIGHT_KG

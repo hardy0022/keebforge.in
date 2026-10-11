@@ -107,6 +107,7 @@ export default function ProfilePage() {
                 id="firstName"
                 type="text"
                 required
+                maxLength={80}
                 autoComplete="given-name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -120,6 +121,7 @@ export default function ProfilePage() {
               <input
                 id="lastName"
                 type="text"
+                maxLength={80}
                 autoComplete="family-name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}

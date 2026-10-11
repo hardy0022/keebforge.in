@@ -11,6 +11,7 @@ import {
   settledAmount,
 } from "@/lib/payments/payment-status";
 import { netCollectedAmount } from "@/lib/payments/refund-accounting";
+import { shouldNotifyAfterManualPayment } from "@/lib/notifications/paid-confirmation";
 import { pickupSlotEndsAt } from "@/lib/shipping/pickup-slots";
 import {
   bookPickup,
@@ -298,6 +299,11 @@ export async function updateOrderAmounts(
 
   // `current` is passed through so a REFUNDED order stays REFUNDED: editing the
   // total is a pricing correction, not a reason to forget the money came back.
+  //
+  // Deliberately NO paid-confirmation here. Editing the total can recompute
+  // `paymentStatus` to PAID, but a price correction records no payment, so it
+  // must never send (or re-send) a "we received your payment" email. Only
+  // recordManualPayment and the online settlement paths notify.
   const paymentStatus = derivePaymentStatus(
     settledAmount(order.payments),
     total,
@@ -1015,6 +1021,20 @@ export async function recordManualPayment(
     return { error: "Couldn't record payment." };
   }
   revalidatePath(`/admin/orders/${order.orderNumber}`);
+
+  // Best-effort, AFTER the settlement tx committed: an admin-recorded payment
+  // that fully settles the order gets the same confirmation as an online one.
+  // Partial payments never notify (the shared gate returns false).
+  //
+  // The adapter is imported lazily so this module (and the action tests that
+  // stub its dependencies) never has to resolve the `server-only` email module
+  // unless a manual payment actually needs to notify.
+  if (shouldNotifyAfterManualPayment({ recordedAmount: payAmount, paymentStatus })) {
+    const { notifyPaidOrder } = await import(
+      "@/lib/notifications/send-paid-confirmation"
+    );
+    await notifyPaidOrder(orderId);
+  }
   return { ok: true };
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentAuth } from "@/lib/auth/session";
 import { syncTrackingCache } from "@/lib/orders/tracking";
@@ -7,12 +8,15 @@ import {
   settledAmount,
 } from "@/lib/payments/payment-status";
 import { settleOrderInTransaction } from "@/lib/payments/settle-order";
+import { notifyPaidOrder } from "@/lib/notifications/send-paid-confirmation";
 import { verifyRazorpayCheckoutSignature } from "@/lib/payments/razorpay-signature";
 import {
   checkRateLimit,
   clientIp,
   rateLimitResponse,
 } from "@/lib/payments/rate-limit";
+import { readJsonBody } from "@/lib/http/read-json-body";
+import { JSON_BODY_LIMIT_SMALL } from "@/lib/utils/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +35,14 @@ export const dynamic = "force-dynamic";
 const RATE_LIMIT_IP = { limit: 30, windowMs: 60_000 };
 const RATE_LIMIT_ORDER = { limit: 10, windowMs: 60_000 };
 
+/** Razorpay ids/signatures are short; bound them before they become DB keys. */
+const bodySchema = z.object({
+  razorpay_order_id: z.string().min(1).max(64),
+  razorpay_payment_id: z.string().min(1).max(64),
+  razorpay_signature: z.string().min(1).max(256),
+  orderId: z.string().min(1).max(64),
+});
+
 export async function POST(req: NextRequest) {
   try {
     // Before anything else, and keyed only on the caller, so a flood of
@@ -41,7 +53,14 @@ export async function POST(req: NextRequest) {
     );
     if (!ipLimit.allowed) return rateLimitResponse(ipLimit, "verify");
 
-    const body = await req.json();
+    const bodyRead = await readJsonBody(req, JSON_BODY_LIMIT_SMALL);
+    if (!bodyRead.ok) {
+      return NextResponse.json(
+        { error: "Missing payment verification data" },
+        { status: bodyRead.status },
+      );
+    }
+    const body = (bodyRead.data ?? {}) as Record<string, unknown>;
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -62,6 +81,13 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Missing payment verification data" },
+        { status: 400 },
+      );
+    }
+
+    if (!bodySchema.safeParse(body).success) {
+      return NextResponse.json(
+        { error: "Invalid payment verification data" },
         { status: 400 },
       );
     }
@@ -185,6 +211,11 @@ export async function POST(req: NextRequest) {
     // the same razorpayPaymentId (a concurrent PAID write makes us skip, never
     // throw on a duplicate payment row). REFUNDED is guarded for the same
     // reason — a replayed verify must not un-refund a settled refund.
+    //
+    // Set true only when THIS transaction lands the full-payment transition, so
+    // the confirmation is triggered after commit and never on a partial capture.
+    let paidNow = false;
+
     await prisma.$transaction(async (tx) => {
       const current = await tx.order.findUnique({
         where: { id: order.id },
@@ -315,6 +346,9 @@ export async function POST(req: NextRequest) {
         return;
       }
 
+      // This settlement is the one that made the order fully paid.
+      if (settled.paymentStatus === "PAID") paidNow = true;
+
       // Claim-by-email above still has to land. `profileId` is a foreign key and so
       // is absent from Prisma's `updateMany` input, which means it cannot ride the
       // conditional write — it stays its own statement, exactly as it was before
@@ -337,6 +371,12 @@ export async function POST(req: NextRequest) {
     });
 
     await syncTrackingCache(order.id);
+
+    if (paidNow) {
+      // After the transaction commits, on purpose: a confirmation failure must
+      // never be able to roll back a captured payment. Best-effort inside.
+      await notifyPaidOrder(order.id);
+    }
 
     return NextResponse.json({ success: true, orderNumber: order.orderNumber });
   } catch (error) {

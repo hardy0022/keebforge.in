@@ -176,6 +176,32 @@ enum MessageAuthor {
   ADMIN
 }
 
+/// What kind of customer notification an outbox row represents. Only one type
+/// exists today; the enum keeps the uniqueness key `(orderId, type)` meaningful
+/// when further transactional emails are added.
+enum NotificationType {
+  PAID_CONFIRMATION
+}
+
+/// Delivery lifecycle for one notification. The transitions are the point:
+///
+///   PENDING       — row exists, no send in flight. The only claimable state.
+///   IN_PROGRESS   — a send is currently in flight (or a prior attempt died
+///                   mid-flight). Never auto-claimed: at most one automatic
+///                   attempt, so a crash here needs manual reconciliation.
+///   SENT          — Resend confirmed acceptance (an email id was returned).
+///   FAILED        — Resend returned a definitive rejection (4xx / validation).
+///                   Confirmed not delivered, so an explicit retry is safe.
+///   NEEDS_REVIEW  — an ambiguous outcome (timeout/network/5xx): the message may
+///                   or may not have been accepted. Never auto-retried.
+enum NotificationStatus {
+  PENDING
+  IN_PROGRESS
+  SENT
+  FAILED
+  NEEDS_REVIEW
+}
+
 // ─── Authentication (Better Auth 1.7.1 — generated schema) ─────────────────
 
 model User {
@@ -657,6 +683,7 @@ model Order {
   tracking        Tracking?
   review          Review?
   couponUsage     CouponUsage?
+  notifications   OrderNotification[]
 
   @@index([profileId])
   @@index([status])
@@ -884,6 +911,44 @@ model Tracking {
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderNumber])
+}
+
+/// Durable, atomic outbox for transactional customer emails tied to an order.
+///
+/// The unique `(orderId, type)` key is the concurrency guard: `/api/payments/
+/// verify` and `/api/payments/webhook` can both observe the same full
+/// settlement, but only one can insert this row, and a second conditional claim
+/// on `status = PENDING` matches nothing once the first has moved it to
+/// IN_PROGRESS. That is what makes "at most one automatic send attempt" a
+/// database guarantee rather than an in-process assumption.
+///
+/// The row is deliberately kept outside the payment settlement transaction:
+/// money state and email state must be able to disagree without either blocking
+/// the other.
+model OrderNotification {
+  id                String             @id @default(cuid())
+  orderId           String
+  type              NotificationType   @default(PAID_CONFIRMATION)
+  status            NotificationStatus @default(PENDING)
+  /// Number of times an attempt has been claimed. Bounded by the claim rules,
+  /// not by a retry loop: only PENDING is claimable, so this stays at 1 unless
+  /// an operator explicitly re-queues a FAILED row.
+  attempts          Int                @default(0)
+  claimedAt         DateTime?
+  sentAt            DateTime?
+  /// Resend's email id, stored only after Resend confirms acceptance.
+  providerMessageId String?
+  /// Sanitized failure diagnostic (provider error code / status only — never a
+  /// message body, address, or payload).
+  lastError         String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, type])
+  @@index([status])
+  @@index([orderId])
 }
 
 // ─── Cart ────────────────────────────────────────────────────────────────────

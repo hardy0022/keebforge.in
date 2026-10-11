@@ -116,6 +116,9 @@ export function AddressBook() {
       if (res.ok) {
         closeModal();
         loadAddresses();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || "Failed to save address.");
       }
     } catch {
       // ignore
@@ -307,6 +310,7 @@ export function AddressBook() {
                     id="addr-first-name"
                     type="text"
                     required
+                    maxLength={80}
                     value={formData.firstName}
                     onChange={(e) =>
                       setFormData({ ...formData, firstName: e.target.value })
@@ -321,6 +325,7 @@ export function AddressBook() {
                     id="addr-last-name"
                     type="text"
                     required
+                    maxLength={80}
                     value={formData.lastName}
                     onChange={(e) =>
                       setFormData({ ...formData, lastName: e.target.value })
@@ -351,6 +356,7 @@ export function AddressBook() {
                   id="streetAddress"
                   type="text"
                   required
+                  maxLength={200}
                   value={formData.streetAddress}
                   onChange={(e) =>
                     setFormData({ ...formData, streetAddress: e.target.value })
@@ -364,6 +370,7 @@ export function AddressBook() {
                 <input
                   id="apartment"
                   type="text"
+                  maxLength={200}
                   value={formData.apartment}
                   onChange={(e) =>
                     setFormData({ ...formData, apartment: e.target.value })
@@ -379,6 +386,7 @@ export function AddressBook() {
                     id="city"
                     type="text"
                     required
+                    maxLength={100}
                     value={formData.city}
                     onChange={(e) =>
                       setFormData({ ...formData, city: e.target.value })

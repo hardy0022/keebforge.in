@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/better-auth";
 import { prisma } from "@/lib/db/prisma";
 import { headers } from "next/headers";
+import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
+
+/** Shares the address-mutation budget with PATCH/DELETE. */
+const RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 
 async function getCurrentProfile() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -22,6 +30,12 @@ export async function POST(
   if (!profile) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const limit = checkRateLimit(
+    `addresses:mutate:ip:${clientIp(req)}`,
+    RATE_LIMIT,
+  );
+  if (!limit.allowed) return rateLimitResponse(limit, "addresses");
 
   const { id } = await params;
 

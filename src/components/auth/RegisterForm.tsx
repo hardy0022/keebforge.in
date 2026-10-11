@@ -7,6 +7,10 @@ import { PasswordField } from "@/components/ui/PasswordField";
 import { EMAIL_INPUT, EMAIL_RE } from "@/lib/utils/email";
 import { usernameError } from "@/lib/utils/username";
 import { PASSWORD_RULES } from "@/lib/utils/password";
+import {
+  readRetryAfterSeconds,
+  registrationErrorMessage,
+} from "@/lib/auth/register-error";
 
 export function RegisterForm({ next }: { next?: string }) {
   const router = useRouter();
@@ -72,19 +76,27 @@ export function RegisterForm({ next }: { next?: string }) {
     setBusy(true);
     setError(null);
 
-    const res = await authClient.signUp.email({
-      name: username.trim(),
-      email,
-      password,
-      callbackURL: "/account",
-    });
+    // Capture the rate-limit interval from the raw response header; Better Auth
+    // surfaces it only as `x-retry-after`, which is not part of `res.error`.
+    let retryAfterSeconds: number | null = null;
+    const res = await authClient.signUp.email(
+      {
+        name: username.trim(),
+        email,
+        password,
+        callbackURL: "/account",
+      },
+      {
+        onError: (ctx) => {
+          retryAfterSeconds = readRetryAfterSeconds(
+            ctx.response.headers.get("x-retry-after"),
+          );
+        },
+      },
+    );
 
     if (res.error) {
-      setError(
-        res.error.status === 422 || res.error.status === 409
-          ? "An account with this email already exists. Try signing in instead."
-          : "Unable to create your account right now. Please try again.",
-      );
+      setError(registrationErrorMessage(res.error, retryAfterSeconds));
       setBusy(false);
       return;
     }

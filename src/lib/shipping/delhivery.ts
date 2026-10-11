@@ -4,6 +4,7 @@
  */
 
 import { createHash } from "crypto";
+import { PREVIEW_OPERATION_DISABLED_MESSAGE } from "@/lib/config/preview-guard";
 import { formatINR } from "@/lib/utils/money";
 
 const BASE_URL =
@@ -254,7 +255,8 @@ export type ShippingErrorCode =
   | "EMPTY_CART"
   | "INVALID_PINCODE"
   | "MISSING_SHIPPING_CONFIGURATION" // product(s) missing shipping weight in the catalog
-  | "NOT_CONFIGURED"; // missing DELHIVERY_API_TOKEN / DELHIVERY_ORIGIN_PINCODE
+  | "NOT_CONFIGURED" // missing DELHIVERY_API_TOKEN / DELHIVERY_ORIGIN_PINCODE
+  | "PREVIEW_DISABLED"; // refused by the Preview isolation guard (never in production)
 
 /** Customer-safe messages keyed by taxonomy code. */
 export const SHIPPING_ERROR_MESSAGES: Record<ShippingErrorCode, string> = {
@@ -268,6 +270,11 @@ export const SHIPPING_ERROR_MESSAGES: Record<ShippingErrorCode, string> = {
   MISSING_SHIPPING_CONFIGURATION:
     "Shipping information is unavailable for one or more products.",
   NOT_CONFIGURED: "Shipping is not configured.",
+  // Distinct from NOT_CONFIGURED, which means the server's Delhivery credentials
+  // are missing. This code is emitted only by the Preview isolation guard on the
+  // shipping routes; it can never occur in production. The message is the shared
+  // preview-disabled string so every Preview refusal reads the same way.
+  PREVIEW_DISABLED: PREVIEW_OPERATION_DISABLED_MESSAGE,
 };
 
 export type ShippingResult =

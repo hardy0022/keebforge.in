@@ -13,8 +13,18 @@ import {
   toShippingMode,
   enabledShippingModes,
 } from "@/lib/shipping/delhivery";
+import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
+import { readJsonBody } from "@/lib/http/read-json-body";
+import { previewOperationsAllowed } from "@/lib/config/deployment";
 
 export const dynamic = "force-dynamic";
+
+/** Per client, per minute — a quote is cheap but each hit can fan out to Delhivery. */
+const RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
 const METHOD_NAMES: Record<ShippingMode, string> = {
   surface: "Surface Shipping",
@@ -43,20 +53,30 @@ export async function POST(req: NextRequest) {
       { status },
     );
 
+  // Preview isolation (G1): each hit can fan out to live Delhivery rate cards
+  // using the shared production token. Refused before the rate limiter or any
+  // work. (The cart read below would also fail closed via the database guard,
+  // but an explicit, correctly-typed 503 is clearer than a generic 502.)
+  if (!previewOperationsAllowed()) {
+    return shippingError(503, "PREVIEW_DISABLED");
+  }
+
   try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return shippingError(400, "INVALID_PINCODE");
-    }
-    const { destinationPincode } = (body ?? {}) as Record<string, unknown>;
+    const limit = checkRateLimit(
+      `shipping:calculate:ip:${clientIp(req)}`,
+      RATE_LIMIT,
+    );
+    if (!limit.allowed) return rateLimitResponse(limit, "shipping");
+
+    const body = await readJsonBody(req, 8 * 1024);
+    if (!body.ok) return shippingError(body.status, "INVALID_PINCODE");
+    const { destinationPincode } = (body.data ?? {}) as Record<string, unknown>;
     if (!isValidPincode(destinationPincode))
       return shippingError(400, "INVALID_PINCODE");
 
     const modes = enabledShippingModes();
     // Legacy single-mode requests still work but the response is always an array.
-    const modeParam = toShippingMode((body as Record<string, unknown>).mode);
+    const modeParam = toShippingMode((body.data as Record<string, unknown>).mode);
     const quotedModes =
       modeParam && modes.includes(modeParam) ? [modeParam] : modes;
 

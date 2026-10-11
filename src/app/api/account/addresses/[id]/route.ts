@@ -1,10 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentAuth } from "@/lib/auth/session";
+import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
+import { readJsonBody } from "@/lib/http/read-json-body";
+import {
+  emailField,
+  optionalText,
+  pinCodeField,
+  requiredText,
+} from "@/lib/validation/customer-input";
+import { MAX_ADDRESS_LINE, MAX_LABEL, MAX_NAME } from "@/lib/utils/limits";
+import { PHONE_RE } from "@/lib/utils/phone";
+
+/**
+ * PATCH semantics (mirrors how the address form actually edits):
+ *  - every field is optional; absent means "keep the stored value";
+ *  - `""` for apartment / phone / email / label / country clears the optional
+ *    field, matching POST + the address book UI;
+ *  - `""` for a REQUIRED field (names, street, city, state, PIN) is rejected —
+ *    it must never silently blank a required field.
+ */
+const addressPatchSchema = z.object({
+  label: optionalText(MAX_LABEL),
+  firstName: requiredText("First name", MAX_NAME).optional(),
+  lastName: requiredText("Last name", MAX_NAME).optional(),
+  email: emailField().optional(),
+  streetAddress: requiredText("Address", MAX_ADDRESS_LINE).optional(),
+  apartment: optionalText(MAX_ADDRESS_LINE),
+  city: requiredText("City", 100).optional(),
+  state: requiredText("State", 100).optional(),
+  postalCode: pinCodeField().optional(),
+  country: optionalText(100),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || PHONE_RE.test(v), "Phone number must be exactly 10 digits.")
+    .optional(),
+  isDefault: z.boolean().optional(),
+});
+
+/** Per client, per minute — address writes are cheap to loop. */
+const RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 
 async function getCurrentProfile() {
-  // getCurrentAuth (not a raw findUnique): it creates the Profile on first
-  // access post-sign-up and handles seeded-profile claim-by-email.
   const { profile } = await getCurrentAuth();
   return profile;
 }
@@ -49,74 +92,56 @@ export async function PATCH(
     return NextResponse.json({ error: "Address not found" }, { status: 404 });
   }
 
-  try {
-    const body = await req.json();
-    const {
-      label,
-      firstName,
-      lastName,
-      email,
-      streetAddress,
-      apartment,
-      city,
-      state,
-      postalCode,
-      country,
-      phone,
-      isDefault,
-    } = body;
-    const name = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
+  const limit = checkRateLimit(`addresses:mutate:ip:${clientIp(req)}`, RATE_LIMIT);
+  if (!limit.allowed) return rateLimitResponse(limit, "addresses");
 
-    if (phone != null && phone !== "" && !/^\d{10}$/.test(phone)) {
-      return NextResponse.json(
-        { error: "Phone number must be exactly 10 digits." },
-        { status: 400 },
-      );
-    }
-    if (
-      email != null &&
-      email !== "" &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
-      return NextResponse.json(
-        { error: "Enter a valid email address." },
-        { status: 400 },
-      );
-    }
+  const body = await readJsonBody(req, 32 * 1024);
+  if (!body.ok) {
+    return NextResponse.json({ error: body.error }, { status: body.status });
+  }
 
-    if (isDefault && !existing.isDefault) {
-      await prisma.address.updateMany({
-        where: { profileId: profile.id, isDefault: true },
-        data: { isDefault: false },
-      });
-    }
-
-    const address = await prisma.address.update({
-      where: { id },
-      data: {
-        label: label ?? existing.label,
-        name: name ?? existing.name,
-        email: email ?? existing.email,
-        streetAddress: streetAddress ?? existing.streetAddress,
-        // Was never destructured here, so every edit silently dropped the
-        // apartment line. Empty string clears it, matching POST + phone.
-        apartment: apartment === "" ? null : (apartment ?? existing.apartment),
-        city: city ?? existing.city,
-        state: state ?? existing.state,
-        postalCode: postalCode ?? existing.postalCode,
-        country: country ?? existing.country,
-        phone: phone === "" ? null : (phone ?? existing.phone),
-        isDefault: isDefault ?? existing.isDefault,
-      },
-    });
-
-    return NextResponse.json(address);
-  } catch {
+  const parsed = addressPatchSchema.safeParse(body.data ?? {});
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Failed to update address" },
-      { status: 500 },
+      { error: parsed.error.issues[0]?.message ?? "Invalid address." },
+      { status: 400 },
     );
   }
+
+  const a = parsed.data;
+  const nameParts = [a.firstName, a.lastName]
+    .filter((v): v is string => v !== undefined && v !== "")
+    .join(" ")
+    .trim();
+
+  if (a.isDefault && !existing.isDefault) {
+    await prisma.address.updateMany({
+      where: { profileId: profile.id, isDefault: true },
+      data: { isDefault: false },
+    });
+  }
+
+  const address = await prisma.address.update({
+    where: { id },
+    data: {
+      label: a.label === undefined || a.label === "" ? existing.label : a.label,
+      name: nameParts || existing.name,
+      email: a.email === "" ? null : (a.email ?? existing.email),
+      streetAddress: a.streetAddress ?? existing.streetAddress,
+      apartment: a.apartment === "" ? null : (a.apartment ?? existing.apartment),
+      city: a.city ?? existing.city,
+      state: a.state ?? existing.state,
+      postalCode: a.postalCode ?? existing.postalCode,
+      country:
+        a.country === undefined || a.country === ""
+          ? existing.country
+          : a.country,
+      phone: a.phone === undefined ? existing.phone : (a.phone === "" ? null : a.phone),
+      isDefault: a.isDefault ?? existing.isDefault,
+    },
+  });
+
+  return NextResponse.json(address);
 }
 
 export async function DELETE(
@@ -137,6 +162,9 @@ export async function DELETE(
   if (!existing) {
     return NextResponse.json({ error: "Address not found" }, { status: 404 });
   }
+
+  const limit = checkRateLimit(`addresses:mutate:ip:${clientIp(req)}`, RATE_LIMIT);
+  if (!limit.allowed) return rateLimitResponse(limit, "addresses");
 
   try {
     await prisma.address.delete({ where: { id } });

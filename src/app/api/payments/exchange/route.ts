@@ -10,8 +10,18 @@ import {
 } from "@/lib/payments/order-capability";
 import { claimExchangeRedemption } from "@/lib/payments/billing-details";
 import { payCookieOptions } from "@/lib/payments/order-access";
+import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
+import { readJsonBody } from "@/lib/http/read-json-body";
+import { JSON_BODY_LIMIT_SMALL } from "@/lib/utils/limits";
 
 export const dynamic = "force-dynamic";
+
+/** Per client, per 10 min — brute-forcing the 43-char code space is the target. */
+const RATE_LIMIT = { limit: 10, windowMs: 10 * 60 * 1000 };
 
 /**
  * Redeems a short-lived exchange code (from the confirmation-email link) for the
@@ -35,9 +45,24 @@ export async function POST(req: NextRequest) {
     { status: 404 },
   );
 
-  const body = await req.json().catch(() => null);
-  const orderNumber = normalizeOrderNumber(body?.orderNumber);
-  const code = readCapabilityParam(body?.code);
+  const limit = checkRateLimit(`exchange:ip:${clientIp(req)}`, RATE_LIMIT);
+  if (!limit.allowed) return rateLimitResponse(limit, "exchange");
+
+  const bodyRead = await readJsonBody(req, JSON_BODY_LIMIT_SMALL);
+  // Oversized bodies get the honest 413; everything else keeps the uniform 404
+  // so the response never reveals whether an order or code exists.
+  if (!bodyRead.ok) {
+    if (bodyRead.status === 413) {
+      return NextResponse.json(
+        { error: "Request body too large." },
+        { status: 413 },
+      );
+    }
+    return invalid;
+  }
+  const body = (bodyRead.data ?? {}) as Record<string, unknown>;
+  const orderNumber = normalizeOrderNumber(body.orderNumber);
+  const code = readCapabilityParam(body.code);
   if (!orderNumber || !code) return invalid;
 
   try {

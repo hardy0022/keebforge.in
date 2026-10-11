@@ -35,6 +35,19 @@ import {
   createOrderCapability,
 } from "@/lib/payments/order-capability";
 import { payCookieOptions } from "@/lib/payments/order-access";
+import { readJsonBody } from "@/lib/http/read-json-body";
+import {
+  PREVIEW_OPERATION_DISABLED_MESSAGE,
+  previewOperationsAllowed,
+} from "@/lib/config/deployment";
+import {
+  MAX_ADDRESS_BOOK,
+  MAX_ADDRESS_LINE,
+  MAX_EMAIL,
+  MAX_LANDMARK,
+  MODS_QUANTITY_LIMITS,
+  ORDER_JSON_LIMIT,
+} from "@/lib/utils/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +64,8 @@ const bodySchema = z.object({
   model: z.string().trim().min(1, "Model is required").max(120),
   layout: z.string().trim().max(40).nullish(),
   switchModel: z.string().trim().max(160).nullish(),
-  switchQuantity: z.number().int().min(1).max(999),
-  stabilizerQuantity: z.number().int().min(0).max(999),
+  switchQuantity: z.number().int().min(1),
+  stabilizerQuantity: z.number().int().min(0),
   keycapsIncluded: z.boolean(),
   serviceIds: z
     .array(z.string().min(1))
@@ -66,7 +79,7 @@ const bodySchema = z.object({
       .trim()
       .toLowerCase()
       .email("Enter a valid email")
-      .max(200),
+      .max(MAX_EMAIL),
     phone: z.string().trim().min(5, "Enter a valid phone number").max(20),
   }),
   // Mods Shipping/Packaging block from the configurator. Amounts here are
@@ -89,18 +102,43 @@ const bodySchema = z.object({
       }),
     })
     .optional(),
-  contactNote: z.string().trim().max(280).optional(),
+  contactNote: z.string().trim().max(MAX_LANDMARK).optional(),
   couponCode: z.string().trim().max(40).optional(),
   saveAddress: z.boolean().optional(),
   shippingAddress: z.object({
-    streetAddress: z.string().trim().min(1, "Address is required").max(280),
-    addressLine2: z.string().trim().max(280).optional(),
+    streetAddress: z
+      .string()
+      .trim()
+      .min(1, "Address is required")
+      .max(MAX_ADDRESS_LINE),
+    addressLine2: z.string().trim().max(MAX_ADDRESS_LINE).optional(),
     city: z.string().trim().min(1, "City is required").max(80),
     state: z.string().trim().min(1, "State is required").max(80),
     postalCode: z.string().regex(/^\d{6}$/, "Enter a valid 6-digit PIN code"),
     country: z.string().trim().max(80).optional(),
   }),
-});
+})
+  // Mods quantities are bounded by what a real build can take, per device.
+  .superRefine((v, ctx) => {
+    const switchMax =
+      v.deviceType === "MOUSE"
+        ? MODS_QUANTITY_LIMITS.MOUSE_SWITCH
+        : MODS_QUANTITY_LIMITS.SWITCH;
+    if (v.switchQuantity > switchMax) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["switchQuantity"],
+        message: `Switch quantity is too high for a ${v.deviceType.toLowerCase()} (max ${switchMax}).`,
+      });
+    }
+    if (v.stabilizerQuantity > MODS_QUANTITY_LIMITS.STABILIZER) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["stabilizerQuantity"],
+        message: `Stabilizer quantity must be ${MODS_QUANTITY_LIMITS.STABILIZER} or fewer.`,
+      });
+    }
+  });
 
 function getRazorpay() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -117,6 +155,14 @@ function getRazorpay() {
  * the shared pricing module — client-supplied amounts are never trusted.
  */
 export async function POST(req: NextRequest) {
+  // Defense in depth: like the product checkout, this mints a Razorpay order
+  // and writes an Order row, so it is refused in Preview before any work.
+  if (!previewOperationsAllowed()) {
+    return NextResponse.json(
+      { error: PREVIEW_OPERATION_DISABLED_MESSAGE },
+      { status: 503 },
+    );
+  }
   try {
     // First thing in the handler, before any parsing or database work.
     const limit = checkRateLimit(
@@ -125,8 +171,14 @@ export async function POST(req: NextRequest) {
     );
     if (!limit.allowed) return rateLimitResponse(limit, "services-create-order");
 
-    const json = await req.json().catch(() => null);
-    const parsed = bodySchema.safeParse(json);
+    const body = await readJsonBody(req, ORDER_JSON_LIMIT);
+    if (!body.ok) {
+      return NextResponse.json(
+        { error: "Invalid order data" },
+        { status: body.status },
+      );
+    }
+    const parsed = bodySchema.safeParse(body.data);
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? "Invalid order data" },
@@ -202,7 +254,7 @@ export async function POST(req: NextRequest) {
       ) {
         return NextResponse.json(
           {
-            error: `Enter packed dimensions up to ${PACKAGE_LIMITS.MAX_DIM_CM} cm per side and weight up to ${PACKAGE_LIMITS.MAX_WEIGHT_KG} kg.`,
+            error: `Enter packed dimensions up to ${PACKAGE_LIMITS.MAX_DIM_CM} cm per side (${PACKAGE_LIMITS.MAX_COMBINED_CM} cm total) and weight up to ${PACKAGE_LIMITS.MAX_WEIGHT_KG} kg.`,
           },
           { status: 422 },
         );
@@ -296,20 +348,23 @@ export async function POST(req: NextRequest) {
       const existingCount = await prisma.address.count({
         where: { profileId: profile.id },
       });
-      await prisma.address.create({
-        data: {
-          profileId: profile.id,
-          label: "Home",
-          streetAddress: cfg.shippingAddress.streetAddress,
-          apartment: cfg.shippingAddress.addressLine2 || null,
-          city: cfg.shippingAddress.city,
-          state: cfg.shippingAddress.state,
-          postalCode: cfg.shippingAddress.postalCode,
-          country: cfg.shippingAddress.country || "India",
-          phone: cfg.customer.phone,
-          isDefault: existingCount === 0,
-        },
-      });
+      // Cap mirrors /api/account/addresses — never silently exceed the book.
+      if (existingCount < MAX_ADDRESS_BOOK) {
+        await prisma.address.create({
+          data: {
+            profileId: profile.id,
+            label: "Home",
+            streetAddress: cfg.shippingAddress.streetAddress,
+            apartment: cfg.shippingAddress.addressLine2 || null,
+            city: cfg.shippingAddress.city,
+            state: cfg.shippingAddress.state,
+            postalCode: cfg.shippingAddress.postalCode,
+            country: cfg.shippingAddress.country || "India",
+            phone: cfg.customer.phone,
+            isDefault: existingCount === 0,
+          },
+        });
+      }
     }
 
     // ── Coupon: validated server-side against the authoritative subtotal ────

@@ -9,21 +9,35 @@ import {
   mediaFolder,
   uploadBuffer,
 } from "@/lib/images/cloudinary";
-import { IMAGE_TYPES_MESSAGE, sniffImageType } from "@/lib/images/validation";
+import {
+  BOUNDED_IMAGE_TYPES_MESSAGE,
+  isNonEmptyFile,
+  sniffBoundedImageType,
+} from "@/lib/images/validation";
 import {
   MAX_REVIEW_IMAGES,
   recalcProductRating,
   verifiedProfileIds,
 } from "@/lib/reviews";
 import { invalidateReviews } from "@/lib/caching/cache";
-
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+import { MAX_IMAGE_DIM, readImageDimensions } from "@/lib/images/read-dimensions";
+import {
+  actionRateLimited,
+  RATE_LIMIT_ACTION_MESSAGE,
+} from "@/lib/rate-limit/action";
+import {
+  MAX_IMAGE_BYTES,
+  MAX_REVIEW_TOTAL_IMAGE_BYTES,
+} from "@/lib/utils/limits";
 
 export type ReviewSubmitState = {
   ok?: boolean;
   redirectTo?: string;
   error?: string;
 };
+
+/** One successful write a browsing reviewer is likely to make. */
+const RATE_LIMIT = { limit: 5, windowMs: 60 * 60 * 1000 };
 
 /** Server-only validation + persist for a customer product review (create or edit). */
 export async function submitReview(
@@ -32,6 +46,11 @@ export async function submitReview(
 ): Promise<ReviewSubmitState> {
   const { user, profile } = await getCurrentAuth();
   if (!user || !profile) return { error: "Please sign in to write a review." };
+
+  // Per profile, not per IP — shared connections must not cap a reviewer.
+  if (await actionRateLimited("review", RATE_LIMIT, `profile:${profile.id}`)) {
+    return { error: RATE_LIMIT_ACTION_MESSAGE };
+  }
 
   const slug = String(formData.get("slug") ?? "").trim();
   // The caller states its intent explicitly. Never infer it from what happens
@@ -121,9 +140,7 @@ export async function submitReview(
     return { error: "Requested photo removal could not be resolved." };
   }
 
-  const rawImages = formData
-    .getAll("images")
-    .filter((f): f is File => f instanceof File);
+  const rawImages = formData.getAll("images").filter(isNonEmptyFile);
   if (rawImages.length + kept.length > MAX_REVIEW_IMAGES) {
     return { error: `You can attach at most ${MAX_REVIEW_IMAGES} photos.` };
   }
@@ -141,15 +158,27 @@ export async function submitReview(
       buffer: Buffer.from(await f.arrayBuffer()),
     })),
   );
+  let totalBytes = 0;
   for (const img of images) {
     if (img.buffer.length > MAX_IMAGE_BYTES)
       return {
         error: `Each photo must be under 5 MB — "${img.name}" is too large.`,
       };
-    if (!sniffImageType(img.buffer))
+    totalBytes += img.buffer.length;
+    if (totalBytes > MAX_REVIEW_TOTAL_IMAGE_BYTES)
       return {
-        error: `"${img.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}`,
+        error: "Total photo size must stay under 16 MB.",
       };
+    if (!sniffBoundedImageType(img.buffer))
+      return {
+        error: `"${img.name}" isn't a valid image. ${BOUNDED_IMAGE_TYPES_MESSAGE}`,
+      };
+    const dims = readImageDimensions(img.buffer);
+    if (dims && (dims.width > MAX_IMAGE_DIM || dims.height > MAX_IMAGE_DIM)) {
+      return {
+        error: `"${img.name}" is too large (images must be under ${MAX_IMAGE_DIM}px on each side).`,
+      };
+    }
   }
 
   const verified = product
@@ -158,6 +187,12 @@ export async function submitReview(
   const reviewId = target?.id ?? `review-${crypto.randomUUID()}`;
 
   // Upload new photos once the row exists so they land in the review's own folder.
+  //
+  // No explicit preview guard is needed before the upload the way
+  // repair-request.ts has one: submitReview has already read the database on
+  // every path by now (getCurrentAuth, then prisma.product/review/media above),
+  // so in Preview the database guard throws before reaching Cloudinary. Keep the
+  // prisma reads above this upload — reordering them would reopen that gap.
   const uploaded: {
     url: string;
     publicId: string;

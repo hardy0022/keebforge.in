@@ -3,7 +3,32 @@
 import { Resend } from "resend";
 import { z } from "zod";
 import { cloudinaryConfigured, uploadBuffer } from "@/lib/images/cloudinary";
-import { IMAGE_TYPES_MESSAGE, sniffImageType } from "@/lib/images/validation";
+import {
+  BOUNDED_IMAGE_TYPES_MESSAGE,
+  isNonEmptyFile,
+  sniffBoundedImageType,
+} from "@/lib/images/validation";
+import { MAX_IMAGE_DIM, readImageDimensions } from "@/lib/images/read-dimensions";
+import {
+  actionRateLimited,
+  RATE_LIMIT_ACTION_MESSAGE,
+} from "@/lib/rate-limit/action";
+import {
+  MAX_DEVICE_MODEL,
+  MAX_EMAIL,
+  MAX_IMAGE_BYTES,
+  MAX_INQUIRY_TOTAL_IMAGE_BYTES,
+} from "@/lib/utils/limits";
+import {
+  logSuppressedDelivery,
+  resolveOutboundRecipient,
+} from "@/lib/email/outbound";
+import { contactInquiryEmail, readTemplateIds } from "@/lib/email/templates";
+import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
+import {
+  PREVIEW_OPERATION_DISABLED_MESSAGE,
+  previewOperationsAllowed,
+} from "@/lib/config/deployment";
 
 const inquirySchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(80),
@@ -17,8 +42,8 @@ const inquirySchema = z.object({
     .string()
     .trim()
     .email("Please enter a valid email address.")
-    .max(120),
-  deviceModel: z.string().trim().max(120).default(""),
+    .max(MAX_EMAIL),
+  deviceModel: z.string().trim().max(MAX_DEVICE_MODEL).default(""),
   issue: z
     .string()
     .trim()
@@ -27,7 +52,9 @@ const inquirySchema = z.object({
 });
 
 const MAX_IMAGES = 5;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/** Per account-less submission, per hour — the form is guest-reachable. */
+const RATE_LIMIT = { limit: 5, windowMs: 60 * 60 * 1000 };
 
 export type InquiryState = { ok?: boolean; error?: string };
 
@@ -35,6 +62,18 @@ export async function sendInquiry(
   _prev: InquiryState,
   formData: FormData,
 ): Promise<InquiryState> {
+  // Preview isolation (G1): this guest-reachable action writes to the shared
+  // Cloudinary account and sends mail through the shared Resend account. It has
+  // no database access, so the database guard cannot cover it — refuse the whole
+  // action in Preview before any rate limit or work.
+  if (!previewOperationsAllowed()) {
+    return { error: PREVIEW_OPERATION_DISABLED_MESSAGE };
+  }
+
+  if (await actionRateLimited("inquiry", RATE_LIMIT)) {
+    return { error: RATE_LIMIT_ACTION_MESSAGE };
+  }
+
   const parsed = inquirySchema.safeParse({
     name: formData.get("name"),
     phone: formData.get("phone"),
@@ -53,9 +92,7 @@ export async function sendInquiry(
 
   const { name, phone, email, deviceModel, issue } = parsed.data;
 
-  const rawImages = formData
-    .getAll("images")
-    .filter((f): f is File => f instanceof File);
+  const rawImages = formData.getAll("images").filter(isNonEmptyFile);
   if (rawImages.length > MAX_IMAGES) {
     return { error: `You can attach at most ${MAX_IMAGES} photos.` };
   }
@@ -68,15 +105,27 @@ export async function sendInquiry(
       buffer: Buffer.from(await f.arrayBuffer()),
     })),
   );
+  let totalBytes = 0;
   for (const img of images) {
     if (img.buffer.length > MAX_IMAGE_BYTES)
       return {
         error: `Each photo must be under 5 MB — "${img.name}" is too large.`,
       };
-    if (!sniffImageType(img.buffer))
+    totalBytes += img.buffer.length;
+    if (totalBytes > MAX_INQUIRY_TOTAL_IMAGE_BYTES)
       return {
-        error: `"${img.name}" isn't a valid image. ${IMAGE_TYPES_MESSAGE}`,
+        error: "Total photo size must stay under 20 MB.",
       };
+    if (!sniffBoundedImageType(img.buffer))
+      return {
+        error: `"${img.name}" isn't a valid image. ${BOUNDED_IMAGE_TYPES_MESSAGE}`,
+      };
+    const dims = readImageDimensions(img.buffer);
+    if (dims && (dims.width > MAX_IMAGE_DIM || dims.height > MAX_IMAGE_DIM)) {
+      return {
+        error: `"${img.name}" is too large (images must be under ${MAX_IMAGE_DIM}px on each side).`,
+      };
+    }
   }
 
   const uploaded: { url: string; publicId: string }[] = [];
@@ -104,41 +153,57 @@ export async function sendInquiry(
   }
 
   try {
+    // Test/suppression policy: redirect or skip. Suppression is intentional, so
+    // the inquiry still reports success rather than a misleading send failure.
+    const plan = resolveOutboundRecipient("contact@keebforge.in");
+    if (plan.action === "skip") {
+      logSuppressedDelivery(plan.reason);
+      return { ok: true };
+    }
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>",
-      to: ["contact@keebforge.in"],
-      replyTo: email,
-      subject: `Repair Inquiry — ${deviceModel || "Device"} — ${name}`,
-      html: `
-        <h2>Repair Inquiry — KeebForge.in</h2>
-        <table cellpadding="6" style="font-family:sans-serif;font-size:14px;color:#1a1a1a">
-          <tr><td><strong>Name</strong></td><td>${esc(name)}</td></tr>
-          <tr><td><strong>Phone</strong></td><td>${esc(phone)}</td></tr>
-          <tr><td><strong>Email</strong></td><td>${esc(email)}</td></tr>
-          <tr><td><strong>Device / Model</strong></td><td>${esc(deviceModel)}</td></tr>
-          <tr><td><strong>Issue</strong></td><td>${esc(issue)}</td></tr>
-        </table>
-        ${
-          uploaded.length > 0
-            ? `<h3>Photos (${uploaded.length})</h3>` +
-              uploaded
-                .map((u) => `<p><a href="${esc(u.url)}">${esc(u.url)}</a></p>`)
-                .join("")
-            : ""
-        }
-        <p style="color:#888">Reply to this inquiry by clicking Reply — it goes straight back to the customer.</p>
-      `,
-    });
+    // The admin recipient (the shared contact inbox), the reply-to behaviour and
+    // the escaping all stay here; a configured template only renders the body.
+    const mail = contactInquiryEmail(
+      {
+        name,
+        phone,
+        email: email,
+        deviceModel,
+        issue,
+        photoUrls: uploaded.map((u) => u.url),
+      },
+      readTemplateIds().contactInquiry,
+    );
+    const from = process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>";
+    const { error } = mail.template
+      ? await resend.emails.send({
+          from,
+          to: [plan.to],
+          replyTo: email,
+          subject: mail.subject,
+          template: mail.template,
+        })
+      : await resend.emails.send({
+          from,
+          to: [plan.to],
+          replyTo: email,
+          subject: mail.subject,
+          html: mail.html,
+        });
     if (error) {
-      console.error("Resend send error:", error);
+      // The `{ error }` payload can echo the message (recipient, inquiry text),
+      // so only the sanitized diagnostic is logged.
+      console.error(
+        "Resend error (inquiry):",
+        resendErrorDiagnostic(error),
+      );
       return {
         error:
           "The inquiry could not be sent right now. Please email contact@keebforge.in directly.",
       };
     }
   } catch (e) {
-    console.error("Resend error:", e);
+    console.error("Resend error (inquiry):", resendErrorDiagnostic(e));
     return {
       error:
         "The inquiry could not be sent right now. Please email contact@keebforge.in directly.",
@@ -146,14 +211,4 @@ export async function sendInquiry(
   }
 
   return { ok: true };
-}
-
-function esc(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ]!,
-  );
 }

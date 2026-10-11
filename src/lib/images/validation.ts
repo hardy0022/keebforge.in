@@ -10,6 +10,18 @@ export const IMAGE_ACCEPT = [
   "image/avif",
 ] as const;
 
+/**
+ * Customer image uploads — JPG/PNG/WebP only, matching the server's
+ * dimension-bounded allow-list. AVIF is excluded because we cannot yet parse
+ * its dimensions, so a byte cap alone cannot bound how much it decodes. Admin
+ * catalog uploads keep the broader `IMAGE_ACCEPT`.
+ */
+export const CUSTOMER_IMAGE_ACCEPT = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
 const ALLOWED_MIME = new Set<string>(IMAGE_ACCEPT);
 
 /** Magic-byte sniff — never trust the browser-reported MIME type alone. */
@@ -50,9 +62,49 @@ export async function sniffImageFile(file: File): Promise<boolean> {
   return sniffImageType(head) !== null;
 }
 
+/**
+ * Client-side guard for customer uploads: same byte sniff, but rejects AVIF so
+ * the picker cannot accept a file the server will refuse.
+ */
+export async function sniffBoundedImageFile(file: File): Promise<boolean> {
+  const head = new Uint8Array(
+    await new Response(file.slice(0, 16)).arrayBuffer(),
+  );
+  return sniffBoundedImageType(head) !== null;
+}
+
 export function isAllowedImageMime(mime: string): boolean {
   return ALLOWED_MIME.has(mime);
 }
 
+/**
+ * Customer-upload sniff that only returns formats whose pixel dimensions we can
+ * bound (`readImageDimensions`). AVIF has no parser yet, so a byte cap alone
+ * cannot bound how much a single AVIF decodes — reject it here until one exists.
+ * Admin catalog uploads keep the broader `sniffImageType`.
+ */
+export function sniffBoundedImageType(
+  buf: Uint8Array,
+): "jpeg" | "png" | "webp" | null {
+  const type = sniffImageType(buf);
+  return type === "avif" ? null : type;
+}
+
+/**
+ * A submitted form part is a real upload only when it is a File carrying bytes.
+ * An empty file input (and iOS gallery "blob" placeholders sent when no photo
+ * was chosen) arrives as a 0-byte File, which must be ignored rather than
+ * rejected — the field is optional.
+ */
+export function isNonEmptyFile(value: unknown): value is File {
+  return (
+    typeof File !== "undefined" && value instanceof File && value.size > 0
+  );
+}
+
 export const IMAGE_TYPES_MESSAGE =
   "Only JPG, PNG, WebP and AVIF images are supported.";
+
+/** Customer uploads bound dimensions, so AVIF (unparsed) is not accepted here. */
+export const BOUNDED_IMAGE_TYPES_MESSAGE =
+  "Only JPG, PNG and WebP images are supported.";

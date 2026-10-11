@@ -14,43 +14,27 @@ import {
   resolveConfiguredPrice,
   type ProductConfigSnapshot,
 } from "@/lib/catalog/product-options";
-
-const optionIdsSchema = z
-  .string()
-  .optional()
-  .transform((v, ctx) => {
-    if (!v) return undefined;
-    try {
-      const arr = JSON.parse(v);
-      // An empty array is valid: a MULTIPLE group (or all-optional groups)
-      // may legitimately have zero selections.
-      if (
-        Array.isArray(arr) &&
-        arr.length <= 10 &&
-        arr.every((x) => typeof x === "string")
-      )
-        return arr as string[];
-    } catch {
-      /* fallthrough */
-    }
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Invalid configuration.",
-    });
-    return z.NEVER;
-  });
+import { optionIdsJson } from "@/lib/validation/customer-input";
+import { MAX_CART_LINES, MAX_CART_QUANTITY } from "@/lib/utils/limits";
+import {
+  actionRateLimited,
+  RATE_LIMIT_ACTION_MESSAGE,
+} from "@/lib/rate-limit/action";
 
 const addSchema = z.object({
   productId: z.string().min(1),
   variantId: z.string().min(1).optional(),
-  quantity: z.coerce.number().int().min(1).max(50),
-  optionIds: optionIdsSchema,
+  quantity: z.coerce.number().int().min(1).max(MAX_CART_QUANTITY),
+  optionIds: optionIdsJson(),
 });
 
 const qtySchema = z.object({
   itemId: z.string().min(1),
-  quantity: z.coerce.number().int().min(1).max(50),
+  quantity: z.coerce.number().int().min(1).max(MAX_CART_QUANTITY),
 });
+
+/** Per client, per minute — cart mutations are the most-looped customer endpoint. */
+const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 
 export type CartActionState = {
   ok?: boolean;
@@ -110,6 +94,10 @@ export async function addToCart(
   _prev: CartActionState | null,
   formData: FormData,
 ): Promise<CartActionState> {
+if (await actionRateLimited("cart", RATE_LIMIT)) {
+  return { error: RATE_LIMIT_ACTION_MESSAGE };
+}
+
 const parsed = addSchema.safeParse({
   productId: formData.get("productId"),
   variantId: formData.get("variantId") || undefined,
@@ -224,6 +212,12 @@ if (existing) {
     data: { quantity: nextQty },
   });
 } else {
+  const lineCount = await prisma.cartItem.count({
+    where: { cartId: cart.id },
+  });
+  if (lineCount >= MAX_CART_LINES) {
+    return { error: `Your cart can hold at most ${MAX_CART_LINES} items.` };
+  }
   await prisma.cartItem.create({
     data: {
       cartId: cart.id,
@@ -246,6 +240,10 @@ export async function updateCartItem(
   _prev: CartActionState | null,
   formData: FormData,
 ): Promise<CartActionState> {
+if (await actionRateLimited("cart", RATE_LIMIT)) {
+  return { error: RATE_LIMIT_ACTION_MESSAGE };
+}
+
 const parsed = qtySchema.safeParse({
   itemId: formData.get("itemId"),
   quantity: formData.get("quantity"),
@@ -299,6 +297,10 @@ return { ok: true, quantity, available: avail };
 export async function removeCartItem(
   formData: FormData,
 ): Promise<{ ok?: boolean; error?: string }> {
+if (await actionRateLimited("cart", RATE_LIMIT)) {
+  return { error: RATE_LIMIT_ACTION_MESSAGE };
+}
+
 const itemId = formData.get("itemId");
 if (typeof itemId !== "string" || !itemId) return { ok: true };
 

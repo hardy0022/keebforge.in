@@ -15,6 +15,7 @@ import {
   type ServiceOrderConfigInput,
 } from "@/lib/mods/pricing";
 import { PACKAGE_LIMITS } from "@/lib/shipping/package-limits";
+import { MODS_QUANTITY_LIMITS } from "@/lib/utils/limits";
 import { deriveLegs } from "@/lib/shipping/shipping-estimate";
 import { formatPaiseWhole } from "@/lib/utils/money";
 import { PHONE_INPUT } from "@/lib/utils/phone";
@@ -226,13 +227,16 @@ function QtyControl({
   value,
   onChange,
   onSetValue,
+  max,
 }: {
   label: string;
   id: QtyKey;
   value: number;
   onChange: (key: QtyKey, delta: number) => void;
   onSetValue: (key: QtyKey, value: number) => void;
+  max: number;
 }) {
+  const maxBound = Math.max(1, max);
   return (
     <div className="qty-row">
       <span className="qty-label">{label}</span>
@@ -251,7 +255,7 @@ function QtyControl({
           aria-label={label}
           value={value}
           min={1}
-          max={999}
+          max={maxBound}
           onChange={(e) =>
             onSetValue(id, Math.max(1, parseInt(e.target.value || "1", 10)))
           }
@@ -726,7 +730,8 @@ export function ModConfigurator({
     pkgNums.W > 0 &&
     pkgNums.W <= PACKAGE_LIMITS.MAX_DIM_CM &&
     pkgNums.H > 0 &&
-    pkgNums.H <= PACKAGE_LIMITS.MAX_DIM_CM;
+    pkgNums.H <= PACKAGE_LIMITS.MAX_DIM_CM &&
+    pkgNums.L + pkgNums.W + pkgNums.H <= PACKAGE_LIMITS.MAX_COMBINED_CM;
   const weightOk =
     pkgNums.g > 0 && pkgNums.g <= PACKAGE_LIMITS.MAX_WEIGHT_KG * 1000;
   const pkgOk = dimsOk && weightOk;
@@ -1235,20 +1240,22 @@ export function ModConfigurator({
                 </Field>
                 <Field label="Component Quantities">
                   <div className="qty-stack-row">
-                    <QtyControl
-                      label="Switches"
-                      id="sw"
-                      value={qty.sw}
-                      onChange={adjustQty}
-                      onSetValue={setQtyVal}
-                    />
-                    <QtyControl
-                      label="Stabilizers"
-                      id="stab"
-                      value={qty.stab}
-                      onChange={adjustQty}
-                      onSetValue={setQtyVal}
-                    />
+<QtyControl
+  label="Switches"
+  id="sw"
+  value={qty.sw}
+  onChange={adjustQty}
+  onSetValue={setQtyVal}
+  max={MODS_QUANTITY_LIMITS.SWITCH}
+/>
+<QtyControl
+  label="Stabilizers"
+  id="stab"
+  value={qty.stab}
+  onChange={adjustQty}
+  onSetValue={setQtyVal}
+  max={MODS_QUANTITY_LIMITS.STABILIZER}
+/>
                   </div>
                 </Field>
                 <Field label="Switch Model" htmlFor="kb-switch-model">
@@ -1323,13 +1330,14 @@ export function ModConfigurator({
                 </Field>
                 <Field label="Component Quantities">
                   <div className="qty-stack-row">
-                    <QtyControl
-                      label="Number of Switches"
-                      id="msw"
-                      value={qty.msw}
-                      onChange={adjustQty}
-                      onSetValue={setQtyVal}
-                    />
+<QtyControl
+  label="Number of Switches"
+  id="msw"
+  value={qty.msw}
+  onChange={adjustQty}
+  onSetValue={setQtyVal}
+  max={MODS_QUANTITY_LIMITS.MOUSE_SWITCH}
+/>
                   </div>
                 </Field>
               </div>

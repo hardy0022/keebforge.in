@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { sendInquiry, type InquiryState } from "@/app/actions/inquiry";
-import { sniffImageFile } from "@/lib/images/validation";
+import { sniffBoundedImageFile } from "@/lib/images/validation";
 import { PHONE_INPUT } from "@/lib/utils/phone";
 import { EMAIL_INPUT } from "@/lib/utils/email";
 
-const ACCEPT = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const ACCEPT = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGES = 5;
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -47,10 +47,10 @@ export function InquiryForm({ hideIntro = false }: { hideIntro?: boolean }) {
         continue;
       }
       // Gallery/camera picks may report an empty or generic MIME type — sniff the bytes.
-      if (!(await sniffImageFile(f))) {
+      if (!(await sniffBoundedImageFile(f))) {
         err =
           err ??
-          `"${f.name}" isn't a supported image. Use JPG, PNG, WebP or AVIF.`;
+          `"${f.name}" isn't a supported image. Use JPG, PNG or WebP.`;
         continue;
       }
       merged.push(f);

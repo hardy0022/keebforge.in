@@ -14,8 +14,18 @@ import {
   type ServiceShippingMethod,
 } from "@/lib/shipping/shipping-estimate";
 import { PACKAGE_LIMITS, isValidPackage } from "@/lib/shipping/package-limits";
+import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
+import { readJsonBody } from "@/lib/http/read-json-body";
+import { previewOperationsAllowed } from "@/lib/config/deployment";
 
 export const dynamic = "force-dynamic";
+
+/** Per client, per minute — each quote fans out to live Delhivery rate cards. */
+const RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
 /**
  * POST /api/shipping/service-quote
@@ -52,12 +62,23 @@ function toServiceMethod(v: unknown): ServiceShippingMethod | null {
 }
 
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>;
-  try {
-    body = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return fail(400, "INVALID_PINCODE");
+  // Preview isolation (G1): every call fans out to live Delhivery rate cards
+  // using the shared production token and pickup address. Refused before the
+  // rate limiter or any work, since this endpoint has no database-backed guard
+  // of its own.
+  if (!previewOperationsAllowed()) {
+    return fail(503, "PREVIEW_DISABLED");
   }
+
+  const limit = checkRateLimit(
+    `shipping:service-quote:ip:${clientIp(req)}`,
+    RATE_LIMIT,
+  );
+  if (!limit.allowed) return rateLimitResponse(limit, "shipping");
+
+  const bodyRead = await readJsonBody(req, 8 * 1024);
+  if (!bodyRead.ok) return fail(bodyRead.status, "INVALID_PINCODE");
+  const body = (bodyRead.data ?? {}) as Record<string, unknown>;
 
   const { pincode } = body;
   const dims = [body.lengthCm, body.widthCm, body.heightCm].map((v) =>
@@ -78,7 +99,7 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         errorCode: "INVALID_PACKAGE",
-        message: `Enter packed dimensions up to ${PACKAGE_LIMITS.MAX_DIM_CM} cm per side and weight up to ${PACKAGE_LIMITS.MAX_WEIGHT_KG} kg.`,
+        message: `Enter packed dimensions up to ${PACKAGE_LIMITS.MAX_DIM_CM} cm per side (${PACKAGE_LIMITS.MAX_COMBINED_CM} cm total) and weight up to ${PACKAGE_LIMITS.MAX_WEIGHT_KG} kg.`,
       },
       { status: 400 },
     );

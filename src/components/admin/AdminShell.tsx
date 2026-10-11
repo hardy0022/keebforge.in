@@ -33,6 +33,7 @@ const NAV_GROUPS: {
       { href: "/admin/orders", label: "Orders", icon: "🧾" },
       { href: "/admin/orders/completed", label: "Completed", icon: "✅" },
       { href: "/admin/payments", label: "Payments", icon: "💳" },
+      { href: "/admin/notifications", label: "Notifications", icon: "📧" },
       { href: "/admin/shipments", label: "Shipments", icon: "📦" },
     ],
   },
@@ -80,7 +81,7 @@ export function AdminShell({
 
   const initials = (name || email)
     .split(/\s+/)
-    .map((s) => s[0])
+    .map((s) => Array.from(s)[0] ?? "")
     .slice(0, 2)
     .join("")
     .toUpperCase();

@@ -11,12 +11,16 @@ import { PinCodeInput } from "@/components/ui/PinCodeInput";
 import { Field } from "@/components/ui/Field";
 import { PHONE_INPUT } from "@/lib/utils/phone";
 import { EMAIL_INPUT } from "@/lib/utils/email";
+import {
+  CUSTOM_WORK_TYPES,
+  REPAIR_WORK_TYPES,
+} from "@/lib/utils/limits";
 import { Panel } from "@/components/ui/Panel";
 import { PillRadioGroup, PillRadio } from "@/components/ui/PillRadio";
 import {
-  sniffImageFile,
-  IMAGE_ACCEPT,
-  IMAGE_TYPES_MESSAGE,
+  sniffBoundedImageFile,
+  CUSTOMER_IMAGE_ACCEPT,
+  BOUNDED_IMAGE_TYPES_MESSAGE,
 } from "@/lib/images/validation";
 
 export type AddressDTO = {
@@ -54,31 +58,8 @@ const SERVICE_CARDS = [
 
 type ServiceType = (typeof SERVICE_CARDS)[number]["id"];
 
-const CUSTOM_WORK = [
-  "Custom Build",
-  "Switch Modification",
-  "Stabilizer Work",
-  "Lubing",
-  "Soldering",
-  "PCB Work",
-  "Firmware",
-  "Case / Plate",
-  "Keycaps",
-  "Full Custom Build",
-  "Other",
-];
-const REPAIR_WORK = [
-  "Not powering on",
-  "Keys not working",
-  "Connection issue",
-  "PCB issue",
-  "Switch issue",
-  "RGB issue",
-  "Firmware issue",
-  "Physical damage",
-  "Liquid damage",
-  "Other",
-];
+const CUSTOM_WORK = [...CUSTOM_WORK_TYPES];
+const REPAIR_WORK = [...REPAIR_WORK_TYPES];
 
 const CONDITIONS = [
   "Working but has issues",
@@ -207,8 +188,8 @@ export function RepairIntake({
         alert(`Each photo must be under 3 MB — "${f.name}" is too large.`);
         continue;
       }
-      if (!(await sniffImageFile(f))) {
-        alert(`${IMAGE_TYPES_MESSAGE} ("${f.name}" isn't one.)`);
+      if (!(await sniffBoundedImageFile(f))) {
+        alert(`${BOUNDED_IMAGE_TYPES_MESSAGE} ("${f.name}" isn't one.)`);
         continue;
       }
       accepted.push({
@@ -569,7 +550,7 @@ export function RepairIntake({
                     <label className="wr-photo-add">
                       <input
                         type="file"
-                        accept={IMAGE_ACCEPT.join(",")}
+                        accept={CUSTOMER_IMAGE_ACCEPT.join(",")}
                         multiple
                         onChange={onFilesChange}
                         className="sr-only"
@@ -580,7 +561,7 @@ export function RepairIntake({
                   )}
                 </div>
                 <p className="field-hint">
-                  PNG / JPG / WebP / AVIF · Up to {MAX_PHOTOS} photos · Max 3
+                  PNG / JPG / WebP · Up to {MAX_PHOTOS} photos · Max 3
                   MB each
                 </p>
               </Field>
@@ -729,6 +710,7 @@ export function RepairIntake({
                         <Field label="Street address" htmlFor="ri-street">
                           <input
                             id="ri-street"
+                            maxLength={200}
                             value={street}
                             onChange={(e) => setStreet(e.target.value)}
                             autoComplete="street-address"
@@ -738,6 +720,7 @@ export function RepairIntake({
                         <Field label="Landmark (Optional)" htmlFor="ri-landmark">
                           <input
                             id="ri-landmark"
+                            maxLength={200}
                             value={landmark}
                             onChange={(e) => setLandmark(e.target.value)}
                             placeholder="Near metro station, opposite park…"
@@ -778,6 +761,7 @@ export function RepairIntake({
                     <Field label="Street address" htmlFor="ri-street">
                       <input
                         id="ri-street"
+                        maxLength={200}
                         value={street}
                         onChange={(e) => setStreet(e.target.value)}
                         autoComplete="street-address"
@@ -787,6 +771,7 @@ export function RepairIntake({
                     <Field label="Landmark (Optional)" htmlFor="ri-landmark">
                       <input
                         id="ri-landmark"
+                        maxLength={200}
                         value={landmark}
                         onChange={(e) => setLandmark(e.target.value)}
                         placeholder="Near metro station, opposite park…"

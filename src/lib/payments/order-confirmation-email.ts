@@ -1,6 +1,10 @@
 import { Resend } from "resend";
 import { EXCHANGE_PARAM } from "@/lib/payments/order-capability";
 import { SITE_URL } from "@/lib/seo";
+import {
+  logSuppressedDelivery,
+  resolveOutboundRecipient,
+} from "@/lib/email/outbound";
 
 /**
  * Guest order confirmation email — the recovery path for the payment
@@ -32,6 +36,16 @@ export async function sendGuestOrderConfirmation(params: {
   }
 
   const { to, orderNumber, exchangeCode } = params;
+
+  // Test/suppression policy: redirect to a single test address, or skip the
+  // send entirely. Either way checkout is unaffected — the customer still holds
+  // the capability in this browser.
+  const plan = resolveOutboundRecipient(to);
+  if (plan.action === "skip") {
+    logSuppressedDelivery(plan.reason);
+    return;
+  }
+
   const payUrl =
     `${SITE_URL}/order/success/${encodeURIComponent(orderNumber)}/exchange` +
     `?${EXCHANGE_PARAM}=${encodeURIComponent(exchangeCode)}`;
@@ -48,7 +62,7 @@ export async function sendGuestOrderConfirmation(params: {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
       from: process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>",
-      to: [to],
+      to: [plan.to],
       subject: `Order ${orderNumber} confirmed — KeebForge`,
       html:
         `<h2>Thanks for your order — KeebForge</h2>` +

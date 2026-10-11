@@ -9,9 +9,23 @@ import {
   type InlinePaymentDeps,
   type InlinePaymentOrder,
 } from "@/lib/payments/pay-inline-core";
+import {
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/payments/rate-limit";
+import { readJsonBody } from "@/lib/http/read-json-body";
+import {
+  PREVIEW_OPERATION_DISABLED_MESSAGE,
+  previewOperationsAllowed,
+} from "@/lib/config/deployment";
+import { JSON_BODY_LIMIT_SMALL } from "@/lib/utils/limits";
 import Razorpay from "razorpay";
 
 export const dynamic = "force-dynamic";
+
+/** Per client, per minute — each success mints a Razorpay order + customer. */
+const RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 
 /**
  * Opens a Razorpay session for an EXISTING order that's still unpaid (e.g. the
@@ -29,10 +43,38 @@ export const dynamic = "force-dynamic";
  * client needs to open the modal — no customer PII.
  */
 export async function POST(req: NextRequest) {
+  // Defense in depth: opening a Razorpay session can create a customer + order
+  // against shared credentials, so it is refused in Preview before any work.
+  if (!previewOperationsAllowed()) {
+    return NextResponse.json(
+      { error: PREVIEW_OPERATION_DISABLED_MESSAGE },
+      { status: 503 },
+    );
+  }
   try {
-    const body = await req.json().catch(() => null);
+    const limit = checkRateLimit(
+      `pay-inline:ip:${clientIp(req)}`,
+      RATE_LIMIT,
+    );
+    if (!limit.allowed) return rateLimitResponse(limit, "pay-inline");
+
+    const bodyRead = await readJsonBody<{ orderNumber?: string }>(
+      req,
+      JSON_BODY_LIMIT_SMALL,
+    );
+    if (!bodyRead.ok) {
+      return NextResponse.json(
+        { error: "Invalid request." },
+        { status: bodyRead.status },
+      );
+    }
+    const orderNumber =
+      typeof bodyRead.data?.orderNumber === "string" &&
+      bodyRead.data.orderNumber.length <= 40
+        ? bodyRead.data.orderNumber
+        : undefined;
     const result = await startInlinePayment(makeDeps(), {
-      orderNumber: body?.orderNumber,
+      orderNumber,
       // Read from the HttpOnly cookie, never from the request body — a
       // client-supplied token would be replayable from any origin.
       capabilityToken: await readPayCookie(),

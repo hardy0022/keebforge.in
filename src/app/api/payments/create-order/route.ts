@@ -38,6 +38,12 @@ import {
   rateLimitResponse,
 } from "@/lib/payments/rate-limit";
 import { sendGuestOrderConfirmation } from "@/lib/payments/order-confirmation-email";
+import { readJsonBody } from "@/lib/http/read-json-body";
+import {
+  PREVIEW_OPERATION_DISABLED_MESSAGE,
+  previewOperationsAllowed,
+} from "@/lib/config/deployment";
+import { MAX_ADDRESS_BOOK, MAX_ADDRESS_LINE, ORDER_JSON_LIMIT } from "@/lib/utils/limits";
 import { Prisma } from "@prisma/client";
 import Razorpay from "razorpay";
 
@@ -55,8 +61,12 @@ const RATE_LIMIT = { limit: 15, windowMs: 60_000 };
 const addressSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required.").max(80),
   lastName: z.string().trim().min(1, "Last name is required.").max(80),
-  streetAddress: z.string().trim().min(1, "Address is required.").max(300),
-  apartment: z.string().trim().max(120).optional(),
+  streetAddress: z
+    .string()
+    .trim()
+    .min(1, "Address is required.")
+    .max(MAX_ADDRESS_LINE),
+  apartment: z.string().trim().max(MAX_ADDRESS_LINE).optional(),
   city: z.string().trim().min(1, "City is required.").max(100),
   state: z.string().trim().min(1, "State is required.").max(100),
   postalCode: z
@@ -73,8 +83,12 @@ const addressSchema = z.object({
 
 const billingSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required.").max(160),
-  addressLine1: z.string().trim().min(1, "Address is required.").max(300),
-  addressLine2: z.string().trim().max(120).optional(),
+  addressLine1: z
+    .string()
+    .trim()
+    .min(1, "Address is required.")
+    .max(MAX_ADDRESS_LINE),
+  addressLine2: z.string().trim().max(MAX_ADDRESS_LINE).optional(),
   city: z.string().trim().min(1, "City is required.").max(100),
   state: z.string().trim().min(1, "State is required.").max(100),
   pinCode: z
@@ -117,6 +131,15 @@ function getRazorpay() {
 }
 
 export async function POST(req: NextRequest) {
+  // Defense in depth: a Preview deployment must not mint a Razorpay order or
+  // write an Order row against a shared/production database. Refused before the
+  // rate limiter, validation, or any DB access.
+  if (!previewOperationsAllowed()) {
+    return NextResponse.json(
+      { error: PREVIEW_OPERATION_DISABLED_MESSAGE },
+      { status: 503 },
+    );
+  }
   try {
     // First thing in the handler: this endpoint mints a Razorpay order (a real
     // paid API call) and writes an Order row, so an unbounded loop here is both a
@@ -131,8 +154,14 @@ export async function POST(req: NextRequest) {
     // Guests may order — the address travels with the order, not the account.
     const { user, profile } = await getCurrentAuth();
 
-    const raw = await req.json().catch(() => null);
-    const parsed = bodySchema.safeParse(raw ?? {});
+    const bodyRead = await readJsonBody(req, ORDER_JSON_LIMIT);
+    if (!bodyRead.ok) {
+      return NextResponse.json(
+        { error: "Invalid delivery details." },
+        { status: bodyRead.status },
+      );
+    }
+    const parsed = bodySchema.safeParse(bodyRead.data ?? {});
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -486,20 +515,23 @@ export async function POST(req: NextRequest) {
       const existingCount = await prisma.address.count({
         where: { profileId: profile.id },
       });
-      await prisma.address.create({
-        data: {
-          profileId: profile.id,
-          label: "Home",
-          streetAddress: addr.streetAddress,
-          apartment: addr.apartment || null,
-          city: addr.city,
-          state: addr.state,
-          postalCode: addr.postalCode,
-          country: "India",
-          phone: addr.phone,
-          isDefault: existingCount === 0,
-        },
-      });
+      // Cap mirrors /api/account/addresses — never silently exceed the book.
+      if (existingCount < MAX_ADDRESS_BOOK) {
+        await prisma.address.create({
+          data: {
+            profileId: profile.id,
+            label: "Home",
+            streetAddress: addr.streetAddress,
+            apartment: addr.apartment || null,
+            city: addr.city,
+            state: addr.state,
+            postalCode: addr.postalCode,
+            country: "India",
+            phone: addr.phone,
+            isDefault: existingCount === 0,
+          },
+        });
+      }
     }
 
     const orderNumber = `KF${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;

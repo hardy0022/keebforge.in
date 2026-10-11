@@ -5,6 +5,7 @@ import type { Prisma, Profile, Role, User } from "@prisma/client";
 import { auth } from "@/lib/auth/better-auth";
 import { canAction } from "@/lib/auth/roles";
 import { prisma } from "@/lib/db/prisma";
+import { previewOperationsAllowed } from "@/lib/config/deployment";
 
 /**
  * Server-side admin authorization, backed by Profile.role OR
@@ -52,6 +53,12 @@ function profileHasAdminRole(
 
 /** Resolves the signed-in user's admin context, or null. Cached per request. */
 export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
+  // Defense in depth: admin mutations must not run against a shared/production
+  // database from a Preview deployment. Returning null reuses the existing
+  // authorization path (requireAdminContext → /unauthorized), so a Preview admin
+  // is indistinguishable from a non-admin.
+  if (!previewOperationsAllowed()) return null;
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return null;
 

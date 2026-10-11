@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { assertPreviewDatabaseTargetFromEnv } from "@/lib/config/preview-guard";
 
 export { Prisma };
 
@@ -11,6 +12,12 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 // toggled on an already-built `next start`.
 function getPrisma() {
   if (!globalForPrisma.prisma) {
+    // Fail closed BEFORE a client is constructed: a Vercel Preview deployment
+    // must not reach an unapproved (e.g. production) database. No-op outside
+    // Preview. Throwing leaves `globalForPrisma.prisma` unset, so every access
+    // re-checks rather than serving a broken client. Calls the pure core
+    // directly so `server-only` is not pulled into the Prisma import graph.
+    assertPreviewDatabaseTargetFromEnv(process.env);
     globalForPrisma.prisma = new PrismaClient(
       process.env["PRISMA_QUERY_LOG"] === "1" ? { log: ["query"] } : undefined,
     );

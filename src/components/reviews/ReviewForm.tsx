@@ -10,9 +10,9 @@ import {
 import Link from "next/link";
 import { submitReview, type ReviewSubmitState } from "@/app/actions/review";
 import {
-  sniffImageFile,
-  IMAGE_ACCEPT,
-  IMAGE_TYPES_MESSAGE,
+  sniffBoundedImageFile,
+  CUSTOMER_IMAGE_ACCEPT,
+  BOUNDED_IMAGE_TYPES_MESSAGE,
 } from "@/lib/images/validation";
 import { cldUrl } from "@/lib/images/cloudinary-url";
 import { ReviewStars } from "./ReviewStars";
@@ -87,8 +87,8 @@ export function ReviewForm({
         alert(`Each photo must be under 5 MB — "${f.name}" is too large.`);
         continue;
       }
-      if (!(await sniffImageFile(f))) {
-        alert(`${IMAGE_TYPES_MESSAGE} ("${f.name}" isn't one.)`);
+      if (!(await sniffBoundedImageFile(f))) {
+        alert(`${BOUNDED_IMAGE_TYPES_MESSAGE} ("${f.name}" isn't one.)`);
         continue;
       }
       accepted.push({
@@ -232,7 +232,7 @@ export function ReviewForm({
                 <label className="wr-photo-add">
                   <input
                     type="file"
-                    accept={IMAGE_ACCEPT.join(",")}
+                    accept={CUSTOMER_IMAGE_ACCEPT.join(",")}
                     multiple
                     onChange={onFilesChange}
                     className="sr-only"
@@ -243,7 +243,7 @@ export function ReviewForm({
               )}
             </div>
             <p className="field-hint">
-              PNG / JPG / WebP / AVIF · Up to {MAX_IMAGES} photos · Max 5 MB
+              PNG / JPG / WebP · Up to {MAX_IMAGES} photos · Max 5 MB
               each
             </p>
           </section>

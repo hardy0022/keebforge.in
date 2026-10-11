@@ -76,6 +76,13 @@ function installResendCapture() {
   };
   mod._load = function (request, parent, main) {
     if (request === "resend") return { Resend: Stub, default: Stub };
+    // `order-confirmation-email.ts` now resolves its recipient through the
+    // server-only outbound policy (`@/lib/email/outbound`). `server-only` is
+    // supplied by Next.js and has no node resolution, so tsx cannot load the
+    // module unless we answer it with an empty object — which is what it
+    // resolves to on the server anyway. Same approach as
+    // resend-verification.test.ts and payment-endpoints.test.ts.
+    if (request === "server-only") return {};
     return orig.call(this, request, parent, main);
   };
   mod.__osCapture = true;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { settledAmount } from "@/lib/payments/payment-status";
 import { settleOrderInTransaction } from "@/lib/payments/settle-order";
+import { notifyPaidOrder } from "@/lib/notifications/send-paid-confirmation";
 import {
   applyRefundToPayments,
   planRefundAccounting,
@@ -270,6 +271,13 @@ export async function POST(req: NextRequest) {
         );
       }
       await refreshTrackingCache(order!.id);
+      if (capture.settledOrder && capture.paymentStatus === "PAID") {
+        // After the transaction commits, on purpose: a confirmation failure must
+        // never make Razorpay redeliver (we still 200) nor touch the settled
+        // order. `notifyPaidOrder` is best-effort and claims at-most-once, so
+        // this and the browser /verify path cannot send duplicates.
+        await notifyPaidOrder(order!.id);
+      }
       return NextResponse.json({ received: true });
     }
 

@@ -8,6 +8,12 @@ import { prisma } from "@/lib/db/prisma";
 import { isStrongPassword } from "@/lib/utils/password";
 import { getOrCreateProfileFromUser } from "@/lib/auth/profile";
 import { sendVerificationEmailMessage } from "@/lib/auth/send-verification-email";
+import {
+  logSuppressedDelivery,
+  resolveOutboundRecipient,
+} from "@/lib/email/outbound";
+import { passwordResetEmail, readTemplateIds } from "@/lib/email/templates";
+import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
 
 /**
  * KeebForge authentication — Better Auth (sole auth authority).
@@ -29,28 +35,59 @@ export const auth = betterAuth({
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
       try {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const { data, error } = await resend.emails.send({
-          from: "KeebForge <no-reply@keebforge.in>",
-          to: user.email,
-          subject: "Reset your KeebForge password",
-          html:
-            `<h2>Reset your password — KeebForge.in</h2>` +
-            `<p>Hi ${user.name.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!)},</p>` +
-            `<p>We received a request to reset your password. Tap the button below to choose a new one. This link expires in 1 hour.</p>` +
-            `<p style="margin:24px 0"><a href="${url}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;border-radius:10px;text-decoration:none;font-weight:600">Reset password</a></p>` +
-            `<p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`,
-        });
-        if (error) {
-          // API-level rejection (rate limit, sender policy, invalid recipient)
-          // — does NOT throw, so log it or it stays invisible.
-          console.error("Resend error (password reset):", error);
+        // Test/suppression policy. Suppressed: nothing is sent and the request
+        // still succeeds (Better Auth must not leak that mail was withheld).
+        const plan = resolveOutboundRecipient(user.email);
+        if (plan.action === "skip") {
+          logSuppressedDelivery(plan.reason);
           return;
         }
-        console.log(`[auth] reset email sent to ${user.email} (id=${data?.id})`);
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        // Better Auth generated the token and `url` (from this app's baseURL —
+        // https://keebforge.in in production). A configured Resend template
+        // renders the message; otherwise the inline HTML fallback is sent. The
+        // application never generates the token, and the URL is delivered only.
+        const mail = passwordResetEmail(
+          { name: user.name, resetUrl: url },
+          readTemplateIds().passwordReset,
+        );
+        const from = "KeebForge <no-reply@keebforge.in>";
+        const { data, error } = mail.template
+          ? await resend.emails.send({
+              from,
+              to: plan.to,
+              subject: mail.subject,
+              template: mail.template,
+            })
+          : await resend.emails.send({
+              from,
+              to: plan.to,
+              subject: mail.subject,
+              html: mail.html,
+            });
+        if (error) {
+          // API-level rejection (rate limit, sender policy, invalid recipient)
+          // — does NOT throw, so log it or it stays invisible. Only the
+          // sanitized diagnostic is logged; the provider message can echo the
+          // recipient address.
+          console.error(
+            "Resend error (password reset):",
+            resendErrorDiagnostic(error),
+          );
+          return;
+        }
+        // No recipient address is logged — success is recorded by id only.
+        console.log(
+          `[auth] reset email sent${
+            plan.redirected ? " (redirected to test recipient)" : ""
+          } (id=${data?.id})`,
+        );
       } catch (e) {
         // Must never fail the request (and leak that the email didn't send).
-        console.error("Resend error (password reset):", e);
+        console.error(
+          "Resend error (password reset):",
+          resendErrorDiagnostic(e),
+        );
       }
     },
   },

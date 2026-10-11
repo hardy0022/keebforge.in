@@ -5,6 +5,17 @@ import { prisma } from "@/lib/db/prisma";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_STAGES } from "@/lib/orders";
 import { outstandingBalance } from "@/lib/payments/refund-accounting";
 import { trackShipment, type TrackingResult } from "@/lib/shipping/delhivery";
+import {
+  actionRateLimited,
+  RATE_LIMIT_ACTION_MESSAGE,
+} from "@/lib/rate-limit/action";
+import {
+  PREVIEW_OPERATION_DISABLED_MESSAGE,
+  previewOperationsAllowed,
+} from "@/lib/config/deployment";
+
+/** Per client, per minute — scanning also costs a live Delhivery call. */
+const RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 
 /**
  * Reads the public-safe Tracking cache — never the raw Order tables (no
@@ -101,7 +112,20 @@ export async function fetchShipmentScans(
   _prev: ShipmentScanState,
   formData: FormData,
 ): Promise<ShipmentScanState> {
-  const parsed = waybillSchema.safeParse(formData.get("waybill"));
+  // Preview isolation: this action calls Delhivery's live tracking API with the
+  // shared production token and never touches the database, so the database
+  // guard cannot cover it. Refuse before the rate limiter or any provider call.
+  // (trackOrder, the sibling action, only reads the database, so it is already
+  // covered by the database guard and needs no explicit check.)
+  if (!previewOperationsAllowed()) {
+    return { ok: false, error: PREVIEW_OPERATION_DISABLED_MESSAGE };
+  }
+
+  if (await actionRateLimited("track-scans", RATE_LIMIT)) {
+    return { ok: false, error: RATE_LIMIT_ACTION_MESSAGE };
+  }
+
+  const parsed = waybillSchema.safeParse(formData.get("waybill"));;
   if (!parsed.success)
     return { ok: false, error: "Please enter a valid tracking number." };
 
@@ -149,6 +173,10 @@ export async function trackOrder(
   _prev: TrackState,
   formData: FormData,
 ): Promise<TrackState> {
+  if (await actionRateLimited("track-order", RATE_LIMIT)) {
+    return { ok: false, error: RATE_LIMIT_ACTION_MESSAGE };
+  }
+
   const parsed = orderNumberSchema.safeParse(formData.get("orderNumber"));
   if (!parsed.success)
     return {
