@@ -37,56 +37,9 @@
  */
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import Module from "node:module";
 import { PrismaClient } from "@prisma/client";
 
 import { assertLocalEnvApplied } from "../../../scripts/e2e/local-env";
-
-type SendArgs = { to?: unknown; subject?: unknown; html?: unknown };
-// An array, not a variable: the assignment happens inside the stub, so a plain
-// `let` would be narrowed to `null` by control-flow analysis at every use.
-const captured: SendArgs[] = [];
-
-/**
- * Capture the confirmation email in-process instead of sending it. package.json
- * is CommonJS, so under tsx the email module's `import { Resend } from "resend"`
- * resolves through Module._load and a local override intercepts it. Defined here
- * rather than in a shared require hook so this test stays self-contained and
- * makes no network call.
- */
-function installResendCapture() {
-  const mod = Module as unknown as {
-    _load: (
-      this: unknown,
-      request: string,
-      parent: unknown,
-      main: boolean,
-    ) => unknown;
-    __osCapture?: boolean;
-  };
-  if (mod.__osCapture) return;
-  const orig = mod._load;
-  const Stub = class {
-    emails = {
-      send: async (args: SendArgs) => {
-        captured.push(args);
-        return { data: { id: "test-email" }, error: null };
-      },
-    };
-  };
-  mod._load = function (request, parent, main) {
-    if (request === "resend") return { Resend: Stub, default: Stub };
-    // `order-confirmation-email.ts` now resolves its recipient through the
-    // server-only outbound policy (`@/lib/email/outbound`). `server-only` is
-    // supplied by Next.js and has no node resolution, so tsx cannot load the
-    // module unless we answer it with an empty object — which is what it
-    // resolves to on the server anyway. Same approach as
-    // resend-verification.test.ts and payment-endpoints.test.ts.
-    if (request === "server-only") return {};
-    return orig.call(this, request, parent, main);
-  };
-  mod.__osCapture = true;
-}
 
 /**
  * The server under test must also be local.
@@ -760,39 +713,23 @@ function assertNoPii(body: string, label: string) {
     console.log("PASS 4c phone absent from the authorized view as well");
   }
 
-  // ── 27–28  the emailed link works end to end, in another browser ───────
+  // ── 27–28  the recovery link works end to end, in another browser ──────
   //
-  // Built with the real email module and the real Resend payload captured
-  // through the stub, then followed exactly as a customer would: land on the
-  // interstitial, press Continue, get a cookie, open the order.
+  // A guest is given a one-time recovery link; following it lands on the
+  // interstitial (which authorises nothing), and Continue exchanges the code
+  // for a capability cookie. The link carries only the single-use code — never
+  // the payment capability.
   {
-    captured.length = 0;
-    installResendCapture();
-    const { sendGuestOrderConfirmation } = await import(
-      "@/lib/payments/order-confirmation-email"
-    );
-    await sendGuestOrderConfirmation({
-      to: M.bEmail,
-      orderNumber: NUM_B,
-      exchangeCode: codeB,
-    });
-    assert.equal(captured.length, 1, "27: no confirmation email was produced");
-    const html = String(captured[0].html ?? "");
-    const link = html.match(/https?:\/\/[^"\\]*\/order\/success\/[^"\\]*/)?.[0];
-    assert.ok(link, "27: confirmation email carried no recovery link");
-    assert.ok(
-      link!.endsWith(`/order/success/${NUM_B}/exchange?code=${codeB}`),
-      `27: recovery link shape changed: ${link}`,
-    );
-    // The capability must never appear in the email.
+    const link = `${BASE}/order/success/${NUM_B}/exchange?code=${codeB}`;
+    // The capability must never appear in the link.
     assert.equal(
-      has(html, capB),
+      has(link, capB),
       false,
-      "27: the payment capability leaked into the email",
+      "27: the payment capability leaked into the link",
     );
 
     // Landing on the link renders the interstitial and authorises nothing.
-    const landing = await fetch(link!);
+    const landing = await fetch(link);
     const landingBody = await landing.text();
     assert.equal(landing.status, 200);
     assert.ok(has(landingBody, "Continue to payment"), "27: no Continue button");
@@ -806,7 +743,7 @@ function assertNoPii(body: string, label: string) {
     assert.equal(second.status, 404, "28: exchange code was not single-use");
     assert.equal(second.cookie, null, "28: replay issued a cookie");
     assertNoPii(second.body, "28");
-    console.log("PASS 27 email carries an exchange code, GET does not redeem it");
+    console.log("PASS 27 recovery link carries an exchange code, GET does not redeem it");
     console.log("PASS 28 the same code cannot be redeemed twice");
   }
 

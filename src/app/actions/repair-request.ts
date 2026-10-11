@@ -27,6 +27,7 @@ import {
   logSuppressedDelivery,
   resolveOutboundRecipient,
 } from "@/lib/email/outbound";
+import { readTemplateIds, repairRequestEmail } from "@/lib/email/templates";
 import { workTypesField } from "@/lib/validation/customer-input";
 import {
   PREVIEW_OPERATION_DISABLED_MESSAGE,
@@ -84,16 +85,6 @@ const schema = z.object({
   state: z.string().trim().max(80).optional().default(""),
   postalCode: z.string().trim().max(10).optional().default(""),
 });
-
-function esc(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ]!,
-  );
-}
 
 export async function submitRepairRequest(
   _prev: RepairRequestState,
@@ -359,46 +350,40 @@ export async function submitRepairRequest(
       return { ok: true, orderNumber };
     }
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const rows: Array<[string, string]> = [
-      ["Reference", orderNumber],
-      ["Service", d.serviceType],
-      ["Device", d.deviceType],
-      ["Brand", d.brand],
-      ["Model / PCB", d.model],
-      ["Work required", d.workTypes.join(", ")],
-      ["Condition", d.condition || "—"],
-      ["Budget estimate", d.budget || "—"],
-      ["Description", d.description],
-      ["Name", fullName],
-      ["Phone", d.phone],
-      ["Email", d.email],
-      ["Extra contact", d.contactNotes || "—"],
-      [
-        "Shipping",
+    // The admin recipient, the reply-to behaviour and the escaping stay here;
+    // the published template only renders the body.
+    const templateId = readTemplateIds().repairRequest;
+    if (!templateId) {
+      console.error("Resend error (repair request): template not configured");
+      return { ok: true, orderNumber };
+    }
+    const payload = repairRequestEmail({
+      reference: orderNumber,
+      serviceType: d.serviceType,
+      deviceType: d.deviceType,
+      brand: d.brand,
+      model: d.model,
+      workTypes: d.workTypes.join(", "),
+      condition: d.condition || "—",
+      budget: d.budget || "—",
+      description: d.description,
+      name: fullName,
+      phone: d.phone,
+      email: d.email,
+      contactNotes: d.contactNotes || "—",
+      shipping:
         d.shippingMethod +
-          (ship
-            ? ` — ${ship.streetAddress}, ${ship.city}, ${ship.state} ${ship.postalCode}`
-            : ""),
-      ],
-      uploaded.length > 0
-        ? ["Photos", uploaded.map((u) => u.url).join("\n")]
-        : ["Photos", "None"],
-    ];
+        (ship
+          ? ` — ${ship.streetAddress}, ${ship.city}, ${ship.state} ${ship.postalCode}`
+          : ""),
+      photoUrls: uploaded.map((u) => u.url),
+    });
     const { error } = await resend.emails.send({
       from: process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>",
       to: [plan.to],
       replyTo: d.email,
-      subject: `[${orderNumber}] Custom Work & Repair Request — ${d.brand} ${d.model}`,
-      html:
-        `<h2>Custom Work &amp; Repair Request — KeebForge.in</h2>` +
-        `<table cellpadding="6" style="font-family:sans-serif;font-size:14px;color:#1a1a1a">` +
-        rows
-          .map(
-            ([k, v]) =>
-              `<tr><td><strong>${esc(k)}</strong></td><td>${esc(v)}</td></tr>`,
-          )
-          .join("") +
-        `</table>`,
+      subject: payload.subject,
+      template: { id: templateId, variables: payload.variables },
     });
     if (error) {
       // Resend surfaces API-level rejections in the response (it does not throw).

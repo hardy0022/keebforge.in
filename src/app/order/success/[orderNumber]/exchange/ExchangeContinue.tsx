@@ -21,7 +21,7 @@ function stripCodeFromUrl() {
 }
 
 /**
- * Explicit Continue button for the email exchange interstitial.
+ * Explicit Continue button for the exchange interstitial.
  *
  * Deliberately a POST that does not navigate on its own: the code is spent by
  * this click and nowhere else. On success we replace the history entry so the
@@ -66,7 +66,7 @@ export function ExchangeContinue({
         // One message for an expired, spent, wrong or unknown code. The customer
         // cannot tell them apart either, so neither can anyone probing.
         setError(
-          "This link is no longer valid. Open the most recent confirmation email, or contact support with your order number.",
+          "This link is no longer valid. Contact support with your order number and we'll help you open it.",
         );
         setBusy(false);
         return;

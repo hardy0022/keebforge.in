@@ -33,7 +33,7 @@ export async function generateMetadata({
   return buildMetadata({
     title: "Order Confirmed | KeebForge",
     description:
-      "Your KeebForge order has been received. Open the link in your confirmation email, or sign in, to view the full order.",
+      "Your KeebForge order has been received. Sign in to view the full order, or track it with your order number.",
     path: `/order/success/${orderNumber}`,
     noIndex: true,
   });
@@ -114,14 +114,14 @@ function OrderUnverified() {
 
           <div className="os-process-box">
             <p className="os-process-text">
-              To see your items, delivery address and receipt, open the private
-              link in your order confirmation email, or{" "}
+              To see your items, delivery address and receipt,{" "}
               <Link href="/auth/login" style={{ color: "var(--acc)" }}>
                 sign in
               </Link>{" "}
-              to the account that placed the order. If you no longer have the
-              email, our support team can resend it — quote your order number
-              and the email address you used.
+              to the account that placed the order. If you checked out as a guest
+              or no longer have access, contact our support team with your order
+              number and the email address you used and we&apos;ll help you open
+              it.
             </p>
           </div>
 

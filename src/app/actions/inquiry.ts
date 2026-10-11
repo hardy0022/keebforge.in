@@ -162,34 +162,31 @@ export async function sendInquiry(
     }
     const resend = new Resend(process.env.RESEND_API_KEY);
     // The admin recipient (the shared contact inbox), the reply-to behaviour and
-    // the escaping all stay here; a configured template only renders the body.
-    const mail = contactInquiryEmail(
-      {
-        name,
-        phone,
-        email: email,
-        deviceModel,
-        issue,
-        photoUrls: uploaded.map((u) => u.url),
-      },
-      readTemplateIds().contactInquiry,
-    );
+    // the escaping all stay here; the published template only renders the body.
+    const templateId = readTemplateIds().contactInquiry;
+    if (!templateId) {
+      console.error("Resend error (inquiry): template not configured");
+      return {
+        error:
+          "The inquiry could not be sent right now. Please email contact@keebforge.in directly.",
+      };
+    }
+    const payload = contactInquiryEmail({
+      name,
+      phone,
+      email: email,
+      deviceModel,
+      issue,
+      photoUrls: uploaded.map((u) => u.url),
+    });
     const from = process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>";
-    const { error } = mail.template
-      ? await resend.emails.send({
-          from,
-          to: [plan.to],
-          replyTo: email,
-          subject: mail.subject,
-          template: mail.template,
-        })
-      : await resend.emails.send({
-          from,
-          to: [plan.to],
-          replyTo: email,
-          subject: mail.subject,
-          html: mail.html,
-        });
+    const { error } = await resend.emails.send({
+      from,
+      to: [plan.to],
+      replyTo: email,
+      subject: payload.subject,
+      template: { id: templateId, variables: payload.variables },
+    });
     if (error) {
       // The `{ error }` payload can echo the message (recipient, inquiry text),
       // so only the sanitized diagnostic is logged.

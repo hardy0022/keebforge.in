@@ -105,11 +105,11 @@ export function OrderPaymentSummary({
         </>
       ) : (
         // Entitlement is deliberately absent: this visitor reached the page
-        // with only the order number. Say where the real link comes from
+        // without the payment capability. Point them at the ways to get it
         // rather than failing on click.
         <p className="os-pay-note">
-          Open the payment link from your confirmation email, or{" "}
-          <Link href="/contact">contact support</Link> to pay for this order.
+          Sign in to the account that placed this order, or{" "}
+          <Link href="/contact">contact support</Link> to pay for it.
         </p>
       )}
     </div>

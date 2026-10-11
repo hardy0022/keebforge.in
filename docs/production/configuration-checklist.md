@@ -73,8 +73,10 @@ All unset in production, which leaves every send going to its real recipient as 
 - [ ] EMAIL_SEND_DISABLED — when truthy, every outbound email is suppressed. Verify: unset in prod.
 - [ ] EMAIL_TEST_RECIPIENT — when set to a valid address, all outbound email is redirected to it.
   Verify: unset in prod (never point at a customer).
-- [ ] RESEND template IDs (`RESEND_TEMPLATE_*`) — optional template overrides; blank/missing means
-  the inline HTML fallback is used. Verify: unset unless intentionally configured.
+- [ ] RESEND template IDs (`RESEND_TEMPLATE_*`) — **required** for each email to send; there is no
+  inline-HTML fallback. A blank/missing id makes that path refuse (paid sends fail as
+  `template:not-configured`; inquiry/repair return an error; auth mails are skipped). Verify: all six
+  ids set in prod (see `docs/resend-templates.md`).
 
 ## Preview isolation (Preview scope only — leave unset)
 This project shares one database URL and integration credentials between the Vercel Preview and

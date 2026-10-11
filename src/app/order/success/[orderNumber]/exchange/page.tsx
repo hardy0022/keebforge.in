@@ -21,7 +21,7 @@ export async function generateMetadata({
 }
 
 /**
- * Interstitial between the emailed exchange code and the order page.
+ * Interstitial between an exchange code and the order page.
  *
  * Deliberately does NOT touch the database and does NOT echo the code anywhere
  * except into the Continue button's POST body. A GET here is inert: it renders a
@@ -55,7 +55,7 @@ export default async function ExchangePage({
             <p className="order-success-sub">
               {order
                 ? "This link gives this browser access to pay for your order. It works once."
-                : "This link is incomplete. Open the link straight from your order confirmation email."}
+                : "This link is incomplete. Use the exact link you were given, or contact support with your order number."}
             </p>
             {order && (
               <p className="order-success-order">

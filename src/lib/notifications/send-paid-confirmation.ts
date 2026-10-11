@@ -31,6 +31,7 @@ import {
   resolveOutboundRecipient,
 } from "@/lib/email/outbound";
 import { readTemplateIds } from "@/lib/email/templates";
+import { SITE_URL } from "@/lib/seo";
 
 /**
  * Database + Resend adapter for the paid-order confirmation outbox.
@@ -64,25 +65,23 @@ export async function sendViaResend(message: EmailMessage): Promise<SendOutcome>
     logSuppressedDelivery(plan.reason);
     return { kind: "rejected", reason: `suppressed:${plan.reason}` };
   }
+  if (!message.template) {
+    // No template id configured for this order type. Definitive (nothing left
+    // the building) so an explicit retry after configuration is safe.
+    return { kind: "rejected", reason: "template:not-configured" };
+  }
   try {
     const from =
       process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>";
-    // A configured template is sent instead of the inline HTML; both carry the
-    // same authoritative, already-decided data. The subject is passed either
-    // way so the operator can still override it on the record.
-    const { data, error } = message.template
-      ? await resend.emails.send({
-          from,
-          to: plan.to,
-          subject: message.subject,
-          template: message.template,
-        })
-      : await resend.emails.send({
-          from,
-          to: plan.to,
-          subject: message.subject,
-          html: message.html,
-        });
+    // The message is rendered by its published Resend template with the
+    // already-decided variables. The subject is passed so the operator can still
+    // override it on the record.
+    const { data, error } = await resend.emails.send({
+      from,
+      to: plan.to,
+      subject: message.subject,
+      template: message.template,
+    });
     if (error) {
       const reason = resendErrorDiagnostic(error);
       return classifyResendApiError(error) === "rejected"
@@ -117,6 +116,10 @@ async function loadOrder(
     customerEmail: order.customerEmail,
     paymentStatus: order.paymentStatus,
     total: order.total,
+    subtotal: order.subtotal,
+    shipping: order.shipping,
+    discount: order.discount,
+    tax: order.tax,
     // Gross collected from verified rows (PAID + REFUNDED): what was actually paid.
     paidAmount: settledAmount(order.payments),
     items: order.items.map((item) => ({
@@ -124,6 +127,7 @@ async function loadOrder(
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       lineTotal: item.lineTotal,
+      imageUrl: item.imageUrl,
     })),
     services: order.services.map((service) => ({
       name: service.name,
@@ -210,7 +214,9 @@ export async function notifyPaidOrder(
   try {
     const order = await loadOrder(orderId);
     if (!order) return { status: "skipped", reason: "order-not-found" };
-    return await runPaidConfirmation(deps, order, readTemplateIds());
+    return await runPaidConfirmation(deps, order, readTemplateIds(), {
+      siteUrl: SITE_URL,
+    });
   } catch (error) {
     console.error(
       `[paid-confirmation] unexpected failure for order ${orderId}: ${resendErrorDiagnostic(error)}`,

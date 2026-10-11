@@ -447,7 +447,7 @@ const body = (r: Awaited<ReturnType<typeof startInlinePayment>>) =>
     console.log("PASS 23 success URL is credential-free; cookie value verifies");
   }
 
-  // ── 24. Email link carries an exchange code, not the capability ─────────
+  // ── 24. Recovery link carries an exchange code, not the capability ──────
   {
     const capability = createOrderCapability();
     const exchange = createExchangeCode();
@@ -457,19 +457,19 @@ const body = (r: Awaited<ReturnType<typeof startInlinePayment>>) =>
       [EXCHANGE_EXPIRY_KEY]: exchange.expiresAt,
       [EXCHANGE_STATE_KEY]: EXCHANGE_STATE_REDEEMABLE,
     };
-    // What order-confirmation-email.ts builds.
+    // What the order-success recovery link points at.
     const payUrl = new URL(
       `https://kf.test/order/success/KF30X2A/exchange?${EXCHANGE_PARAM}=${exchange.code}`,
     );
     assert.equal(
       payUrl.pathname,
       "/order/success/KF30X2A/exchange",
-      "email must point at the interstitial, not the order page",
+      "the recovery link must point at the interstitial, not the order page",
     );
     const fromEmail = readCapabilityParam(payUrl.searchParams.get(EXCHANGE_PARAM));
     assert.equal(fromEmail, exchange.code);
     assert.equal(verifyOrderExchange(fromEmail, billingDetails), true);
-    // The capability itself is NOT in the email — only the code is.
+    // The capability itself is NOT in the link — only the code is.
     assert.equal(payUrl.href.includes(capability.token), false);
     // …and the code alone is not a payment credential.
     assert.equal(verifyOrderPayCookie(exchange.code, billingDetails), false);

@@ -37,7 +37,6 @@ import {
   clientIp,
   rateLimitResponse,
 } from "@/lib/payments/rate-limit";
-import { sendGuestOrderConfirmation } from "@/lib/payments/order-confirmation-email";
 import { readJsonBody } from "@/lib/http/read-json-body";
 import {
   PREVIEW_OPERATION_DISABLED_MESSAGE,
@@ -239,8 +238,8 @@ export async function POST(req: NextRequest) {
           // Only the hash was stored, so a replay cannot recover the original
           // plaintext. Rotate the capability instead: this is the same browser
           // retrying the same checkout, and the superseded token stops working.
-          // The emailed exchange code is untouched, so the recovery link the
-          // customer already has still works.
+          // The stored exchange code is untouched, so an already-issued
+          // recovery link still works.
           const replayed = createOrderCapability();
           // Merge, not replace: replacing the document from the snapshot read
           // above would revert a concurrent exchange redemption.
@@ -653,17 +652,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (couponEligible) await incrementCouponUsage(couponEligible.couponId);
-
-    // Guests get a recovery link: no session, no way back to this capability
-    // after the tab closes. Signed-in customers reach the order from their
-    // account, so they are not emailed.
-    if (!profile) {
-      await sendGuestOrderConfirmation({
-        to: email,
-        orderNumber,
-        exchangeCode: exchange.code,
-      });
-    }
 
     const res = NextResponse.json({
       orderId: order.id,

@@ -1,10 +1,11 @@
 /**
  * Resend-managed email templates — configuration and pure payload builders.
  *
- * Four transactional emails can be rendered by a template published in the
- * Resend dashboard instead of the inline HTML this codebase has always used:
+ * Every transactional email is rendered by a template published in the Resend
+ * dashboard rather than inline HTML in this codebase:
  *
- *   password reset, contact-inquiry admin notification, shop paid-order
+ *   password reset, email verification, contact-inquiry admin notification,
+ *   custom-work/repair-request admin notification, shop paid-order
  *   confirmation, mods (SERVICE) paid-order confirmation.
  *
  * The application stays the authority for everything the template must not own:
@@ -17,30 +18,35 @@
  * ────────────────
  * Like `@/lib/email/outbound-policy`, this module takes the environment as a
  * plain map and reads nothing at import time, so the variable builders and the
- * "configured or fall back" rule can be unit-tested without a network.
+ * "configured or not" rule can be unit-tested without a network.
  *
- * TEMPLATE IDS ARE NOT INVENTED
- * ─────────────────────────────
- * No template exists in the Resend account yet. Each id is read from an optional
- * environment variable (see `EMAIL_TEMPLATE_ENV`). When a variable is unset the
- * send falls back to the inline HTML (`html`), so production and local behaviour
- * are unchanged until an operator publishes a template and sets its id. See
- * `docs/resend-templates.md` for the exact dashboard steps.
+ * TEMPLATE IDS
+ * ────────────
+ * Each id is read from a required environment variable (see `EMAIL_TEMPLATE_ENV`).
+ * A published template's id is set by the operator (see docs/resend-templates.md).
+ * When an id is unset the call site cannot render that email and reports the
+ * failure rather than inventing a template.
  *
  * VARIABLES
  * ─────────
  * Resend's send API accepts only flat `string | number` variables (no arrays or
  * objects). List-shaped content (order items, mods configuration, service lines,
  * photos) is therefore pre-rendered in the application into an escaped HTML
- * fragment and passed as a single `*Html` variable. Text variables carry the raw
- * value; `*Html` variables are already HTML-escaped with `esc()` and must be
- * inserted without further escaping. `resetUrl` is a trusted, Better-Auth
- * generated URL (never user input) and is passed through unchanged.
+ * fragment and passed as a single `*Html` variable. Resend inserts `{{{KEY}}}`
+ * values without escaping, so `*Html` variables are HTML-escaped here with
+ * `esc()` before they are handed over. `resetUrl`/`verifyUrl` are trusted,
+ * Better-Auth generated URLs (never user input) and are passed through
+ * unchanged.
+ *
+ * `EMAIL`, `FIRST_NAME`, `LAST_NAME`, `UNSUBSCRIBE_URL`, `contact` and `this` are
+ * reserved by Resend; no variable key here collides with them.
  */
 
 export const EMAIL_TEMPLATE_ENV = {
   passwordReset: "RESEND_TEMPLATE_PASSWORD_RESET",
+  emailVerification: "RESEND_TEMPLATE_EMAIL_VERIFICATION",
   contactInquiry: "RESEND_TEMPLATE_CONTACT_INQUIRY",
+  repairRequest: "RESEND_TEMPLATE_REPAIR_REQUEST",
   shopOrderPaid: "RESEND_TEMPLATE_SHOP_ORDER_PAID",
   modsOrderPaid: "RESEND_TEMPLATE_MODS_ORDER_PAID",
 } as const;
@@ -59,8 +65,8 @@ export type EmailTemplateRef = {
  * Read the configured template ids from the environment.
  *
  * Trims whitespace and treats an empty (or non-string) value as unconfigured, so
- * a blank variable degrades to the inline-HTML fallback rather than sending a
- * request with an empty id.
+ * a blank variable is a hard "not configured" rather than a request with an
+ * empty id.
  */
 export function readTemplateIds(
   env: Record<string, string | undefined> = process.env,
@@ -94,12 +100,19 @@ export function esc(value: string): string {
   );
 }
 
-/** A rendered message: an inline-HTML fallback plus an optional template. */
+/** A rendered message: the subject plus the template variables to send. */
 export type EmailPayload = {
   subject: string;
-  html: string;
-  template?: EmailTemplateRef;
+  variables: Record<string, string | number>;
 };
+
+/** Combine a template id with a built payload into Resend's `template` shape. */
+export function templateRef(
+  id: string,
+  payload: EmailPayload,
+): { subject: string; template: EmailTemplateRef } {
+  return { subject: payload.subject, template: { id, variables: payload.variables } };
+}
 
 /**
  * Password reset. Better Auth generates the token and the `resetUrl` (derived
@@ -107,95 +120,131 @@ export type EmailPayload = {
  * only in development); this only frames the message. The token is never
  * generated or read here, and only the reset URL is handed to the template.
  */
-export function passwordResetEmail(
-  input: { name: string; resetUrl: string },
-  templateId?: string,
-): EmailPayload {
-  const subject = "Reset your KeebForge password";
-  const html =
-    `<h2>Reset your password — KeebForge.in</h2>` +
-    `<p>Hi ${esc(input.name)},</p>` +
-    `<p>We received a request to reset your password. Tap the button below to choose a new one. This link expires in 1 hour.</p>` +
-    `<p style="margin:24px 0"><a href="${esc(input.resetUrl)}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;border-radius:10px;text-decoration:none;font-weight:600">Reset password</a></p>` +
-    `<p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`;
-
+export function passwordResetEmail(input: {
+  name: string;
+  resetUrl: string;
+}): EmailPayload {
   return {
-    subject,
-    html,
-    template: templateId
-      ? {
-          id: templateId,
-          variables: {
-            name: input.name,
-            resetUrl: input.resetUrl,
-            expiresIn: "1 hour",
-          },
-        }
-      : undefined,
+    subject: "Reset your KeebForge password",
+    variables: {
+      name: input.name,
+      resetUrl: input.resetUrl,
+      expiresIn: "1 hour",
+    },
+  };
+}
+
+/**
+ * Email verification. Better Auth generates the token and the `verifyUrl`; this
+ * only frames the message. The token is never generated or read here.
+ */
+export function verificationEmail(input: {
+  name: string;
+  verifyUrl: string;
+}): EmailPayload {
+  return {
+    subject: "Verify your KeebForge email",
+    variables: {
+      name: input.name,
+      verifyUrl: input.verifyUrl,
+      expiresIn: "1 hour",
+    },
   };
 }
 
 /**
  * Contact-inquiry admin notification. The recipient (the shared contact inbox)
  * and the reply-to behaviour are decided by the caller; this only builds the
- * body. The optional uploaded-photo links are pre-rendered into an escaped
- * `photosHtml` fragment so the template can insert them raw.
+ * variables. The optional uploaded-photo links are pre-rendered into an escaped
+ * `photosHtml` fragment so the template can insert them raw. `customerEmail` is
+ * the inquiry sender's address (not a recipient); the key avoids Resend's
+ * reserved `EMAIL`.
  */
-export function contactInquiryEmail(
-  input: {
-    name: string;
-    phone: string;
-    email: string;
-    deviceModel: string;
-    issue: string;
-    photoUrls: string[];
-  },
-  templateId?: string,
-): EmailPayload {
-  const subject = `Repair Inquiry — ${input.deviceModel || "Device"} — ${input.name}`;
+export function contactInquiryEmail(input: {
+  name: string;
+  phone: string;
+  email: string;
+  deviceModel: string;
+  issue: string;
+  photoUrls: string[];
+}): EmailPayload {
   const photosHtml =
     input.photoUrls.length > 0
-      ? `<h3>Photos (${input.photoUrls.length})</h3>` +
+      ? `<p style="margin:24px 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#71717a;">Photos (${input.photoUrls.length})</p>` +
         input.photoUrls
-          .map((url) => `<p><a href="${esc(url)}">${esc(url)}</a></p>`)
+          .map(
+            (url) =>
+              `<p style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;"><a href="${esc(url)}" style="color:#4d7c0f;">${esc(url)}</a></p>`,
+          )
           .join("")
       : "";
-  const rows: Array<[string, string]> = [
-    ["Name", input.name],
-    ["Phone", input.phone],
-    ["Email", input.email],
-    ["Device / Model", input.deviceModel],
-    ["Issue", input.issue],
-  ];
-  const html =
-    `<h2>Repair Inquiry — KeebForge.in</h2>` +
-    `<table cellpadding="6" style="font-family:sans-serif;font-size:14px;color:#1a1a1a">` +
-    rows
-      .map(
-        ([key, value]) =>
-          `<tr><td><strong>${esc(key)}</strong></td><td>${esc(value)}</td></tr>`,
-      )
-      .join("") +
-    `</table>` +
-    photosHtml +
-    `<p style="color:#888">Reply to this inquiry by clicking Reply — it goes straight back to the customer.</p>`;
 
   return {
-    subject,
-    html,
-    template: templateId
-      ? {
-          id: templateId,
-          variables: {
-            name: input.name,
-            phone: input.phone,
-            email: input.email,
-            deviceModel: input.deviceModel,
-            issue: input.issue,
-            photosCount: input.photoUrls.length,
-            photosHtml,
-          },
-        }
-      : undefined,
+    subject: `Repair Inquiry — ${input.deviceModel || "Device"} — ${input.name}`,
+    variables: {
+      name: input.name,
+      phone: input.phone,
+      customerEmail: input.email,
+      deviceModel: input.deviceModel,
+      issue: input.issue,
+      photosCount: input.photoUrls.length,
+      photosHtml,
+    },
+  };
+}
+
+/**
+ * Custom-work / repair-request admin notification. Mirrors the previous inline
+ * table as flat template variables; the uploaded-photo links are pre-rendered
+ * into an escaped `photosHtml` fragment.
+ */
+export function repairRequestEmail(input: {
+  reference: string;
+  serviceType: string;
+  deviceType: string;
+  brand: string;
+  model: string;
+  workTypes: string;
+  condition: string;
+  budget: string;
+  description: string;
+  name: string;
+  phone: string;
+  email: string;
+  contactNotes: string;
+  shipping: string;
+  photoUrls: string[];
+}): EmailPayload {
+  const photosHtml =
+    input.photoUrls.length > 0
+      ? `<p style="margin:24px 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#71717a;">Photos (${input.photoUrls.length})</p>` +
+        input.photoUrls
+          .map(
+            (url) =>
+              `<p style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;"><a href="${esc(url)}" style="color:#4d7c0f;">${esc(url)}</a></p>`,
+          )
+          .join("")
+      : "";
+
+  return {
+    subject: `[${input.reference}] Custom Work & Repair Request — ${input.brand} ${input.model}`,
+    variables: {
+      reference: input.reference,
+      serviceType: input.serviceType,
+      deviceType: input.deviceType,
+      brand: input.brand,
+      model: input.model,
+      workTypes: input.workTypes,
+      condition: input.condition,
+      budget: input.budget,
+      description: input.description,
+      name: input.name,
+      phone: input.phone,
+      customerEmail: input.email,
+      contactNotes: input.contactNotes,
+      shipping: input.shipping,
+      photosCount: input.photoUrls.length,
+      photosHtml,
+    },
   };
 }

@@ -165,7 +165,6 @@ const TEST = "qa-inbox@example.net";
 
     const paths: Array<{ file: string; to: string }> = [
       { file: "src/lib/notifications/send-paid-confirmation.ts", to: "to: plan.to," },
-      { file: "src/lib/payments/order-confirmation-email.ts", to: "to: [plan.to]," },
       { file: "src/lib/auth/better-auth.ts", to: "to: plan.to," },
       { file: "src/lib/auth/send-verification-email.ts", to: "to: plan.to," },
       { file: "src/app/actions/inquiry.ts", to: "to: [plan.to]," },
@@ -189,7 +188,7 @@ const TEST = "qa-inbox@example.net";
       assert.ok(src.includes(to), `${file} must send to the resolved recipient`);
     }
 
-    pass("all six outbound paths route their recipient through the policy");
+    pass("all outbound paths route their recipient through the policy");
   }
 
   // ── C. verification path honours the policy end-to-end ────────────────────

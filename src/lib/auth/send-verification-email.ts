@@ -4,6 +4,7 @@ import {
   logSuppressedDelivery,
   resolveOutboundRecipient,
 } from "@/lib/email/outbound";
+import { readTemplateIds, verificationEmail } from "@/lib/email/templates";
 import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
 
 /**
@@ -28,12 +29,20 @@ import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
  *
  * The thrown message is a fixed string. Resend's own error text never reaches
  * the caller, so no provider detail can surface in a response body.
+ *
+ * The message body lives in a published Resend template; only the variables are
+ * built here. The template id is resolved inside the default transport, so a
+ * test that injects `deliver` never needs it.
  */
 
 export const VERIFICATION_EMAIL_SUBJECT = "Verify your KeebForge email";
 export const VERIFICATION_EMAIL_FROM = "KeebForge <no-reply@keebforge.in>";
 
-type Mail = { to: string; subject: string; html: string };
+type Mail = {
+  to: string;
+  subject: string;
+  variables: Record<string, string | number>;
+};
 
 type SendResult = {
   data?: { id?: string } | null;
@@ -44,31 +53,17 @@ type Deliver = (mail: Mail) => SendResult | Promise<SendResult>;
 
 /** Default transport. Resend returns (not throws) on API-level rejection. */
 function deliverViaResend(mail: Mail): Promise<SendResult> {
+  const templateId = readTemplateIds().emailVerification;
+  if (!templateId) {
+    return Promise.reject(new Error("verification template not configured"));
+  }
   const resend = new Resend(process.env.RESEND_API_KEY);
   return resend.emails.send({
     from: VERIFICATION_EMAIL_FROM,
     to: mail.to,
     subject: mail.subject,
-    html: mail.html,
+    template: { id: templateId, variables: mail.variables },
   });
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(
-    /[&<>"]/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c,
-  );
-}
-
-export function verificationEmailHtml(name: string, url: string): string {
-  return (
-    `<h2>Verify your email — KeebForge.in</h2>` +
-    `<p>Hi ${escapeHtml(name)},</p>` +
-    `<p>Confirm your email to secure your account and link any past guest orders to it.</p>` +
-    `<p style="margin:24px 0"><a href="${url}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;border-radius:10px;text-decoration:none;font-weight:600">Verify email</a></p>` +
-    `<p>This link expires in 1 hour. If you didn't create an account, you can ignore this email.</p>`
-  );
 }
 
 /**
@@ -99,17 +94,22 @@ export async function sendVerificationEmailMessage(
     return;
   }
 
+  const payload = verificationEmail({
+    name: args.user.name,
+    verifyUrl: args.url,
+  });
+
   let result: SendResult;
   try {
     result = await deliver({
       to: plan.to,
-      subject: VERIFICATION_EMAIL_SUBJECT,
-      html: verificationEmailHtml(args.user.name, args.url),
+      subject: payload.subject,
+      variables: payload.variables,
     });
   } catch (e) {
-    // Transport/SDK failure. Log server-side only — the caller gets `rejected`.
-    // Only the sanitized diagnostic is logged; a provider message can echo the
-    // recipient address.
+    // Transport/SDK failure (or an unconfigured template). Log server-side only
+    // — the caller gets `rejected`. Only the sanitized diagnostic is logged; a
+    // provider message can echo the recipient address.
     console.error(
       "Resend error (email verification):",
       resendErrorDiagnostic(e),

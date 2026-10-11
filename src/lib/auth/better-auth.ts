@@ -44,27 +44,28 @@ export const auth = betterAuth({
         }
         const resend = new Resend(process.env.RESEND_API_KEY);
         // Better Auth generated the token and `url` (from this app's baseURL —
-        // https://keebforge.in in production). A configured Resend template
-        // renders the message; otherwise the inline HTML fallback is sent. The
-        // application never generates the token, and the URL is delivered only.
-        const mail = passwordResetEmail(
-          { name: user.name, resetUrl: url },
-          readTemplateIds().passwordReset,
-        );
+        // https://keebforge.in in production). The published Resend template
+        // renders the message; the application never generates the token and
+        // only delivers the URL. Without a configured template id there is
+        // nothing to send, so the request quietly succeeds without a mail.
+        const templateId = readTemplateIds().passwordReset;
+        if (!templateId) {
+          console.error(
+            "Resend error (password reset): template not configured",
+          );
+          return;
+        }
+        const payload = passwordResetEmail({
+          name: user.name,
+          resetUrl: url,
+        });
         const from = "KeebForge <no-reply@keebforge.in>";
-        const { data, error } = mail.template
-          ? await resend.emails.send({
-              from,
-              to: plan.to,
-              subject: mail.subject,
-              template: mail.template,
-            })
-          : await resend.emails.send({
-              from,
-              to: plan.to,
-              subject: mail.subject,
-              html: mail.html,
-            });
+        const { data, error } = await resend.emails.send({
+          from,
+          to: plan.to,
+          subject: payload.subject,
+          template: { id: templateId, variables: payload.variables },
+        });
         if (error) {
           // API-level rejection (rate limit, sender policy, invalid recipient)
           // — does NOT throw, so log it or it stays invisible. Only the

@@ -5,6 +5,9 @@ import {
   esc,
   passwordResetEmail,
   readTemplateIds,
+  repairRequestEmail,
+  templateRef,
+  verificationEmail,
 } from "@/lib/email/templates";
 import {
   buildModsPaidConfirmation,
@@ -22,10 +25,11 @@ import {
  * Pins the guarantees that keep the application authoritative when a template is
  * configured:
  *
- *   1. Template ids come only from optional environment variables; a missing or
- *      blank id degrades to the inline-HTML fallback (no request, no error).
- *   2. Template variables are built from the same server-side snapshots as the
- *      fallback, with list content pre-escaped into `*Html` fragments.
+ *   1. Template ids come only from environment variables; a missing or blank id
+ *      is reported as unconfigured (no invented id, no inline fallback).
+ *   2. Template variables are built from the same server-side snapshots the
+ *      application always used, with list content pre-escaped into `*Html`
+ *      fragments (Resend inserts `{{{KEY}}}` unescaped).
  *   3. The paid-notification state machine is untouched: a configured template
  *      rides along on the message, and SENT / FAILED / NEEDS_REVIEW are still
  *      decided solely by the Resend outcome.
@@ -120,18 +124,22 @@ function fakeDeps(outcome: SendOutcome) {
 }
 
 (async () => {
-  // ── 1. Environment-driven ids, missing configuration falls back ────────────
+  // ── 1. Environment-driven ids ──────────────────────────────────────────────
   {
     assert.deepEqual(readTemplateIds({}), {}, "no env → no templates configured");
 
     const ids = readTemplateIds({
       [EMAIL_TEMPLATE_ENV.passwordReset]: "  tpl_pw  ",
       [EMAIL_TEMPLATE_ENV.contactInquiry]: "tpl_contact",
+      [EMAIL_TEMPLATE_ENV.repairRequest]: "tpl_repair",
+      [EMAIL_TEMPLATE_ENV.emailVerification]: "tpl_verify",
       [EMAIL_TEMPLATE_ENV.shopOrderPaid]: "",
       [EMAIL_TEMPLATE_ENV.modsOrderPaid]: "   ",
     });
     assert.equal(ids.passwordReset, "tpl_pw", "ids are trimmed");
     assert.equal(ids.contactInquiry, "tpl_contact");
+    assert.equal(ids.repairRequest, "tpl_repair");
+    assert.equal(ids.emailVerification, "tpl_verify");
     assert.equal(ids.shopOrderPaid, undefined, "blank id is unconfigured");
     assert.equal(ids.modsOrderPaid, undefined, "whitespace id is unconfigured");
 
@@ -141,25 +149,34 @@ function fakeDeps(outcome: SendOutcome) {
   // ── 2. Password reset: Better Auth URL delivered, never generated here ─────
   {
     const url = "https://keebforge.in/reset-password?token=abc&callbackURL=%2F";
-    const noTemplate = passwordResetEmail({ name: "Ada", resetUrl: url });
-    assert.equal(noTemplate.subject, "Reset your KeebForge password");
-    assert.equal(noTemplate.template, undefined, "missing id → inline fallback");
-    assert.ok(noTemplate.html.includes("&amp;callbackURL"), "url is escaped in href");
-
-    const withTemplate = passwordResetEmail({ name: "Ada", resetUrl: url }, "tpl_pw");
-    assert.equal(withTemplate.template?.id, "tpl_pw");
+    const payload = passwordResetEmail({ name: "Ada", resetUrl: url });
+    assert.equal(payload.subject, "Reset your KeebForge password");
     assert.equal(
-      withTemplate.template?.variables.resetUrl,
+      payload.variables.resetUrl,
       url,
       "the trusted reset URL is passed through unchanged",
     );
-    assert.equal(withTemplate.template?.variables.name, "Ada");
-    assert.equal(withTemplate.template?.variables.expiresIn, "1 hour");
+    assert.equal(payload.variables.name, "Ada");
+    assert.equal(payload.variables.expiresIn, "1 hour");
+
+    const ref = templateRef("tpl_pw", payload);
+    assert.equal(ref.template.id, "tpl_pw");
+    assert.equal(ref.template.variables.resetUrl, url);
 
     pass("password reset: template carries the Better Auth reset URL unchanged");
   }
 
-  // ── 3. Contact inquiry: photo list pre-escaped, admin recipient untouched ──
+  // ── 2b. Verification: the verify URL is delivered unchanged ────────────────
+  {
+    const url = "https://keebforge.in/api/auth/verify-email?token=xyz";
+    const payload = verificationEmail({ name: "Ada", verifyUrl: url });
+    assert.equal(payload.subject, "Verify your KeebForge email");
+    assert.equal(payload.variables.verifyUrl, url);
+    assert.equal(payload.variables.expiresIn, "1 hour");
+    pass("verification: template carries the Better Auth verify URL unchanged");
+  }
+
+  // ── 3. Contact inquiry: photo list pre-escaped, recipient untouched ────────
   {
     const base = {
       name: "Sam",
@@ -169,56 +186,88 @@ function fakeDeps(outcome: SendOutcome) {
       issue: "Does not power on.",
     };
 
-    const noPhotos = contactInquiryEmail({ ...base, photoUrls: [] });
-    assert.equal(noPhotos.template, undefined);
-    assert.ok(noPhotos.html.includes("Repair Inquiry"));
-
-    const tpl = contactInquiryEmail(
-      { ...base, photoUrls: ["https://cdn.example/a.jpg?x=1&y=2", "bad<url>"] },
-      "tpl_contact",
-    );
-    assert.equal(tpl.template?.id, "tpl_contact");
-    assert.equal(tpl.template?.variables.photosCount, 2);
-    const photosHtml = String(tpl.template?.variables.photosHtml);
+    const payload = contactInquiryEmail({
+      ...base,
+      photoUrls: ["https://cdn.example/a.jpg?x=1&y=2", "bad<url>"],
+    });
+    assert.equal(payload.variables.photosCount, 2);
+    assert.equal(payload.variables.name, "Sam");
+    assert.equal(payload.variables.customerEmail, "sam@example.org");
+    const photosHtml = String(payload.variables.photosHtml);
     assert.ok(photosHtml.includes("Photos (2)"));
     assert.ok(photosHtml.includes("&amp;y=2"), "photo URL is escaped");
     assert.ok(!photosHtml.includes("<url>"), "metacharacters in URL are neutralised");
-    assert.equal(tpl.template?.variables.name, "Sam");
 
-    const emptyTpl = contactInquiryEmail({ ...base, photoUrls: [] }, "tpl_contact");
-    assert.equal(emptyTpl.template?.variables.photosHtml, "");
+    const noPhotos = contactInquiryEmail({ ...base, photoUrls: [] });
+    assert.equal(noPhotos.variables.photosHtml, "");
+    assert.equal(noPhotos.variables.photosCount, 0);
 
-    pass("contact inquiry: configured template gets an escaped photos fragment");
+    pass("contact inquiry: template gets an escaped photos fragment");
   }
 
-  // ── 4. Shop / mods builders: fallback vs configured template ───────────────
+  // ── 3b. Repair request: every field becomes a flat variable ────────────────
+  {
+    const payload = repairRequestEmail({
+      reference: "KF-2026-000789",
+      serviceType: "Repair",
+      deviceType: "Keyboard",
+      brand: "Keychron",
+      model: "Q1",
+      workTypes: "Soldering, Lubing",
+      condition: "Used",
+      budget: "₹2,000",
+      description: "Sticky keys",
+      name: "Sam",
+      phone: "9876543210",
+      email: "sam@example.org",
+      contactNotes: "—",
+      shipping: "Ship to KeebForge",
+      photoUrls: ["https://cdn.example/p.jpg"],
+    });
+    assert.match(payload.subject, /KF-2026-000789/);
+    assert.equal(payload.variables.reference, "KF-2026-000789");
+    assert.equal(payload.variables.workTypes, "Soldering, Lubing");
+    assert.equal(payload.variables.customerEmail, "sam@example.org");
+    assert.ok(String(payload.variables.photosHtml).includes("Photos (1)"));
+    pass("repair request: fields map to flat template variables");
+  }
+
+  // ── 4. Shop / mods builders: configured template or nothing ────────────────
   {
     assert.equal(
       buildShopPaidConfirmation(shopOrder).template,
       undefined,
-      "shop: no id → inline fallback",
+      "shop: no id → no template",
     );
     const shop = buildShopPaidConfirmation(shopOrder, { shopOrderPaid: "tpl_shop" });
     assert.equal(shop.template?.id, "tpl_shop");
     assert.equal(shop.template?.variables.orderNumber, "KF-2026-000123");
     assert.equal(shop.template?.variables.customerName, "Ada <Lovelace>");
     assert.ok(
-      String(shop.html).includes("&lt;Lovelace&gt;"),
-      "fallback html still escapes customer input",
+      String(shop.template?.variables.itemsHtml).includes("&lt;TKL&gt;"),
+      "the pre-rendered items fragment escapes customer input",
+    );
+    assert.ok(
+      String(shop.template?.variables.totalsHtml).includes("Total paid"),
+      "the pre-rendered totals fragment is present",
     );
 
     assert.equal(
       buildModsPaidConfirmation(modsOrder).template,
       undefined,
-      "mods: no id → inline fallback",
+      "mods: no id → no template",
     );
     const mods = buildModsPaidConfirmation(modsOrder, { modsOrderPaid: "tpl_mods" });
     assert.equal(mods.template?.id, "tpl_mods");
-    assert.equal(mods.template?.variables.shippingMethod, "You ship your device to KeebForge (Express)");
+    assert.equal(
+      mods.template?.variables.shippingMethod,
+      "You ship your device to KeebForge (Express)",
+    );
     assert.equal(
       mods.template?.variables.shippingAddress,
       "Flat 4B, Lake View, Bengaluru, Karnataka 560001",
     );
+    assert.ok(String(mods.template?.variables.amountPaid).includes("₹"));
     assert.ok(String(mods.template?.variables.configHtml).includes("Wooting"));
     assert.ok(String(mods.template?.variables.servicesHtml).includes("Gasket mount install"));
 
@@ -232,7 +281,7 @@ function fakeDeps(outcome: SendOutcome) {
       "tpl_mods",
     );
 
-    pass("shop/mods builders attach the configured template; fallback otherwise");
+    pass("shop/mods builders attach the configured template, or none");
   }
 
   // ── 5. Shared escaper is single-sourced ────────────────────────────────────
@@ -271,11 +320,12 @@ function fakeDeps(outcome: SendOutcome) {
     assert.equal(ambiguous.calls.sent, 0);
     assert.equal(ambiguous.message()?.template?.id, "tpl_mods");
 
-    // No template configured anywhere still works and sends the fallback.
+    // With no template configured the message carries no template; the transport
+    // (not this pure core) is what turns that into a definitive failure.
     const noTemplates = fakeDeps({ kind: "accepted", providerMessageId: "re_2" });
     result = await runPaidConfirmation(noTemplates.deps, shopOrder);
     assert.equal(result.status, "sent");
-    assert.equal(noTemplates.message()?.template, undefined, "no id → html fallback");
+    assert.equal(noTemplates.message()?.template, undefined, "no id → no template");
 
     // An unpaid order is skipped before any claim or send, template or not.
     const unpaid = fakeDeps({ kind: "accepted", providerMessageId: "re_3" });

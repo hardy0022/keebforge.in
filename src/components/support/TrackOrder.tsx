@@ -241,7 +241,7 @@ function PayNowInline({
       if (!res.ok || !data) {
         setError(
           data?.error ??
-            "Could not start payment. Use the link in your confirmation email.",
+            "Could not start payment. Please try again, or contact support.",
         );
         setBusy(false);
         return;
@@ -290,10 +290,11 @@ function PayNowInline({
           )}
         </>
       ) : (
-        // Tracking is public; payment is not. Without a capability link,
-        // point at it instead of failing on click.
+        // Tracking is public; payment is not. Without the payment capability,
+        // point at how to get it instead of failing on click.
         <span className="track-pay-error-inline">
-          Use the payment link in your confirmation email, or contact support.
+          Sign in to the account that placed this order, or contact support to
+          pay.
         </span>
       )}
     </>

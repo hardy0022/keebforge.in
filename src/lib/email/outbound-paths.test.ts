@@ -4,12 +4,12 @@ import {
   OUTBOUND_SEND_DISABLED_ENV,
   OUTBOUND_TEST_RECIPIENT_ENV,
 } from "@/lib/email/outbound-policy";
+import { EMAIL_TEMPLATE_ENV } from "@/lib/email/templates";
 
 /**
- * Mocked behavioural tests for the four outbound email paths that are driven by
+ * Mocked behavioural tests for the outbound email paths that are driven by
  * the shared outbound-recipient policy:
  *
- *   - guest order confirmation  (sendGuestOrderConfirmation)
  *   - paid-order confirmation   (sendViaResend)
  *   - repair inquiry            (sendInquiry)
  *   - repair request            (submitRepairRequest)
@@ -112,6 +112,8 @@ const saved = {
   redirect: process.env[OUTBOUND_TEST_RECIPIENT_ENV],
   disabled: process.env[OUTBOUND_SEND_DISABLED_ENV],
   vercel: process.env.VERCEL_ENV,
+  inquiry: process.env[EMAIL_TEMPLATE_ENV.contactInquiry],
+  repair: process.env[EMAIL_TEMPLATE_ENV.repairRequest],
 };
 function resetPolicyEnv() {
   delete process.env[OUTBOUND_TEST_RECIPIENT_ENV];
@@ -121,6 +123,11 @@ function resetPolicyEnv() {
   // the environment regardless of where the suite is run.
   delete process.env.VERCEL_ENV;
   process.env.RESEND_API_KEY = "re_test_key";
+  // The inquiry/repair actions send through a published Resend template; an
+  // unconfigured id is a hard "not configured" refusal, so the behavioural
+  // tests pin the ids they expect to be sent.
+  process.env[EMAIL_TEMPLATE_ENV.contactInquiry] = "tpl_contact";
+  process.env[EMAIL_TEMPLATE_ENV.repairRequest] = "tpl_repair";
 }
 function restoreEnv() {
   const put = (name: string, value: string | undefined) => {
@@ -132,48 +139,22 @@ function restoreEnv() {
   put(OUTBOUND_TEST_RECIPIENT_ENV, saved.redirect);
   put(OUTBOUND_SEND_DISABLED_ENV, saved.disabled);
   put("VERCEL_ENV", saved.vercel);
+  put(EMAIL_TEMPLATE_ENV.contactInquiry, saved.inquiry);
+  put(EMAIL_TEMPLATE_ENV.repairRequest, saved.repair);
 }
 
 (async () => {
   try {
-    // ── 1. guest order confirmation ───────────────────────────────────────────
-    {
-      const { sendGuestOrderConfirmation } = await import(
-        "@/lib/payments/order-confirmation-email"
-      );
-      const call = () =>
-        sendGuestOrderConfirmation({
-          to: REAL,
-          orderNumber: "KFEMAIL1",
-          exchangeCode: "code_test_1",
-        });
-
-      resetPolicyEnv();
-      captured.length = 0;
-      await call();
-      assert.equal(captured.length, 1, "baseline: no confirmation email produced");
-      assert.deepEqual(captured[0].to, [REAL], "baseline must reach the real guest");
-
-      process.env[OUTBOUND_TEST_RECIPIENT_ENV] = TEST;
-      captured.length = 0;
-      await call();
-      assert.deepEqual(captured[0].to, [TEST], "override must redirect the guest email");
-
-      delete process.env[OUTBOUND_TEST_RECIPIENT_ENV];
-      process.env[OUTBOUND_SEND_DISABLED_ENV] = "true";
-      captured.length = 0;
-      await call();
-      assert.equal(captured.length, 0, "disabled must suppress the guest email");
-
-      pass("guest order confirmation redirects/suppresses/sends per policy");
-    }
-
-    // ── 2. paid-order confirmation ────────────────────────────────────────────
+    // ── 1. paid-order confirmation ────────────────────────────────────────────
     {
       const { sendViaResend } = await import(
         "@/lib/notifications/send-paid-confirmation"
       );
-      const message = { to: REAL, subject: "Order confirmed", html: "<p>x</p>" };
+      const message = {
+        to: REAL,
+        subject: "Order confirmed",
+        template: { id: "tpl_shop", variables: { orderNumber: "KF-1" } },
+      };
 
       resetPolicyEnv();
       captured.length = 0;
@@ -213,7 +194,7 @@ function restoreEnv() {
       pass("paid-order confirmation redirects/suppresses/sends per policy");
     }
 
-    // ── 2b. paid-order confirmation via a Resend template ─────────────────────
+    // ── 2b. paid-order confirmation carries the Resend template ───────────────
     {
       const { sendViaResend } = await import(
         "@/lib/notifications/send-paid-confirmation"
@@ -221,7 +202,6 @@ function restoreEnv() {
       const templated = {
         to: REAL,
         subject: "Payment received",
-        html: "<p>fallback</p>",
         template: { id: "tpl_shop", variables: { orderNumber: "KF-1" } },
       };
 
@@ -232,12 +212,12 @@ function restoreEnv() {
       assert.equal(
         captured[0].template?.id,
         "tpl_shop",
-        "the template must be sent, not the inline html",
+        "the template must be sent",
       );
       assert.equal(
         captured[0].html,
         undefined,
-        "html must not be sent alongside a template",
+        "inline html must never be sent alongside a template",
       );
 
       // Redirect still applies to the templated send.
@@ -259,17 +239,17 @@ function restoreEnv() {
       );
       assert.equal(captured.length, 0, "suppressed template must not call the provider");
 
-      // Without a template id, the inline html fallback is still sent.
+      // A message with no template id is a definitive, retryable rejection — the
+      // app never falls back to inline HTML.
       resetPolicyEnv();
       captured.length = 0;
-      outcome = await sendViaResend({
-        to: REAL,
-        subject: "Payment received",
-        html: "<p>fallback</p>",
-      });
-      assert.equal(outcome.kind, "accepted");
-      assert.equal(captured[0].html, "<p>fallback</p>");
-      assert.equal(captured[0].template, undefined);
+      outcome = await sendViaResend({ to: REAL, subject: "Payment received" });
+      assert.deepEqual(
+        outcome,
+        { kind: "rejected", reason: "template:not-configured" },
+        "no template must be a definitive rejection",
+      );
+      assert.equal(captured.length, 0, "no template must not call the provider");
 
       pass("templated paid confirmation: template sent, policy still enforced");
     }
