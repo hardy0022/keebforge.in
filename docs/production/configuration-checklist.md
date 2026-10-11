@@ -1,6 +1,6 @@
 # Production Configuration Checklist (Read-Only Verification)
 
-**Status:** UNVERIFIED for all items. Verification requires separately authorized read-only review of deployment configuration. No secrets are to be inspected or printed.
+**Status:** PARTIALLY VERIFIED. As of 2026-10-11 the scheduled-reconciliation variables (`CRON_SECRET`, `PAID_NOTIFICATION_RECONCILE_SINCE`) and the cron registration are presence-verified in Production. All other items remain UNVERIFIED. Verification requires separately authorized read-only review of deployment configuration. No secrets are to be inspected or printed.
 
 ## Database
 - [ ] DATABASE_URL (connection) — Purpose: app DB connectivity. Config: deployment env (Vercel/Supabase). Verify: format/target, not local/scratch; no secret values exposed.
@@ -37,6 +37,38 @@
 - [ ] NEXT_PUBLIC_APP_URL — Purpose: public URLs. Config: deployment env. Verify: production domain. UNVERIFIED.
 - [ ] ADMIN_PANEL_PRODUCTION_ENABLED — Purpose: admin access gating. Config: deployment env. Verify: correct for prod. UNVERIFIED.
 - [ ] NODE_ENV — Purpose: runtime mode. Config: deployment. Verify: production. UNVERIFIED.
+
+## Scheduled paid-order reconciliation (Vercel Cron)
+Verified present in the Production scope on 2026-10-11 (presence check only, values not read).
+- [x] CRON_SECRET — Purpose: authenticates `GET /api/cron/reconcile-paid-notifications`
+  (`Authorization: Bearer $CRON_SECRET`). Config: deployment env, Production only. The route
+  fails closed (HTTP 500) when unset and returns 401 on a bad/absent header. Verify: present;
+  never commit or print the value. VERIFIED (presence, 2026-10-11).
+- [x] PAID_NOTIFICATION_RECONCILE_SINCE — Purpose: only paid orders created on or after this
+  ISO-8601 instant are eligible for the scheduled backfill, so the historical backlog is never
+  auto-queued. The route fails closed (HTTP 500) when missing or invalid. Verify: present and a
+  valid timestamp. VERIFIED (presence, 2026-10-11).
+- [ ] PAID_NOTIFICATION_RECONCILE_LIMIT — Optional per-run cap, clamped to a hard maximum of
+  100; unset means 100. Verify: omitted or within range. UNVERIFIED.
+- [ ] Cron registration — Purpose: the schedule exists on the project. Config: `vercel.json`
+  (`"crons"`, `0 3 * * *`; Hobby allows once-per-day only). Verify: project cron list shows
+  `/api/cron/reconcile-paid-notifications`. VERIFIED (registered, 2026-10-11).
+
+## Outbound email safety (optional, server-only)
+All unset in production, which leaves every send going to its real recipient as before.
+- [ ] EMAIL_SEND_DISABLED — when truthy, every outbound email is suppressed. Verify: unset in prod.
+- [ ] EMAIL_TEST_RECIPIENT — when set to a valid address, all outbound email is redirected to it.
+  Verify: unset in prod (never point at a customer).
+- [ ] RESEND template IDs (`RESEND_TEMPLATE_*`) — optional template overrides; blank/missing means
+  the inline HTML fallback is used. Verify: unset unless intentionally configured.
+
+## Preview isolation (Preview scope only — leave unset)
+This project shares one database URL and integration credentials between the Vercel Preview and
+Production scopes, so Preview fails closed unless `VERCEL_ENV` is exactly `production` (or unset/local).
+- [ ] PREVIEW_DATABASE_TARGETS — Preview-scope allowlist of approved database targets. Verify: unset
+  until a separate Preview database exists.
+- [ ] PREVIEW_DANGEROUS_OPERATIONS_ENABLED — truthy re-enables guarded Preview operations. Verify:
+  unset until the Preview deployment has its own database and isolated credentials.
 
 ## Verification procedure (read-only)
 1. Review deployment platform configuration without printing secrets.

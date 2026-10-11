@@ -103,6 +103,12 @@ const nextConfig: NextConfig = {
   // server-action body limit would reject them.
   experimental: {
     serverActions: { bodySizeLimit: "30mb" },
+    // Middleware (src/proxy.ts) buffers every request body it forwards. The
+    // default proxyClientMaxBodySize is 10 MB; any server-action POST larger
+    // than that (work/repair/review photo uploads) was truncated mid-multipart,
+    // surfacing as "Unexpected end of form". Match the server-action limit so a
+    // body that the action can accept is not destroyed before it arrives.
+    proxyClientMaxBodySize: "30mb",
   },
   // @better-auth/infra dynamic-imports @better-auth/sso for SAML SSO, which we
   // don't use; externalize so Next doesn't try to bundle a missing module.

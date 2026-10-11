@@ -10132,7 +10132,9 @@ a.reviews-page:hover {
 }
 .work-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Sample Work shows exactly 8 projects per page as 4×2 on desktop, 2×4 on
+     tablet (≤960px) and 1×8 on mobile (≤640px) — same rhythm as the reviews. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
 }
 .work-grid > .hp-reveal {
@@ -10268,7 +10270,10 @@ a.reviews-page:hover {
   padding-top: clamp(8px, 1.2vw, 16px);
 }
 .work-page .reviews-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Work page shows exactly 8 reviews per page as 4×2 on desktop, 2×4 on
+     tablet (≤960px) and 1×8 on mobile (≤640px). Product pages keep the base
+     .reviews-grid rule. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────── */

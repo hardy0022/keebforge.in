@@ -35,7 +35,7 @@ export default async function WorkPage({
 
   const projects = await getWorkProjects();
 
-  const PER_PAGE = 12;
+  const PER_PAGE = 8;
   const featured = projects[0];
   // `projects` already has the featured project first, so paginating the whole
   // list keeps ordering identical and renders the featured one as grid card #1.
@@ -117,7 +117,7 @@ export default async function WorkPage({
                               // largest above-the-fold image on the page, so it
                               // keeps the eager load it had as the hero.
                               priority={isFeatured}
-                              sizes="(min-width: 1280px) 381px, (min-width: 960px) 30vw, (min-width: 640px) 47vw, 92vw"
+                              sizes="(min-width: 1280px) 281px, (min-width: 960px) 22vw, (min-width: 640px) 47vw, 92vw"
                             />
                           ) : (
                             <div className="flex h-full items-center justify-center text-[var(--t3)]">

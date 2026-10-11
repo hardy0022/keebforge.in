@@ -1,13 +1,39 @@
 # Migration History — Production Reconciliation (Read-Only)
 
-## Summary
-- Current repository migrations: 44 directories (`prisma/migrations/*`).
+## Current status (verified 2026-10-11)
+- Repository migrations: **44** directories (`prisma/migrations/*`).
+- Production `_prisma_migrations` ledger: **53** records total.
+  - **45** COMPLETED, **8** ROLLED_BACK, **0** UNFINISHED, **0** ANOMALOUS.
+- Extra in prod vs current repo: `20260823120000_organization_auth` (1) — historical, preserved below.
+- Local migrations with no verified production ledger record: **0**.
+- Schema verified present in production:
+  - `OrderNotification` outbox with its `NotificationType` / `NotificationStatus` enums, the
+    unique `(orderId, type)` index, the `status` and `orderId` indexes, and the cascade FK to `Order`.
+  - `ProductOptionGroup.selectionMode` (`ProductOptionSelectionMode`).
+  - `Refund.razorpayPaymentId`.
+- Server: PostgreSQL 17.6 at `aws-0-ap-south-1.pooler.supabase.com`.
+
+### Newly applied migrations (were "pending application")
+| Migration | Applied (production) | Verification |
+|---|---|---|
+| `20261002120001_refund_razorpay_payment_id` | 2026-10-05 | COMPLETED ledger record; `Refund.razorpayPaymentId` present |
+| `20261007000000_add_product_option_selection_mode` | 2026-10-07 | COMPLETED ledger record; `ProductOptionGroup.selectionMode` present |
+| `20261010120000_order_paid_notifications` | 2026-10-11 | COMPLETED ledger record; `OrderNotification` + enums + indexes + FK present |
+
+The 2026-10-11 apply used the guarded production migration path (read-only target
+verification, typed migration-name confirmation, read-only pre/post-check). That tooling
+lives on the `chore/guarded-production-migration-path` branch; on `main` the same script
+deliberately refuses. Applying the branch's tooling is a transient, operator-driven step and
+is **not** merged into the release.
+
+## Phase 5B audit snapshot (historical)
+- Current repository migrations at audit time: 44 directories (`prisma/migrations/*`).
 - Production `_prisma_migrations` ledger (snapshot from the Phase 5B audit): 50 records total.
 - Classifications at audit time: 42 COMPLETED, 8 ROLLED_BACK, 0 UNFINISHED, 0 ANOMALOUS.
-- Extra in prod vs current repo: `20260823120000_organization_auth` (1) — historical, preserved above.
-- Local migrations with no *verified* production ledger record: 3.
-  - `20261002120001_refund_razorpay_payment_id` — verified absent at audit (see "Pending application").
-  - `20261007000000_add_product_option_selection_mode` and `20261010120000_order_paid_notifications` — authored **after** the audit. Their application status is **NOT verified against the production ledger** and must not be assumed either way.
+- Extra in prod vs current repo: `20260823120000_organization_auth` (1) — historical, preserved below.
+- Local migrations with no *verified* production ledger record at audit time: 3.
+  - `20261002120001_refund_razorpay_payment_id` — verified absent at audit (see "Newly applied migrations").
+  - `20261007000000_add_product_option_selection_mode` and `20261010120000_order_paid_notifications` — authored **after** the audit. All three are now applied and verified (see "Current status").
 - Every other local migration directory appears as COMPLETED in the audit ledger.
 
 ## Rolled-back migrations (re-applied)
@@ -38,35 +64,31 @@ This explains 7 checksum mismatches observed; all current local files match the 
 - `20261002120000_refund_accounting`: checksum matches local; COMPLETED, not rolled back.
 
 ## Reproducibility
-- Clean scratch replay of the 41 migrations that existed at Phase 2B succeeded. The 42nd (`20261002120001_refund_razorpay_payment_id`) has NOT been replayed or applied anywhere. The 43rd (`20261007000000_add_product_option_selection_mode`) and 44th (`20261010120000_order_paid_notifications`) were authored after the audit; neither has been replayed on scratch nor verified against the production ledger.
+- Clean scratch replay of the 41 migrations that existed at Phase 2B succeeded. The 42nd (`20261002120001_refund_razorpay_payment_id`), 43rd (`20261007000000_add_product_option_selection_mode`) and 44th (`20261010120000_order_paid_notifications`) have not been replayed on scratch; all three are **applied to and verified in production** (see "Current status").
 - Reproducing the exact historical production migration sequence is not possible from current repository alone because it would require the intermediate rolled-back SQL versions. This is a historical artifact, not a defect.
 - Distinction: **clean rebuild from current history** is supported; **bit-for-bit replay of prod’s historical sequence** is not reconstructible from current files.
 
-## Pending application (not yet verified in any environment)
+## Applied migration notes
 - `20261002120001_refund_razorpay_payment_id`: adds the nullable `Refund.razorpayPaymentId`
   column and its index, so a refund stays traceable to its Razorpay payment even when no
-  local `Payment` row exists. Authored in Phase 5B.1 and verified only by offline
-  regression tests; it has **not** been applied to production and has **not** been
-  replayed on scratch.
+  local `Payment` row exists. Authored in Phase 5B.1; applied to production 2026-10-05.
 - `20261007000000_add_product_option_selection_mode`: creates the
   `ProductOptionSelectionMode` enum (`SINGLE`/`MULTIPLE`) and adds
   `ProductOptionGroup.selectionMode NOT NULL DEFAULT 'SINGLE'`. Forward-only and additive;
-  default preserves existing radio behaviour. Authored after the Phase 5B audit; **not**
-  verified against the production ledger and **not** replayed on scratch.
+  default preserves existing radio behaviour. Applied to production 2026-10-07.
 - `20261010120000_order_paid_notifications`: creates the `OrderNotification` outbox
   (`NotificationType`, `NotificationStatus`, the unique `(orderId, type)` index, status and
-  orderId indexes, and the cascade FK to `Order`). Forward-only and additive. Authored after
-  the Phase 5B audit; **not** verified against the production ledger and validated on scratch
-  only by the rollback-guarded `e2e:notification-outbox` integration harness.
-- Precondition for any of the above: production must be confirmed at the schema level of its
-  predecessor (for `20261002120001`, `20261002120000_refund_accounting`; for
-  `20261007000000`, the schema at `20261002120001` or later; for
-  `20261010120000`, the schema at `20261007000000`). Each is forward-only; run the
-  predecessor's confirmed state first.
-- Adding these migrations required bumping the audited count enforced by
-  `scripts/e2e/scratch-guard.test.ts` from 42 to 44 (the array now lists all 44 directories).
-  That guard is a deliberate tripwire: it pins the exact expected migration set so a schema
-  change cannot land as an incidental diff. Bump the array and this section together.
+  orderId indexes, and the cascade FK to `Order`). Forward-only and additive. Applied to
+  production 2026-10-11; also exercised on scratch by the rollback-guarded
+  `e2e:notification-outbox` integration harness.
+- Precondition honoured for each: production was confirmed at the schema level of its
+  predecessor (`20261002120000_refund_accounting` for `20261002120001`;
+  `20261002120001` for `20261007000000`; `20261007000000` for
+  `20261010120000`) before the forward-only apply.
+- The audited count enforced by `scripts/e2e/scratch-guard.test.ts` is 44 (the array lists all
+  44 directories). That guard is a deliberate tripwire: it pins the exact expected migration
+  set so a schema change cannot land as an incidental diff. Bump the array and this section
+  together.
 
 ## Policy
 - Never rewrite, delete, rename, squash, or resolve historical migrations as a shortcut.

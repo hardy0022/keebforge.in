@@ -9,8 +9,9 @@
 ## 1. Migration & Schema
 | Test | What it proves | Method | Evidence | Blocking | Status | Owner Phase |
 |---|---|---|---|---|---|---|
-| Migration replay (clean) | Current 41 migrations build clean schema | Scratch DB (authorized) | `db:scratch:status` all applied, schema consistent | YES | Existing (Phase 2B validated) | 5B/7 |
-| Migration status (prod) | Prod ledger consistent | Prod read-only (authorized) | 42 completed, no unfinished/anomalous | YES | Existing | 7/8 |
+| Migration replay (clean) | Current history builds a clean schema | Scratch DB (authorized) | 41 replayed on scratch (Phase 2B); migrations 42–44 applied and verified in production | YES | Existing (Phase 2B validated) | 5B/7 |
+| Migration status (prod) | Prod ledger consistent | Prod read-only (authorized) | 45 completed, 8 rolled_back, 0 unfinished/anomalous (verified 2026-10-11) | YES | Existing | 7/8 |
+| Paid-notification outbox migration | Outbox schema present in prod | Prod read-only (authorized) | `OrderNotification` + `NotificationType`/`NotificationStatus` enums + unique `(orderId,type)` index + FK present | YES | New | 8 |
 | Migration history documented | Divergence understood | Doc review | migration-history.md complete | YES | New (5A) | 5A |
 
 ## 2. Authentication & Authorization
