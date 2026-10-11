@@ -39,6 +39,7 @@
     "check:outbound-policy": "tsx src/lib/email/outbound-policy.test.ts",
     "check:email-paths": "tsx src/lib/email/outbound-paths.test.ts && npm run check:email-templates",
     "check:email-templates": "tsx src/lib/email/email-templates.test.ts",
+    "check:resend-template": "tsx scripts/email/resend-shop-order-paid.test.ts",
     "check:register-error": "tsx src/lib/auth/register-error.test.ts",
     "check:paid-confirmation": "tsx src/lib/notifications/paid-confirmation.test.ts",
     "check:reconcile-cron": "tsx src/lib/notifications/reconcile-cron.test.ts",

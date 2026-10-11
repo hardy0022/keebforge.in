@@ -15,6 +15,7 @@ import {
   shouldNotifyAfterManualPayment,
   type NotificationRecoveryPlan,
   type NotificationRecoveryRecord,
+  type EmailMessage,
   type PaidConfirmationDeps,
   type PaidConfirmationOrder,
   type ReconciliationDeps,
@@ -120,9 +121,7 @@ const modsOrder: PaidConfirmationOrder = {
 };
 
 /** In-memory stand-in for the (orderId, type) unique + PENDING-only claim. */
-function fakeDeps(
-  send: (message: { to: string; subject: string; html: string }) => Promise<SendOutcome>,
-) {
+function fakeDeps(send: (message: EmailMessage) => Promise<SendOutcome>) {
   const statusStore = new Map<string, string>();
   const mark: Array<string> = [];
   const deps: PaidConfirmationDeps = {
@@ -164,87 +163,274 @@ function fakeDeps(
 // ── Shop content ────────────────────────────────────────────────────────────
 
 {
-  assert.deepEqual(buildPaidConfirmation(shopOrder), buildShopPaidConfirmation(shopOrder));
-  assert.deepEqual(buildPaidConfirmation(modsOrder), buildModsPaidConfirmation(modsOrder));
+  assert.deepEqual(
+    buildPaidConfirmation(shopOrder, { shopOrderPaid: "tpl_shop" }),
+    buildShopPaidConfirmation(shopOrder, { shopOrderPaid: "tpl_shop" }),
+  );
+  assert.deepEqual(
+    buildPaidConfirmation(modsOrder, { modsOrderPaid: "tpl_mods" }),
+    buildModsPaidConfirmation(modsOrder, { modsOrderPaid: "tpl_mods" }),
+  );
   pass("buildPaidConfirmation dispatches to the shop vs mods builder");
 }
 
 {
-  const mail = buildShopPaidConfirmation(shopOrder);
-  assert.equal(mail.subject, "Payment received — order KF-2026-000123");
+  // No template id configured: the message still names the recipient and
+  // subject, but carries no template — the sender turns that into a definitive
+  // "template:not-configured" failure rather than falling back to inline HTML.
+  const bare = buildShopPaidConfirmation(shopOrder);
+  assert.equal(bare.template, undefined);
+  assert.equal(bare.to, shopOrder.customerEmail);
+  assert.equal(bare.subject, "Order KF-2026-000123 — Payment Confirmed | KeebForge.in");
+  pass("shop confirmation without a template id carries no template");
+}
+
+{
+  const mail = buildShopPaidConfirmation(shopOrder, { shopOrderPaid: "tpl_shop" });
+  assert.equal(mail.subject, "Order KF-2026-000123 — Payment Confirmed | KeebForge.in");
   assert.equal(mail.to, shopOrder.customerEmail);
-  for (const needle of [
-    "KF-2026-000123",
-    "Hot-swap TKL",
-    "× 2",
-    "₹1,000",
-    "contact you",
-    "Payment received",
-  ]) {
-    assert.ok(mail.html.includes(needle), `shop mail should contain ${needle}`);
-  }
-  // Customer-typed content is escaped, never interpolated raw.
-  assert.equal(mail.html.includes("<img src=x onerror=alert(1)>"), false);
-  assert.equal(mail.html.includes("<script>alert(1)</script>"), false);
-  assert.equal(mail.html.includes("&lt;img src=x onerror=alert(1)&gt;"), true);
+  assert.equal(mail.template?.id, "tpl_shop");
+  const v = mail.template?.variables ?? {};
+  const itemsHtml = String(v.itemsHtml);
+  assert.ok(itemsHtml.includes("Hot-swap TKL"), "item name is rendered");
+  assert.ok(itemsHtml.includes("× 2"), "quantity is rendered");
+  assert.ok(String(v.totalsHtml).includes("₹1,000"), "line total is rendered");
+  assert.equal(v.orderUrl, "https://keebforge.in/track-order?order=KF-2026-000123");
+  // Customer-typed content is escaped in the pre-rendered fragment, never raw.
+  assert.equal(itemsHtml.includes("<img src=x onerror=alert(1)>"), false);
+  assert.equal(itemsHtml.includes("&lt;img src=x onerror=alert(1)&gt;"), true);
   pass("shop confirmation renders authoritative order data and escapes input");
 }
 
 {
   // Amount is derived from verified payment records (paidAmount), which here
-  // disagrees with `total` to prove which one is shown. The item row renders its
-  // own line total (₹1,000); ₹950 appears only in the amount-paid row.
-  const paidLower = buildShopPaidConfirmation({
-    ...shopOrder,
-    paidAmount: 95000,
-  });
-  assert.ok(paidLower.html.includes("₹950"), "shows the verified paid amount");
+  // disagrees with `total` to prove which one is shown.
+  const paidLower = buildShopPaidConfirmation(
+    { ...shopOrder, paidAmount: 95000 },
+    { shopOrderPaid: "tpl_shop" },
+  );
+  assert.ok(
+    String(paidLower.template?.variables.totalsHtml).includes("₹950"),
+    "shows the verified paid amount",
+  );
   pass("shop confirmation shows verified paid amount, not the order total");
+}
+
+{
+  // Resend cannot loop, so the list-shaped content is pre-rendered into
+  // table-based fragments the template drops in verbatim.
+  const v = buildShopPaidConfirmation(shopOrder, { shopOrderPaid: "tpl_shop" })
+    .template?.variables ?? {};
+  assert.ok(String(v.itemsHtml).includes("<tr>"), "items fragment renders rows");
+  assert.ok(
+    /<table[^>]*role="presentation"/.test(String(v.totalsHtml)),
+    "totals use layout tables",
+  );
+  assert.ok(String(v.totalsHtml).includes("Total paid"), "totals carry the headline");
+  pass("shop confirmation pre-renders table-based variable fragments");
+}
+
+{
+  // A stored Cloudinary delivery URL gets a small, email-safe transform.
+  const imageUrl =
+    "https://res.cloudinary.com/keebforge/image/upload/v123/products/board.jpg";
+  const withImage = buildShopPaidConfirmation(
+    { ...shopOrder, items: [{ ...shopOrder.items[0], imageUrl }] },
+    { shopOrderPaid: "tpl_shop" },
+  );
+  const itemsHtml = String(withImage.template?.variables.itemsHtml);
+  assert.ok(
+    itemsHtml.includes(
+      "https://res.cloudinary.com/keebforge/image/upload/f_auto,q_auto,c_limit,w_120/v123/products/board.jpg",
+    ),
+    "item image is transformed for email",
+  );
+  assert.ok(itemsHtml.includes("<img "), "thumbnail is rendered");
+  pass("shop confirmation thumbnails a stored Cloudinary image");
+}
+
+{
+  // Anything that is not an absolute HTTPS URL is dropped, never rendered — a
+  // bad image must never break the send and http:// must never leak into mail.
+  for (const imageUrl of [
+    null,
+    "",
+    "http://insecure.example/x.jpg",
+    "data:image/png;base64,AAAA",
+    "javascript:alert(1)",
+  ]) {
+    const mail = buildShopPaidConfirmation(
+      { ...shopOrder, items: [{ ...shopOrder.items[0], imageUrl }] },
+      { shopOrderPaid: "tpl_shop" },
+    );
+    assert.equal(
+      String(mail.template?.variables.itemsHtml).includes("<img "),
+      false,
+      `no <img> for unsupported image: ${String(imageUrl)}`,
+    );
+  }
+  pass("shop confirmation omits unsupported item images");
+}
+
+{
+  // A non-Cloudinary absolute HTTPS URL is allowed as-is (cldUrl is a no-op).
+  const mail = buildShopPaidConfirmation(
+    {
+      ...shopOrder,
+      items: [
+        { ...shopOrder.items[0], imageUrl: "https://cdn.example.com/p.jpg" },
+      ],
+    },
+    { shopOrderPaid: "tpl_shop" },
+  );
+  assert.ok(String(mail.template?.variables.itemsHtml).includes("https://cdn.example.com/p.jpg"));
+  pass("shop confirmation keeps an absolute HTTPS image untouched");
+}
+
+{
+  // Money breakdown comes from the order snapshot; the headline figure is the
+  // verified settled amount, and the discount is shown as a negative line.
+  const mail = buildShopPaidConfirmation(
+    {
+      ...shopOrder,
+      subtotal: 100000,
+      shipping: 4900,
+      discount: 5000,
+      tax: 0,
+      total: 99900,
+      paidAmount: 99900,
+    },
+    { shopOrderPaid: "tpl_shop" },
+  );
+  const totalsHtml = String(mail.template?.variables.totalsHtml);
+  for (const needle of ["₹1,000", "₹49", "-₹50", "₹999"]) {
+    assert.ok(totalsHtml.includes(needle), `totals should contain ${needle}`);
+  }
+  pass("shop confirmation itemises subtotal, shipping, discount and total");
+}
+
+{
+  // The CTA target is derived from the (validated) site origin + order number,
+  // never from anything the client supplied at checkout.
+  const fallback = buildShopPaidConfirmation(shopOrder, { shopOrderPaid: "tpl_shop" });
+  assert.equal(
+    fallback.template?.variables.orderUrl,
+    "https://keebforge.in/track-order?order=KF-2026-000123",
+    "defaults to the production origin",
+  );
+
+  const custom = buildShopPaidConfirmation(
+    shopOrder,
+    { shopOrderPaid: "tpl_shop" },
+    { siteUrl: "https://staging.keebforge.in/" },
+  );
+  const customUrl = String(custom.template?.variables.orderUrl);
+  assert.ok(customUrl.includes("https://staging.keebforge.in/track-order"));
+  assert.equal(customUrl.includes("staging.keebforge.in//"), false, "trailing slash trimmed");
+
+  const encoded = buildShopPaidConfirmation(
+    { ...shopOrder, orderNumber: "KF 2026/1" },
+    { shopOrderPaid: "tpl_shop" },
+    { siteUrl: "https://keebforge.in" },
+  );
+  assert.ok(
+    String(encoded.template?.variables.orderUrl).includes("order=KF%202026%2F1"),
+    "order number is URL-encoded",
+  );
+  pass("shop confirmation builds a safe, URL-encoded tracking CTA");
+}
+
+{
+  // The template path carries the same authoritative values and fragments.
+  const mail = buildShopPaidConfirmation(shopOrder, { shopOrderPaid: "tpl_shop" });
+  assert.equal(mail.template?.id, "tpl_shop");
+  const vars = mail.template?.variables ?? {};
+  assert.equal(vars.orderNumber, "KF-2026-000123");
+  assert.equal(vars.orderUrl, "https://keebforge.in/track-order?order=KF-2026-000123");
+  assert.ok(String(vars.itemsHtml).includes("Hot-swap TKL"));
+  assert.ok(String(vars.totalsHtml).includes("Total paid"));
+  assert.equal(vars.shippingName, shopOrder.customerName.trim());
+  pass("shop confirmation template variables mirror the inline content");
 }
 
 // ── Mods content ────────────────────────────────────────────────────────────
 
 {
-  const mail = buildModsPaidConfirmation(modsOrder);
+  const mail = buildModsPaidConfirmation(modsOrder, { modsOrderPaid: "tpl_mods" });
   assert.equal(mail.subject, "Payment received — mods order KF-2026-000456");
+  const v = mail.template?.variables ?? {};
+  const configHtml = String(v.configHtml);
+  const servicesHtml = String(v.servicesHtml);
   for (const needle of [
-    "KF-2026-000456",
     "Wooting",
     "60HE",
     "60%",
     "Lekker Magnetic",
     "61",
     "Yes",
+  ]) {
+    assert.ok(configHtml.includes(needle), `mods config should contain ${needle}`);
+  }
+  for (const needle of [
     "Gasket mount install × 1",
     "Lubing (factory) × 70",
     "₹100",
-    "You ship your device to KeebForge",
-    "(Express)",
-    "Flat 4B, Lake View",
-    "Bengaluru",
-    "Karnataka",
-    "560001",
-    "₹245",
-    "before proceeding",
   ]) {
-    assert.ok(mail.html.includes(needle), `mods mail should contain ${needle}`);
+    assert.ok(servicesHtml.includes(needle), `mods services should contain ${needle}`);
   }
-  assert.equal(mail.html.includes("<b>"), false, "model is escaped");
+  assert.equal(
+    v.shippingMethod,
+    "You ship your device to KeebForge (Express)",
+    "shipping method is labelled",
+  );
+  for (const needle of ["Flat 4B, Lake View", "Bengaluru", "Karnataka", "560001"]) {
+    assert.ok(String(v.shippingAddress).includes(needle), `address should contain ${needle}`);
+  }
+  assert.ok(String(v.amountPaid).includes("₹245"), "amount paid is rendered");
+  assert.equal(configHtml.includes("<b>"), false, "model is escaped");
   pass("mods confirmation renders configuration, services, shipping and amount");
 }
 
 {
   // Values that were never saved fall back to safe placeholders.
-  const minimal = buildModsPaidConfirmation({
-    ...modsOrder,
-    summary: null,
-    services: [],
-    shippingAddress: null,
-    shippingMode: null,
-  });
-  assert.ok(minimal.html.includes("Saved with your order"));
-  assert.ok(minimal.html.includes("To be confirmed"));
+  const minimal = buildModsPaidConfirmation(
+    {
+      ...modsOrder,
+      summary: null,
+      services: [],
+      shippingAddress: null,
+      shippingMode: null,
+    },
+    { modsOrderPaid: "tpl_mods" },
+  );
+  const v = minimal.template?.variables ?? {};
+  assert.ok(String(v.configHtml).includes("Saved with your order"));
+  assert.ok(String(v.servicesHtml).includes("Saved with your order"));
+  assert.equal(v.shippingAddress, "To be confirmed");
   pass("mods confirmation uses safe fallbacks for missing saved data");
+}
+
+{
+  // Services carry no images, so the mods email is image-free by construction.
+  const v = buildModsPaidConfirmation(modsOrder, { modsOrderPaid: "tpl_mods" })
+    .template?.variables ?? {};
+  const servicesHtml = String(v.servicesHtml);
+  assert.equal(servicesHtml.includes("<img "), false, "no item images in mods mail");
+  assert.ok(/<table[^>]*role="presentation"/.test(servicesHtml), "uses layout tables");
+  pass("mods confirmation pre-renders an image-free services fragment");
+}
+
+{
+  const mail = buildModsPaidConfirmation(
+    modsOrder,
+    { modsOrderPaid: "tpl_mods" },
+    { siteUrl: "https://staging.keebforge.in" },
+  );
+  assert.equal(
+    mail.template?.variables.orderUrl,
+    "https://staging.keebforge.in/track-order?order=KF-2026-000456",
+  );
+  pass("mods confirmation builds a safe tracking CTA");
 }
 
 // ── Skipping rules ──────────────────────────────────────────────────────────

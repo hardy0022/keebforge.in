@@ -1,4 +1,5 @@
 import { formatINR } from "@/lib/utils/money";
+import { cldUrl } from "@/lib/images/cloudinary-url";
 import {
   esc,
   type EmailTemplateIds,
@@ -38,11 +39,25 @@ export type PaidConfirmationOrder = {
   total: number;
   /** Gross collected from verified payment rows (paise). */
   paidAmount: number;
+  /**
+   * Authoritative money breakdown (paise), when the adapter supplies it. All are
+   * optional so a caller that only has `total` still renders correctly; the
+   * builders fall back to the item line totals.
+   */
+  subtotal?: number;
+  shipping?: number;
+  discount?: number;
+  tax?: number;
   items: Array<{
     name: string;
     quantity: number;
     unitPrice: number;
     lineTotal: number;
+    /**
+     * Cloudinary delivery URL snapshot captured at checkout. Absolute HTTPS
+     * only; anything else is omitted from the email (never fetched here).
+     */
+    imageUrl?: string | null;
   }>;
   services: Array<{
     name: string;
@@ -63,11 +78,11 @@ export type PaidConfirmationOrder = {
 export type EmailMessage = {
   to: string;
   subject: string;
-  html: string;
   /**
-   * When a Resend-managed template id is configured, the message is sent with
-   * this instead of `html`. The payload stays authoritative in the application;
-   * the template only renders the supplied variables.
+   * The published Resend template that renders this message together with the
+   * variables the application has already decided. When the template id is not
+   * configured this is undefined and the sender records a definitive, retryable
+   * failure rather than falling back to inline HTML.
    */
   template?: EmailTemplateRef;
 };
@@ -168,6 +183,7 @@ export async function runPaidConfirmation(
   deps: PaidConfirmationDeps,
   order: PaidConfirmationOrder,
   templates: EmailTemplateIds = {},
+  options: PaidConfirmationEmailOptions = {},
 ): Promise<PaidConfirmationResult> {
   const skip = paidConfirmationSkipReason(order);
   if (skip) {
@@ -181,7 +197,7 @@ export async function runPaidConfirmation(
 
   let outcome: SendOutcome;
   try {
-    outcome = await deps.send(buildPaidConfirmation(order, templates));
+    outcome = await deps.send(buildPaidConfirmation(order, templates, options));
   } catch {
     // A thrown send is ambiguous by definition: the request may have left the
     // process before it failed. Never retry it automatically.
@@ -204,46 +220,106 @@ export async function runPaidConfirmation(
   return { status: "needs-review", reason: outcome.reason };
 }
 
+/**
+ * Optional rendering context for the paid-confirmation emails. Kept separate
+ * from the order snapshot: the same order renders identically in tests and prod,
+ * only the absolute origin of the CTA changes.
+ */
+export type PaidConfirmationEmailOptions = {
+  /** Absolute site origin (no trailing slash) used for the header link and CTA. */
+  siteUrl?: string;
+};
+
+/** Brand tokens used by the pre-rendered variable fragments. */
+const BRAND = {
+  ink: "#18181b",
+  muted: "#71717a",
+  border: "#e4e4e7",
+  font: "Arial,Helvetica,sans-serif",
+} as const;
+
+const DEFAULT_SITE_URL = "https://keebforge.in";
+
+/** Email thumbnail width — small payload, never the full-resolution asset. */
+const EMAIL_THUMB_WIDTH = 120;
+
+function resolveSiteUrl(override?: string): string {
+  const raw = (override ?? process.env.NEXT_PUBLIC_APP_URL ?? "")
+    .trim()
+    .replace(/\/+$/, "");
+  return /^https?:\/\//i.test(raw) ? raw : DEFAULT_SITE_URL;
+}
+
+/** The public, secret-free tracking URL — the only safe "view order" link. */
+function orderTrackingUrl(siteUrl: string, orderNumber: string): string {
+  return `${siteUrl}/track-order?order=${encodeURIComponent(orderNumber)}`;
+}
+
+/**
+ * A small, absolute-HTTPS thumbnail URL for an order item, or null.
+ *
+ * Only pre-existing Cloudinary delivery URLs are used — nothing is uploaded or
+ * minted here, and no credentials are ever placed in the markup. A non-HTTPS or
+ * missing URL is omitted so a bad image can never break the send.
+ */
+function emailThumbnail(
+  imageUrl: string | null | undefined,
+  width = EMAIL_THUMB_WIDTH,
+): string | null {
+  const raw = typeof imageUrl === "string" ? imageUrl.trim() : "";
+  if (!/^https:\/\//i.test(raw)) return null;
+  const transformed = cldUrl(raw, width);
+  return /^https:\/\//i.test(transformed) ? transformed : null;
+}
+
 /** Pick the right builder for the order type. */
 export function buildPaidConfirmation(
   order: PaidConfirmationOrder,
   templates: EmailTemplateIds = {},
+  options: PaidConfirmationEmailOptions = {},
 ): EmailMessage {
   return order.type === "SERVICE"
-    ? buildModsPaidConfirmation(order, templates)
-    : buildShopPaidConfirmation(order, templates);
+    ? buildModsPaidConfirmation(order, templates, options)
+    : buildShopPaidConfirmation(order, templates, options);
 }
 
 export function buildShopPaidConfirmation(
   order: PaidConfirmationOrder,
   templates: EmailTemplateIds = {},
+  options: PaidConfirmationEmailOptions = {},
 ): EmailMessage {
+  const siteUrl = resolveSiteUrl(options.siteUrl);
   const amountPaid = order.paidAmount > 0 ? order.paidAmount : order.total;
-  const rows: Array<[string, string]> = order.items.map((item) => [
-    `${item.name} × ${item.quantity}`,
-    formatINR(item.lineTotal),
-  ]);
+  const subtotal =
+    order.subtotal ?? order.items.reduce((sum, item) => sum + item.lineTotal, 0);
+  const shipping = order.shipping ?? Math.max(0, order.total - subtotal);
+  const discount = order.discount ?? 0;
+  const orderUrl = orderTrackingUrl(siteUrl, order.orderNumber);
+
+  const itemsHtml =
+    order.items.map(itemRow).join("") || emptyRow("Your order items");
+
+  const totals: Array<[string, string, boolean?]> = [
+    ["Subtotal", formatINR(subtotal)],
+    ["Shipping", shipping > 0 ? formatINR(shipping) : "Free"],
+  ];
+  if (discount > 0) totals.push(["Discount", `-${formatINR(discount)}`]);
+  totals.push(["Total paid", formatINR(amountPaid), true]);
+
   return {
     to: order.customerEmail,
-    subject: `Payment received — order ${order.orderNumber}`,
-    html:
-      `<h2>Payment received — KeebForge</h2>` +
-      `<p>${greeting(order)}</p>` +
-      `<p>We've received your payment for order <strong>${esc(order.orderNumber)}</strong>. ` +
-      `This confirms your order is paid.</p>` +
-      table(rows) +
-      `<table cellpadding="6" style="font-family:sans-serif;font-size:14px">` +
-      `<tr><td><strong>Amount paid</strong></td><td>${esc(formatINR(amountPaid))}</td></tr>` +
-      `</table>` +
-      `<p>Our team will contact you using the details you provided to coordinate the next steps.</p>`,
+    subject: `Order ${order.orderNumber} — Payment Confirmed | KeebForge.in`,
     template: templates.shopOrderPaid
       ? {
           id: templates.shopOrderPaid,
           variables: {
             orderNumber: order.orderNumber,
             customerName: order.customerName,
-            amountPaid: formatINR(amountPaid),
-            itemsHtml: table(rows),
+            itemsHtml,
+            totalsHtml: totalsTable(totals),
+            shippingName: order.customerName.trim() || "Customer",
+            shippingAddress: formatAddress(order.shippingAddress),
+            orderUrl,
           },
         }
       : undefined,
@@ -253,7 +329,9 @@ export function buildShopPaidConfirmation(
 export function buildModsPaidConfirmation(
   order: PaidConfirmationOrder,
   templates: EmailTemplateIds = {},
+  options: PaidConfirmationEmailOptions = {},
 ): EmailMessage {
+  const siteUrl = resolveSiteUrl(options.siteUrl);
   const amountPaid = order.paidAmount > 0 ? order.paidAmount : order.total;
   const s = order.summary ?? {};
 
@@ -274,48 +352,26 @@ export function buildModsPaidConfirmation(
     configRows.push(["Keycaps included", s.keycapsIncluded ? "Yes" : "No"]);
   }
 
-  const serviceRows: Array<[string, string]> = order.services.map((service) => [
-    `${service.name} × ${service.quantity}`,
-    formatINR(service.lineTotal),
-  ]);
-
   const method = modsShippingMethodLabel(
     asRecord(s.modsShipping)?.method,
     order.shippingMode,
   );
-  const address = order.shippingAddress
-    ? `${order.shippingAddress.streetAddress}, ${order.shippingAddress.city}, ` +
-      `${order.shippingAddress.state} ${order.shippingAddress.postalCode}`
-    : "";
+  const address = formatAddress(order.shippingAddress);
+  const orderUrl = orderTrackingUrl(siteUrl, order.orderNumber);
 
-  const configHtml = table(
-    configRows.length > 0 ? configRows : [["Configuration", "Saved with your order"]],
+  const configHtml = keyValueTable(
+    configRows.length > 0
+      ? configRows
+      : [["Configuration", "Saved with your order"]],
   );
-  const servicesHtml = table(
-    serviceRows.length > 0 ? serviceRows : [["Services", "Saved with your order"]],
-  );
+  const servicesHtml =
+    order.services.length > 0
+      ? listTable(order.services.map(serviceRow).join(""))
+      : keyValueTable([["Services", "Saved with your order"]]);
 
   return {
     to: order.customerEmail,
     subject: `Payment received — mods order ${order.orderNumber}`,
-    html:
-      `<h2>Payment received — KeebForge mods</h2>` +
-      `<p>${greeting(order)}</p>` +
-      `<p>We've received your payment for mods order <strong>${esc(order.orderNumber)}</strong>. ` +
-      `This confirms your order is paid.</p>` +
-      `<h3>Your configuration</h3>` +
-      configHtml +
-      `<h3>Selected services</h3>` +
-      servicesHtml +
-      `<h3>Shipping</h3>` +
-      table([
-        ["Method", method],
-        ["Shipping to", address || "To be confirmed"],
-      ]) +
-      `<table cellpadding="6" style="font-family:sans-serif;font-size:14px">` +
-      `<tr><td><strong>Amount paid</strong></td><td>${esc(formatINR(amountPaid))}</td></tr>` +
-      `</table>` +
-      `<p>Our team will contact you before proceeding with your build.</p>`,
     template: templates.modsOrderPaid
       ? {
           id: templates.modsOrderPaid,
@@ -326,40 +382,128 @@ export function buildModsPaidConfirmation(
             configHtml,
             servicesHtml,
             shippingMethod: method,
-            shippingAddress: address || "To be confirmed",
+            shippingAddress: address,
+            orderUrl,
           },
         }
       : undefined,
   };
 }
 
-// ── Rendering helpers ───────────────────────────────────────────────────────
+// ── Fragment helpers (table-based, inline styles, no external CSS) ───────────
+// The document shell, static copy and buttons live in the Resend template; these
+// only pre-render the list-shaped variables Resend cannot loop over.
 
-function greeting(order: PaidConfirmationOrder): string {
-  const name = order.customerName.trim();
-  return `Hi ${esc(name || "there")},`;
+function listTable(rowsHtml: string): string {
+  return (
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">` +
+    rowsHtml +
+    `</table>`
+  );
 }
 
-function table(rows: Array<[string, string]>): string {
-  if (rows.length === 0) return "";
+type OrderLine = {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  imageUrl?: string | null;
+};
+
+function itemRow(item: OrderLine): string {
+  const thumb = emailThumbnail(item.imageUrl);
+  const cell = `padding:14px 0;border-top:1px solid ${BRAND.border};`;
+  const mediaCell = thumb
+    ? `<td width="76" valign="middle" style="${cell}">` +
+      `<img src="${esc(thumb)}" width="64" height="64" alt="${esc(item.name)}" style="display:block;width:64px;height:64px;border:1px solid ${BRAND.border};border-radius:8px;object-fit:cover;">` +
+      `</td>`
+    : "";
+  const padLeft = thumb ? "padding-left:12px;" : "";
   return (
-    `<table cellpadding="6" style="font-family:sans-serif;font-size:14px;color:#1a1a1a">` +
+    `<tr>` +
+    mediaCell +
+    `<td valign="middle" style="${cell}${padLeft}font-family:${BRAND.font};">` +
+    `<div style="font-size:15px;font-weight:600;color:${BRAND.ink};line-height:1.4;">${esc(item.name)}</div>` +
+    `<div style="font-size:13px;color:${BRAND.muted};line-height:1.5;margin-top:3px;">× ${item.quantity} · ${esc(formatINR(item.unitPrice))} each</div>` +
+    `</td>` +
+    `<td valign="middle" align="right" style="${cell}font-family:${BRAND.font};font-size:15px;font-weight:600;color:${BRAND.ink};white-space:nowrap;">${esc(formatINR(item.lineTotal))}</td>` +
+    `</tr>`
+  );
+}
+
+function serviceRow(service: {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}): string {
+  const cell = `padding:14px 0;border-top:1px solid ${BRAND.border};`;
+  return (
+    `<tr>` +
+    `<td valign="middle" style="${cell}font-family:${BRAND.font};">` +
+    `<div style="font-size:15px;font-weight:600;color:${BRAND.ink};line-height:1.4;">${esc(service.name)} × ${service.quantity}</div>` +
+    `<div style="font-size:13px;color:${BRAND.muted};line-height:1.5;margin-top:3px;">${esc(formatINR(service.unitPrice))} each</div>` +
+    `</td>` +
+    `<td valign="middle" align="right" style="${cell}font-family:${BRAND.font};font-size:15px;font-weight:600;color:${BRAND.ink};white-space:nowrap;">${esc(formatINR(service.lineTotal))}</td>` +
+    `</tr>`
+  );
+}
+
+function emptyRow(text: string): string {
+  return (
+    `<tr><td style="padding:14px 0;border-top:1px solid ${BRAND.border};font-family:${BRAND.font};font-size:14px;color:${BRAND.muted};">` +
+    `${esc(text)}</td></tr>`
+  );
+}
+
+function keyValueTable(rows: Array<[string, string]>): string {
+  if (rows.length === 0) return "";
+  const cell = `padding:10px 0;border-top:1px solid ${BRAND.border};vertical-align:top;`;
+  return (
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">` +
     rows
       .map(
         ([key, value]) =>
-          `<tr><td><strong>${esc(key)}</strong></td><td>${esc(value)}</td></tr>`,
+          `<tr>` +
+          `<td style="${cell}width:170px;font-family:${BRAND.font};font-size:13px;color:${BRAND.muted};">${esc(key)}</td>` +
+          `<td style="${cell}font-family:${BRAND.font};font-size:14px;color:${BRAND.ink};">${esc(value)}</td>` +
+          `</tr>`,
       )
       .join("") +
     `</table>`
   );
 }
 
-/**
- * Escape every value before it becomes HTML. All order content is either a
- * server snapshot or a customer-typed string, so nothing may be interpolated raw.
- *
- * Canonical definition lives in `@/lib/email/templates` and is re-exported above.
- */
+function totalsTable(rows: Array<[string, string, boolean?]>): string {
+  const cell = `padding:10px 0;border-top:1px solid ${BRAND.border};`;
+  return (
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin-top:4px;">` +
+    rows
+      .map(([key, value, strong]) => {
+        const size = strong ? "16px" : "14px";
+        const weight = strong ? "700" : "400";
+        const labelColor = strong ? BRAND.ink : BRAND.muted;
+        return (
+          `<tr>` +
+          `<td style="${cell}font-family:${BRAND.font};font-size:${size};font-weight:${weight};color:${labelColor};">${esc(key)}</td>` +
+          `<td align="right" style="${cell}font-family:${BRAND.font};font-size:${size};font-weight:${weight};color:${BRAND.ink};white-space:nowrap;">${esc(value)}</td>` +
+          `</tr>`
+        );
+      })
+      .join("") +
+    `</table>`
+  );
+}
+
+function formatAddress(address: PaidConfirmationOrder["shippingAddress"]): string {
+  if (!address) return "To be confirmed";
+  const parts = [
+    address.streetAddress,
+    address.city,
+    [address.state, address.postalCode].filter(Boolean).join(" "),
+  ].filter((part) => part.length > 0);
+  return parts.length > 0 ? parts.join(", ") : "To be confirmed";
+}
 
 function str(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
