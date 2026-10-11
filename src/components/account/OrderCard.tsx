@@ -74,7 +74,7 @@ export function OrderCard({ order }: { order: AccountOrder }) {
             className="shop-card-fallback account-order-fallback"
             aria-hidden="true"
           >
-            {(lead?.name ?? "K").charAt(0)}
+            {Array.from(lead?.name ?? "K")[0]}
           </span>
         )}
       </div>

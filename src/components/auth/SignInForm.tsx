@@ -7,16 +7,6 @@ import Link from "next/link";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { EMAIL_INPUT } from "@/lib/utils/email";
 
-async function homeForRole(): Promise<string> {
-  const res = await fetch("/api/auth/me", { cache: "no-store" });
-  if (res.ok) {
-    const me = await res.json();
-    if (me.role === "ADMIN" || me.role === "STAFF" || me.role === "DEVELOPER")
-      return "/admin";
-  }
-  return "/";
-}
-
 export function SignInForm({ next }: { next?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -35,7 +25,7 @@ export function SignInForm({ next }: { next?: string }) {
       setBusy(false);
       return;
     }
-    router.push(next ?? (await homeForRole()));
+    router.push(next ?? "/");
     router.refresh();
   }
 

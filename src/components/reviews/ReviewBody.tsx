@@ -123,11 +123,11 @@ export function ReviewBody({ review }: { review: ReviewCardItem }) {
                 </span>
               ) : (
                 <span className="review-avatar" aria-hidden="true">
-                  {(
+                  {Array.from(
                     review.profile?.name?.trim() ||
-                    review.authorName?.trim() ||
-                    "?"
-                  ).charAt(0)}
+                      review.authorName?.trim() ||
+                      "?",
+                  )[0]}
                 </span>
               )}
               <div className="review-author-meta">

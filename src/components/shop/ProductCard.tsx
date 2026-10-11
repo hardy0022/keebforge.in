@@ -67,7 +67,7 @@ export function ProductCard({
         </DeferredMedia>
       ) : (
         <span className="shop-card-fallback" aria-hidden="true">
-          {product.name.charAt(0)}
+          {Array.from(product.name)[0]}
         </span>
       )}
       <div className="shop-card-body">

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentAuth } from "@/lib/auth/session";
-import { getAdminContext } from "@/lib/auth/admin";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { AuthShell } from "@/components/auth/AuthShell";
 
@@ -17,7 +16,7 @@ export default async function RegisterPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { user } = await getCurrentAuth();
-  if (user) redirect((await getAdminContext()) ? "/admin" : "/");
+  if (user) redirect("/");
 
   const sp = await searchParams;
   // Only allow internal redirects.

@@ -248,7 +248,7 @@ export default async function AdminProductsPage({
                                 fontSize: "0.8rem",
                               }}
                             >
-                              {p.name.charAt(0)}
+                              {Array.from(p.name)[0]}
                             </span>
                           )}
                           <div>

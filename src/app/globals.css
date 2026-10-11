@@ -2325,6 +2325,35 @@ ul {
 .card-q:hover {
   opacity: 1;
 }
+.social-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.social-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--bg3);
+  border: 1px solid var(--bdr);
+  color: var(--acc);
+  transition:
+    border-color 0.28s,
+    transform 0.28s var(--ease-out);
+}
+.social-card:hover .social-brand {
+  transform: translateY(-2px);
+  border-color: var(--bdr-h);
+}
+.social-brand svg {
+  width: 22px;
+  height: 22px;
+}
 .card-feat {
   background: linear-gradient(
     140deg,
@@ -11649,101 +11678,68 @@ a.reviews-page:hover {
 }
 
 /* ─── Contact page ─────────────────────────────────────────────────────────── */
-.contact-page .wrap {
-  max-width: 1160px;
+/* Layout and typography ride the shared /workshop system (ri-page, ri-hero,
+   ri-layout, Panel, Field); only contact-specific pieces live here. */
+.contact-aside {
+  display: grid;
+  gap: 20px;
 }
-/* Header — compact, eyebrow → heading 12–16px, gap to section 70–90px. */
-.contact-hero {
-  padding-top: calc(var(--nav-h) + 36px);
-  padding-bottom: 0;
-}
-.contact-hero-grid {
+.contact-channel-list {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-}
-.contact-hero .sec-num {
-  margin-bottom: 14px;
-}
-.contact-hero .sec-title {
-  font-size: clamp(1.9rem, 4.2vw, 2.85rem);
-  margin-bottom: 0;
-}
-.contact-hero .sec-desc {
-  font-size: 0.95rem;
-  max-width: 560px;
-}
-/* Section rhythm (hero → inquiry → CTA). */
-.contact-inquiry {
-  margin-top: clamp(60px, 6vw, 88px);
-}
-/* Contact channels — stacked cards in the inquiry info column. */
-.contact-channels {
-  display: grid;
-  gap: 14px;
 }
 .contact-channel {
   display: flex;
-  flex-direction: column;
-  background: var(--bg1);
-  border: 1px solid var(--bdr);
-  border-radius: var(--r-md);
-  padding: 18px 20px;
-  transition:
-    transform 0.28s var(--ease-out),
-    border-color 0.28s,
-    box-shadow 0.28s;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--bdr);
 }
-.contact-channel:hover {
-  transform: translateY(-4px);
-  border-color: var(--bdr-h);
-  box-shadow: var(--shadow-card);
+.contact-channel:first-child {
+  padding-top: 0;
 }
-.contact-channel-top {
+.contact-channel:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.contact-channel-ico {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+.contact-channel-body {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
-.contact-channel-top .ci {
-  font-size: 1.3rem;
-  line-height: 1;
-}
-.contact-channel-top .ct {
-  margin: 0;
-}
-.contact-channel .cd {
-  font-size: 0.82rem;
-}
-.contact-channel-link {
-  margin-top: auto;
-  padding-top: 14px;
-  color: var(--acc);
-  font-size: 0.8rem;
+.contact-channel-name {
+  font-family: var(--ff-display);
+  font-size: 0.85rem;
   font-weight: 700;
-}
-.contact-channel-link:hover {
   color: var(--t1);
 }
-/* Repair inquiry — 40/60 information vs form, aligned tops. */
-.contact-inquiry-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: clamp(32px, 4vw, 48px);
-  align-items: start;
+.contact-channel-desc {
+  font-size: 0.78rem;
+  color: var(--t2);
+  line-height: 1.5;
 }
-.contact-inquiry .sec-title {
-  margin-bottom: 14px;
+.contact-channel-link {
+  margin-top: 4px;
+  color: var(--acc);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
-.contact-inquiry-grid .sec-head {
-  margin-bottom: 28px;
+.contact-channel:hover .contact-channel-link {
+  color: var(--t1);
 }
 .contact-guarantees {
-  margin: 14px 0 0;
-  padding: 16px 18px;
-  background: var(--bg1);
-  border-color: rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .contact-guarantees li {
   display: flex;
@@ -11753,100 +11749,33 @@ a.reviews-page:hover {
   color: var(--t2);
   line-height: 1.5;
 }
-.contact-guarantees li + li {
-  margin-top: 10px;
-}
 .contact-guarantees li::before {
   content: "✓";
   color: var(--acc);
   font-weight: 700;
   flex-shrink: 0;
 }
-/* Form — compact premium card, no heavy shadow or glow. */
-.contact-form {
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
-    var(--bg1);
-  border-color: rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: clamp(20px, 2.5vw, 26px);
+/* Issue description grows with its content, then scrolls past a ceiling. */
+.contact-issue {
+  max-height: 340px;
+  overflow-y: auto;
 }
-.contact-form:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-.contact-form .form-row {
+/* Photos field: wrapper keeps the upload-zone label out of `.kf-field > label`
+   so it never picks up micro-label typography. */
+.upload-field {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  margin-bottom: 18px;
 }
-.contact-form .form-row label {
-  color: var(--t2);
+.contact-success {
+  text-align: center;
+  padding: 8px 0 4px;
 }
-.contact-form .form-row .optional {
-  color: var(--t3);
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: none;
-  font-family: var(--ff-body);
-  font-size: 0.7rem;
+.contact-success .ri-done-badge {
+  margin-bottom: 16px;
 }
-.contact-form .form-row input,
-.contact-form .form-row textarea {
-  font-size: 0.9rem;
-  padding: 13px 15px;
-  border-radius: 12px;
-  background: var(--bg2);
-}
-.contact-form .form-row textarea {
-  min-height: 120px;
-}
-.contact-form .upload-zone {
-  padding: 22px 18px;
-  border-radius: 12px;
-}
-.contact-form .btn-form-submit {
-  font-size: 0.9rem;
-  padding: 15px 24px;
-  margin-top: 4px;
-}
-/* CTA — compact, centered, subtle lime ambient. */
-.contact-page .cta-section {
-  margin-top: clamp(76px, 8vw, 104px);
-  padding: clamp(44px, 5vw, 60px) var(--pad-x) clamp(36px, 5vw, 52px);
-}
-.contact-page .cta-title {
-  font-size: clamp(2rem, 3.8vw, 3.1rem);
-  letter-spacing: -0.02em;
-  margin-bottom: 14px;
-}
-.contact-page .cta-desc {
-  max-width: 600px;
-  margin: 0 auto 26px;
-}
-.contact-page .cta-section .btn-prime {
-  font-size: 0.82rem;
-  padding: 14px 30px;
-  min-width: 140px;
-}
-/* Footer on the contact page — aligned to the 1160px content grid. */
-.contact-footer .footer-main,
-.contact-footer .footer-bottom {
-  max-width: 1160px;
-}
-.contact-footer .footer-main {
-  padding-top: 48px;
-  padding-bottom: 40px;
-}
-.contact-footer .footer-watermark {
-  font-size: clamp(5rem, 13vw, 10rem);
-  opacity: 0.016;
-}
-/* Responsive — everything collapses to one column. */
-@media (max-width: 900px) {
-  .contact-inquiry-grid {
-    grid-template-columns: 1fr;
-  }
+.contact-success .ri-done-text {
+  margin-bottom: 20px;
 }
 
 /* ─── Support pages: editorial sections ───────────────────────────────────── */

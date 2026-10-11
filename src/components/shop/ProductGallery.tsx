@@ -69,7 +69,7 @@ export function ProductGallery({
         aria-label="No product image available"
       >
         <div className="product-gallery-fallback" aria-hidden="true">
-          {productName.charAt(0).toUpperCase()}
+          {Array.from(productName)[0]?.toUpperCase()}
         </div>
       </div>
     );

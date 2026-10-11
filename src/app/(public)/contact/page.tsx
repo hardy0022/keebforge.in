@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { SectionHead } from "@/components/ui/SectionHead";
-import { CtaSection } from "@/components/ui/CtaSection";
+import { Panel } from "@/components/ui/Panel";
 import { InquiryForm } from "@/components/contact/InquiryForm";
 import { buildMetadata } from "@/lib/seo";
 
@@ -31,72 +30,63 @@ const CHANNELS = [
 const GUARANTEES = [
   "Describe the issue clearly",
   "Add photos if possible",
-  "We'll review it and get back with a quote",
+  "We'll review it and get back as soon as possible",
 ];
 
 export default function ContactPage() {
   return (
-    <main className="contact-page">
-      <section className="contact-hero" aria-labelledby="contact-title">
-        <div className="wrap contact-hero-grid">
-          <div className="contact-hero-copy">
-            <span className="sec-num">{"// Contact"}</span>
-            <h1 className="sec-title" id="contact-title">
-              Contact KeebForge
-            </h1>
-          </div>
-        </div>
-      </section>
+    <main className="ri-page">
+      <header className="ri-hero">
+        <p className="sec-num">{"// Contact"}</p>
+        <h1 className="ri-hero-title">Contact KeebForge</h1>
+        <p className="ri-hero-desc">
+          Questions about a repair, a quote for PCB work, or a custom build in
+          mind? Send an inquiry below — we&apos;ll get back to you with a quote.
+        </p>
+      </header>
 
-      <section className="contact-inquiry" aria-labelledby="t-form">
-        <div className="wrap contact-inquiry-grid">
-          <div className="contact-inquiry-info">
-            <SectionHead
-              title="Send a Repair Inquiry"
-              desc="Describe your device and issue — we'll get back to you with a quote."
-            />
-            <div className="contact-channels">
-              {CHANNELS.map((c) => (
-                <a
-                  key={c.title}
-                  href={c.href}
-                  target={c.href.startsWith("http") ? "_blank" : undefined}
-                  rel="noopener"
-                  className="contact-channel"
-                >
-                  <div className="contact-channel-top">
-                    <span className="ci" aria-hidden="true">
+      <section className="ri-layout">
+        <div className="ri-main">
+          <InquiryForm />
+        </div>
+        <aside className="ri-side">
+          <div className="contact-aside">
+            <Panel
+              tag="Direct Contact"
+              title="Reach me directly"
+              className="panel"
+            >
+              <div className="contact-channel-list">
+                {CHANNELS.map((c) => (
+                  <a
+                    key={c.title}
+                    href={c.href}
+                    target={c.href.startsWith("http") ? "_blank" : undefined}
+                    rel="noopener"
+                    className="contact-channel"
+                  >
+                    <span className="contact-channel-ico" aria-hidden="true">
                       {c.icon}
                     </span>
-                    <h3 className="ct">{c.title}</h3>
-                  </div>
-                  <p className="cd">{c.desc}</p>
-                  <p className="contact-channel-link">{c.label}</p>
-                </a>
-              ))}
-            </div>
-            <ul className="card contact-guarantees">
-              {GUARANTEES.map((g) => (
-                <li key={g}>{g}</li>
-              ))}
-            </ul>
+                    <span className="contact-channel-body">
+                      <span className="contact-channel-name">{c.title}</span>
+                      <span className="contact-channel-desc">{c.desc}</span>
+                      <span className="contact-channel-link">{c.label}</span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </Panel>
+            <Panel tag="Before You Send" title="Helpful details" className="panel">
+              <ul className="contact-guarantees">
+                {GUARANTEES.map((g) => (
+                  <li key={g}>{g}</li>
+                ))}
+              </ul>
+            </Panel>
           </div>
-          <div className="contact-inquiry-form">
-            <InquiryForm hideIntro />
-          </div>
-        </div>
+        </aside>
       </section>
-
-      <CtaSection
-        title={
-          <>
-            Place Your
-            <br />
-            Order Today
-          </>
-        }
-        desc="Ordering directly is the fastest path — the contact form is best for questions and quotes."
-      />
     </main>
   );
 }

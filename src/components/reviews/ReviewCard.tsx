@@ -77,7 +77,7 @@ export function ReviewCard({
             </span>
           ) : (
             <span className="review-avatar" aria-hidden="true">
-              {name.charAt(0)}
+              {Array.from(name)[0]}
             </span>
           )}
           <div className="review-author-meta">
