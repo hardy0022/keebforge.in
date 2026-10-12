@@ -164,13 +164,6 @@ export async function sendInquiry(
     // The admin recipient (the shared contact inbox), the reply-to behaviour and
     // the escaping all stay here; the published template only renders the body.
     const templateId = readTemplateIds().contactInquiry;
-    if (!templateId) {
-      console.error("Resend error (inquiry): template not configured");
-      return {
-        error:
-          "The inquiry could not be sent right now. Please email contact@keebforge.in directly.",
-      };
-    }
     const payload = contactInquiryEmail({
       name,
       phone,
@@ -180,13 +173,46 @@ export async function sendInquiry(
       photoUrls: uploaded.map((u) => u.url),
     });
     const from = process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>";
-    const { error } = await resend.emails.send({
-      from,
-      to: [plan.to],
-      replyTo: email,
-      subject: payload.subject,
-      template: { id: templateId, variables: payload.variables },
-    });
+    let sendResult;
+    if (templateId) {
+      const tplSend: any = {
+        from,
+        to: [plan.to],
+        subject: payload.subject,
+        template: { id: templateId, variables: payload.variables },
+      };
+      if (email && /@/.test(email)) tplSend.replyTo = email;
+      sendResult = await resend.emails.send(tplSend);
+    } else {
+      console.warn("Resend (inquiry): template not configured; falling back to inline email");
+      const photoHtml =
+        uploaded.length > 0
+          ? `<h3>Photos (${uploaded.length})</h3>` +
+            uploaded
+              .map((u) => `<p><a href="${esc(u.url)}">${esc(u.url)}</a></p>`)
+              .join("")
+          : "";
+      const inlineSend: any = {
+        from,
+        to: [plan.to],
+        subject: `Repair Inquiry — ${deviceModel || "Device"} — ${name}`,
+        html: `
+          <h2>Repair Inquiry — KeebForge.in</h2>
+          <table cellpadding="6" style="font-family:sans-serif;font-size:14px;color:#1a1a1a">
+            <tr><td><strong>Name</strong></td><td>${esc(name)}</td></tr>
+            <tr><td><strong>Phone</strong></td><td>${esc(phone)}</td></tr>
+            <tr><td><strong>Email</strong></td><td>${esc(email)}</td></tr>
+            <tr><td><strong>Device / Model</strong></td><td>${esc(deviceModel)}</td></tr>
+            <tr><td><strong>Issue</strong></td><td>${esc(issue)}</td></tr>
+          </table>
+          ${photoHtml}
+          <p style="color:#888">Reply to this inquiry by clicking Reply — it goes straight back to the customer.</p>
+        `,
+      };
+      if (email && /@/.test(email)) inlineSend.replyTo = email;
+      sendResult = await resend.emails.send(inlineSend);
+    }
+    const { error } = sendResult;
     if (error) {
       // The `{ error }` payload can echo the message (recipient, inquiry text),
       // so only the sanitized diagnostic is logged.
@@ -208,4 +234,12 @@ export async function sendInquiry(
   }
 
   return { ok: true };
+}
+
+function esc(s: string): string {
+  return s.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 }

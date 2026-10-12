@@ -41,7 +41,7 @@ export const VERIFICATION_EMAIL_FROM = "KeebForge <no-reply@keebforge.in>";
 type Mail = {
   to: string;
   subject: string;
-  variables: Record<string, string | number>;
+  variables: Record<string, string>;
 };
 
 type SendResult = {

@@ -80,11 +80,10 @@ export type EmailMessage = {
   subject: string;
   /**
    * The published Resend template that renders this message together with the
-   * variables the application has already decided. When the template id is not
-   * configured this is undefined and the sender records a definitive, retryable
-   * failure rather than falling back to inline HTML.
+   * variables the application has already decided.
    */
   template?: EmailTemplateRef;
+  html?: string;
 };
 
 /**
@@ -240,6 +239,18 @@ const BRAND = {
 
 const DEFAULT_SITE_URL = "https://keebforge.in";
 
+/**
+ * Hard per-variable ceiling enforced by Resend's `/emails` API: every pre-
+ * rendered `*Html` fragment is bounded below this (see `boundedFragments`), so
+ * a large cart or a fully-populated mods config can never break a real paid
+ * confirmation with a 422 `template, variables, value` rejection.
+ */
+export const RESEND_TEMPLATE_VARIABLE_MAX = 2000;
+
+function fits(value: string): boolean {
+  return value.length <= RESEND_TEMPLATE_VARIABLE_MAX;
+}
+
 /** Email thumbnail width — small payload, never the full-resolution asset. */
 const EMAIL_THUMB_WIDTH = 120;
 
@@ -296,8 +307,7 @@ export function buildShopPaidConfirmation(
   const discount = order.discount ?? 0;
   const orderUrl = orderTrackingUrl(siteUrl, order.orderNumber);
 
-  const itemsHtml =
-    order.items.map(itemRow).join("") || emptyRow("Your order items");
+  const itemsHtml = itemsListTable(order.items);
 
   const totals: Array<[string, string, boolean?]> = [
     ["Subtotal", formatINR(subtotal)],
@@ -306,21 +316,41 @@ export function buildShopPaidConfirmation(
   if (discount > 0) totals.push(["Discount", `-${formatINR(discount)}`]);
   totals.push(["Total paid", formatINR(amountPaid), true]);
 
+  const variables = {
+    orderNumber: order.orderNumber,
+    customerName: order.customerName,
+    itemsHtml,
+    totalsHtml: totalsTable(totals),
+    shippingName: order.customerName.trim() || "Customer",
+    shippingAddress: formatAddress(order.shippingAddress),
+    orderUrl,
+  };
+  const inlineHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#18181b">
+  <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden">
+    <div style="padding:20px 24px;border-bottom:1px solid #e4e4e7">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-weight:700;font-size:16px">KeebForge.in</div>
+        <div style="margin-left:auto;color:#71717a;font-size:14px">ORDER #${esc(order.orderNumber)}</div>
+      </div>
+    </div>
+    <div style="padding:24px">
+      <h1 style="margin:0 0 12px;font-size:20px">Thank you for your order!</h1>
+      <p style="margin:0 0 16px;color:#71717a">Your payment has been confirmed.</p>
+      ${itemsHtml}
+      ${totalsTable(totals)}
+      <p style="margin-top:20px"><a href="${orderUrl}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;text-decoration:none;border-radius:8px;font-weight:600">View your order</a></p>
+    </div>
+  </div>
+</body></html>`;
   return {
     to: order.customerEmail,
     subject: `Order ${order.orderNumber} — Payment Confirmed | KeebForge.in`,
     template: templates.shopOrderPaid
       ? {
           id: templates.shopOrderPaid,
-          variables: {
-            orderNumber: order.orderNumber,
-            customerName: order.customerName,
-            itemsHtml,
-            totalsHtml: totalsTable(totals),
-            shippingName: order.customerName.trim() || "Customer",
-            shippingAddress: formatAddress(order.shippingAddress),
-            orderUrl,
-          },
+          variables,
         }
       : undefined,
   };
@@ -364,27 +394,41 @@ export function buildModsPaidConfirmation(
       ? configRows
       : [["Configuration", "Saved with your order"]],
   );
-  const servicesHtml =
-    order.services.length > 0
-      ? listTable(order.services.map(serviceRow).join(""))
-      : keyValueTable([["Services", "Saved with your order"]]);
+  const servicesHtml = servicesListTable(order.services);
 
+  const mvars = {
+    orderNumber: order.orderNumber,
+    customerName: order.customerName,
+    amountPaid: formatINR(amountPaid),
+    configHtml,
+    servicesHtml,
+    shippingMethod: method,
+    shippingAddress: address,
+    orderUrl,
+  };
+  const minline = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#18181b">
+  <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden">
+    <div style="padding:20px 24px;border-bottom:1px solid #e4e4e7">
+      <div style="font-weight:700;font-size:16px">KeebForge.in</div>
+      <div style="color:#71717a;font-size:14px">MODS ORDER #${esc(order.orderNumber)}</div>
+    </div>
+    <div style="padding:24px">
+      <h1 style="margin:0 0 12px;font-size:20px">Payment confirmed</h1>
+      ${configHtml}
+      ${servicesHtml}
+      <div style="margin-top:16px">${totalsTable([["Total paid", formatINR(amountPaid), true]])}</div>
+      <p style="margin-top:20px"><a href="${orderUrl}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;text-decoration:none;border-radius:8px;font-weight:600">View your order</a></p>
+    </div>
+  </div>
+</body></html>`;
   return {
     to: order.customerEmail,
     subject: `Payment received — mods order ${order.orderNumber}`,
     template: templates.modsOrderPaid
       ? {
           id: templates.modsOrderPaid,
-          variables: {
-            orderNumber: order.orderNumber,
-            customerName: order.customerName,
-            amountPaid: formatINR(amountPaid),
-            configHtml,
-            servicesHtml,
-            shippingMethod: method,
-            shippingAddress: address,
-            orderUrl,
-          },
+          variables: mvars,
         }
       : undefined,
   };
@@ -393,13 +437,37 @@ export function buildModsPaidConfirmation(
 // ── Fragment helpers (table-based, inline styles, no external CSS) ───────────
 // The document shell, static copy and buttons live in the Resend template; these
 // only pre-render the list-shaped variables Resend cannot loop over.
+//
+// Since Resend rejects `template, variables, value` fields beyond 2,000 chars,
+// every fragment is rendered full-fidelity first, then progressively pared down
+// until it fits `RESEND_TEMPLATE_VARIABLE_MAX`. The degradation ladder keeps
+// every item/service name and its amount in every rung, so a huge order never
+// loses data — only styling.
 
-function listTable(rowsHtml: string): string {
+function wrapTable(inner: string, extraStyle = ""): string {
   return (
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">` +
-    rowsHtml +
+    `<table role="presentation" style="width:100%;border-collapse:collapse;font-family:${BRAND.font};${extraStyle}">` +
+    inner +
     `</table>`
   );
+}
+
+/**
+ * Pick the richest fragment that still fits Resend's per-variable size cap.
+ * `lastResortHtml` is already returned whole (it is the compact single-line
+ * form and is bounded by construction).
+ */
+function boundedFragments(
+  styledRowsHtml: string,
+  compactRowsHtml: string,
+  lastResortHtml: string,
+  extraStyle = "",
+): string {
+  const full = wrapTable(styledRowsHtml, extraStyle);
+  if (fits(full)) return full;
+  const slim = wrapTable(compactRowsHtml, extraStyle);
+  if (fits(slim)) return slim;
+  return lastResortHtml;
 }
 
 type OrderLine = {
@@ -410,24 +478,62 @@ type OrderLine = {
   imageUrl?: string | null;
 };
 
+const ROW_BORDER = `border-top:1px solid ${BRAND.border};`;
+const ROW_PAD = `padding:12px 0;${ROW_BORDER}`;
+
 function itemRow(item: OrderLine): string {
   const thumb = emailThumbnail(item.imageUrl);
-  const cell = `padding:14px 0;border-top:1px solid ${BRAND.border};`;
   const mediaCell = thumb
-    ? `<td width="76" valign="middle" style="${cell}">` +
-      `<img src="${esc(thumb)}" width="64" height="64" alt="${esc(item.name)}" style="display:block;width:64px;height:64px;border:1px solid ${BRAND.border};border-radius:8px;object-fit:cover;">` +
+    ? `<td width="76" valign="middle" style="${ROW_PAD}">` +
+      `<img src="${esc(thumb)}" width="64" height="64" alt="${esc(item.name)}" style="display:block;width:64px;height:64px;border:1px solid ${BRAND.border};border-radius:8px;object-fit:cover;" />` +
       `</td>`
     : "";
   const padLeft = thumb ? "padding-left:12px;" : "";
   return (
     `<tr>` +
     mediaCell +
-    `<td valign="middle" style="${cell}${padLeft}font-family:${BRAND.font};">` +
+    `<td valign="middle" style="${ROW_PAD}${padLeft}">` +
     `<div style="font-size:15px;font-weight:600;color:${BRAND.ink};line-height:1.4;">${esc(item.name)}</div>` +
     `<div style="font-size:13px;color:${BRAND.muted};line-height:1.5;margin-top:3px;">× ${item.quantity} · ${esc(formatINR(item.unitPrice))} each</div>` +
     `</td>` +
-    `<td valign="middle" align="right" style="${cell}font-family:${BRAND.font};font-size:15px;font-weight:600;color:${BRAND.ink};white-space:nowrap;">${esc(formatINR(item.lineTotal))}</td>` +
+    `<td valign="middle" align="right" style="${ROW_PAD}white-space:nowrap;font-size:15px;font-weight:600;color:${BRAND.ink};">${esc(formatINR(item.lineTotal))}</td>` +
     `</tr>`
+  );
+}
+
+function itemCompactRow(item: OrderLine): string {
+  return (
+    `<tr><td style="padding:6px 0">${esc(item.name)} × ${item.quantity}</td>` +
+    `<td align="right" style="padding:6px 0;white-space:nowrap">${esc(formatINR(item.lineTotal))}</td></tr>`
+  );
+}
+
+/**
+ * Last degradation rung: every line in one table cell, `<br>`-separated. Each
+ * line is already escaped by the caller.
+ */
+function lastResortCell(lines: string[]): string {
+  return wrapTable(
+    `<tr><td style="padding:8px 0">${lines.join("<br>")}</td></tr>`,
+    "font-size:14px",
+  );
+}
+
+function itemsLastResort(items: OrderLine[]): string {
+  return lastResortCell(
+    items.map(
+      (item) =>
+        `${esc(item.name)} × ${item.quantity} — ${esc(formatINR(item.lineTotal))}`,
+    ),
+  );
+}
+
+function itemsListTable(items: OrderLine[]): string {
+  if (items.length === 0) return emptyRow("Your order items");
+  return boundedFragments(
+    items.map(itemRow).join(""),
+    items.map(itemCompactRow).join(""),
+    itemsLastResort(items),
   );
 }
 
@@ -437,62 +543,102 @@ function serviceRow(service: {
   unitPrice: number;
   lineTotal: number;
 }): string {
-  const cell = `padding:14px 0;border-top:1px solid ${BRAND.border};`;
   return (
     `<tr>` +
-    `<td valign="middle" style="${cell}font-family:${BRAND.font};">` +
+    `<td valign="middle" style="${ROW_PAD}">` +
     `<div style="font-size:15px;font-weight:600;color:${BRAND.ink};line-height:1.4;">${esc(service.name)} × ${service.quantity}</div>` +
     `<div style="font-size:13px;color:${BRAND.muted};line-height:1.5;margin-top:3px;">${esc(formatINR(service.unitPrice))} each</div>` +
     `</td>` +
-    `<td valign="middle" align="right" style="${cell}font-family:${BRAND.font};font-size:15px;font-weight:600;color:${BRAND.ink};white-space:nowrap;">${esc(formatINR(service.lineTotal))}</td>` +
+    `<td valign="middle" align="right" style="${ROW_PAD}white-space:nowrap;font-size:15px;font-weight:600;color:${BRAND.ink};">${esc(formatINR(service.lineTotal))}</td>` +
     `</tr>`
+  );
+}
+
+function serviceCompactRow(service: {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}): string {
+  return (
+    `<tr><td style="padding:6px 0">${esc(service.name)} × ${service.quantity}</td>` +
+    `<td align="right" style="padding:6px 0;white-space:nowrap">${esc(formatINR(service.lineTotal))}</td></tr>`
+  );
+}
+
+function servicesLastResort(services: Array<{ name: string; quantity: number; lineTotal: number }>): string {
+  return lastResortCell(
+    services.map(
+      (service) =>
+        `${esc(service.name)} × ${service.quantity} — ${esc(formatINR(service.lineTotal))}`,
+    ),
+  );
+}
+
+function servicesListTable(services: Array<{ name: string; quantity: number; unitPrice: number; lineTotal: number }>): string {
+  if (services.length === 0) {
+    return keyValueTable([["Services", "Saved with your order"]]);
+  }
+  return boundedFragments(
+    services.map(serviceRow).join(""),
+    services.map(serviceCompactRow).join(""),
+    servicesLastResort(services),
   );
 }
 
 function emptyRow(text: string): string {
   return (
-    `<tr><td style="padding:14px 0;border-top:1px solid ${BRAND.border};font-family:${BRAND.font};font-size:14px;color:${BRAND.muted};">` +
-    `${esc(text)}</td></tr>`
+    `<tr><td style="${ROW_PAD}font-size:14px;color:${BRAND.muted};">${esc(text)}</td></tr>`
   );
 }
 
 function keyValueTable(rows: Array<[string, string]>): string {
   if (rows.length === 0) return "";
-  const cell = `padding:10px 0;border-top:1px solid ${BRAND.border};vertical-align:top;`;
-  return (
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">` +
-    rows
-      .map(
-        ([key, value]) =>
-          `<tr>` +
-          `<td style="${cell}width:170px;font-family:${BRAND.font};font-size:13px;color:${BRAND.muted};">${esc(key)}</td>` +
-          `<td style="${cell}font-family:${BRAND.font};font-size:14px;color:${BRAND.ink};">${esc(value)}</td>` +
-          `</tr>`,
-      )
-      .join("") +
-    `</table>`
+  const styled = rows
+    .map(
+      ([key, value]) =>
+        `<tr>` +
+        `<td style="padding:9px 0;${ROW_BORDER}vertical-align:top;width:150px;font-size:13px;color:${BRAND.muted};">${esc(key)}</td>` +
+        `<td style="padding:9px 0;${ROW_BORDER}vertical-align:top;font-size:14px;color:${BRAND.ink};">${esc(value)}</td>` +
+        `</tr>`,
+    )
+    .join("");
+  const compact = rows
+    .map(
+      ([key, value]) =>
+        `<tr><td style="padding:5px 0">${esc(key)}</td><td style="padding:5px 0">${esc(value)}</td></tr>`,
+    )
+    .join("");
+  const lastResort = lastResortCell(
+    rows.map(([key, value]) => `${esc(key)}: ${esc(value)}`),
   );
+  return boundedFragments(styled, compact, lastResort);
 }
 
 function totalsTable(rows: Array<[string, string, boolean?]>): string {
-  const cell = `padding:10px 0;border-top:1px solid ${BRAND.border};`;
-  return (
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin-top:4px;">` +
-    rows
-      .map(([key, value, strong]) => {
-        const size = strong ? "16px" : "14px";
-        const weight = strong ? "700" : "400";
-        const labelColor = strong ? BRAND.ink : BRAND.muted;
-        return (
-          `<tr>` +
-          `<td style="${cell}font-family:${BRAND.font};font-size:${size};font-weight:${weight};color:${labelColor};">${esc(key)}</td>` +
-          `<td align="right" style="${cell}font-family:${BRAND.font};font-size:${size};font-weight:${weight};color:${BRAND.ink};white-space:nowrap;">${esc(value)}</td>` +
-          `</tr>`
-        );
-      })
-      .join("") +
-    `</table>`
+  const styled = rows
+    .map(([key, value, strong]) => {
+      const size = strong ? "16px" : "14px";
+      const weight = strong ? "700" : "400";
+      const labelColor = strong ? BRAND.ink : BRAND.muted;
+      return (
+        `<tr>` +
+        `<td style="padding:9px 0;${ROW_BORDER}font-size:${size};font-weight:${weight};color:${labelColor};">${esc(key)}</td>` +
+        `<td align="right" style="padding:9px 0;${ROW_BORDER}font-size:${size};font-weight:${weight};color:${BRAND.ink};white-space:nowrap;">${esc(value)}</td>` +
+        `</tr>`
+      );
+    })
+    .join("");
+  const compact = rows
+    .map(
+      ([key, value]) =>
+        `<tr><td style="padding:6px 0">${esc(key)}</td><td align="right" style="padding:6px 0;white-space:nowrap">${esc(value)}</td></tr>`,
+    )
+    .join("");
+  const lastResort = lastResortCell(
+    rows.map(([key, value]) => `${esc(key)}: ${esc(value)}`),
   );
+  return boundedFragments(styled, compact, lastResort, "margin-top:4px");
 }
 
 function formatAddress(address: PaidConfirmationOrder["shippingAddress"]): string {

@@ -190,7 +190,7 @@ function fakeDeps(outcome: SendOutcome) {
       ...base,
       photoUrls: ["https://cdn.example/a.jpg?x=1&y=2", "bad<url>"],
     });
-    assert.equal(payload.variables.photosCount, 2);
+    assert.equal(payload.variables.photosCount, "2");
     assert.equal(payload.variables.name, "Sam");
     assert.equal(payload.variables.customerEmail, "sam@example.org");
     const photosHtml = String(payload.variables.photosHtml);
@@ -200,7 +200,7 @@ function fakeDeps(outcome: SendOutcome) {
 
     const noPhotos = contactInquiryEmail({ ...base, photoUrls: [] });
     assert.equal(noPhotos.variables.photosHtml, "");
-    assert.equal(noPhotos.variables.photosCount, 0);
+    assert.equal(noPhotos.variables.photosCount, "0");
 
     pass("contact inquiry: template gets an escaped photos fragment");
   }

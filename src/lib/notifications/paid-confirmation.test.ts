@@ -20,6 +20,7 @@ import {
   type PaidConfirmationOrder,
   type ReconciliationDeps,
   type SendOutcome,
+  RESEND_TEMPLATE_VARIABLE_MAX,
 } from "@/lib/notifications/paid-confirmation";
 import {
   classifyResendApiError,
@@ -418,6 +419,88 @@ function fakeDeps(send: (message: EmailMessage) => Promise<SendOutcome>) {
   assert.equal(servicesHtml.includes("<img "), false, "no item images in mods mail");
   assert.ok(/<table[^>]*role="presentation"/.test(servicesHtml), "uses layout tables");
   pass("mods confirmation pre-renders an image-free services fragment");
+}
+
+// ── Resend per-variable size cap (2,000 chars) ──────────────────────────────
+// Resend rejects `template, variables, value` fields above the limit with a
+// 422. Every pre-rendered fragment must stay below it, for realistic and
+// worst-case carts/configs alike, while keeping every name and amount.
+
+{
+  const manyItems = Array.from({ length: 8 }, (_, i) => ({
+    name: `Switch pack ${i + 1} (soldering required)`,
+    quantity: i + 1,
+    unitPrice: 50000,
+    lineTotal: 50000 * (i + 1),
+  }));
+  const mail = buildShopPaidConfirmation(
+    { ...shopOrder, items: manyItems },
+    { shopOrderPaid: "tpl_shop" },
+  );
+  const itemsHtml = String(mail.template?.variables.itemsHtml);
+  assert.ok(
+    itemsHtml.length <= RESEND_TEMPLATE_VARIABLE_MAX,
+    `large shop cart itemsHtml stays under the cap (got ${itemsHtml.length})`,
+  );
+  for (const item of manyItems) {
+    assert.ok(itemsHtml.includes(item.name), "every item name survives");
+  }
+  pass("shop items fragment is bounded for a large cart");
+}
+
+{
+  const fullConfig = {
+    ...modsOrder,
+    services: Array.from({ length: 8 }, (_, i) => ({
+      name: `Service line ${i + 1} (desolder + relube)`,
+      quantity: i + 1,
+      unitPrice: 15000,
+      lineTotal: 15000 * (i + 1),
+    })),
+  };
+  const mail = buildModsPaidConfirmation(fullConfig, { modsOrderPaid: "tpl_mods" });
+  const v = mail.template?.variables ?? {};
+  const configHtml = String(v.configHtml);
+  const servicesHtml = String(v.servicesHtml);
+  assert.ok(
+    configHtml.length <= RESEND_TEMPLATE_VARIABLE_MAX,
+    `full mods config stays under the cap (got ${configHtml.length})`,
+  );
+  assert.ok(
+    servicesHtml.length <= RESEND_TEMPLATE_VARIABLE_MAX,
+    `large services list stays under the cap (got ${servicesHtml.length})`,
+  );
+  for (const s of fullConfig.services) {
+    assert.ok(servicesHtml.includes(s.name), "every service name survives");
+  }
+  pass("mods fragments are bounded for a full config and service list");
+}
+
+{
+  const huge = buildModsPaidConfirmation(
+    {
+      ...modsOrder,
+      services: Array.from({ length: 40 }, (_, i) => ({
+        name: `Micro-service ${i + 1}`,
+        quantity: 1,
+        unitPrice: 10000,
+        lineTotal: 10000,
+      })),
+    },
+    { modsOrderPaid: "tpl_mods" },
+  );
+  const servicesHtml = String(huge.template?.variables.servicesHtml);
+  assert.ok(
+    servicesHtml.length <= RESEND_TEMPLATE_VARIABLE_MAX,
+    `worst-case services list still fits (got ${servicesHtml.length})`,
+  );
+  for (let i = 1; i <= 40; i += 1) {
+    assert.ok(
+      servicesHtml.includes(`Micro-service ${i}`),
+      `service ${i} survives the degradation ladder`,
+    );
+  }
+  pass("mods services fragment never loses data even at the cap");
 }
 
 {

@@ -29,10 +29,12 @@
  *
  * VARIABLES
  * ─────────
- * Resend's send API accepts only flat `string | number` variables (no arrays or
- * objects). List-shaped content (order items, mods configuration, service lines,
- * photos) is therefore pre-rendered in the application into an escaped HTML
- * fragment and passed as a single `*Html` variable. Resend inserts `{{{KEY}}}`
+ * Resend's send API accepts only flat `string` variables (no numbers, arrays or
+ * objects) — a numeric value is rejected with a 422
+ * `Variable "<key>" must be a `string``. List-shaped content (order items, mods
+ * configuration, service lines, photos) is therefore pre-rendered in the
+ * application into an escaped HTML fragment and passed as a single `*Html`
+ * variable. Counts are stringified with `String(...)` at the builder. Resend inserts `{{{KEY}}}`
  * values without escaping, so `*Html` variables are HTML-escaped here with
  * `esc()` before they are handed over. `resetUrl`/`verifyUrl` are trusted,
  * Better-Auth generated URLs (never user input) and are passed through
@@ -58,7 +60,7 @@ export type EmailTemplateIds = Partial<Record<EmailTemplateKey, string>>;
 /** The `template` object Resend's `emails.send` expects. */
 export type EmailTemplateRef = {
   id: string;
-  variables: Record<string, string | number>;
+  variables: Record<string, string>;
 };
 
 /**
@@ -103,7 +105,7 @@ export function esc(value: string): string {
 /** A rendered message: the subject plus the template variables to send. */
 export type EmailPayload = {
   subject: string;
-  variables: Record<string, string | number>;
+  variables: Record<string, string>;
 };
 
 /** Combine a template id with a built payload into Resend's `template` shape. */
@@ -187,7 +189,7 @@ export function contactInquiryEmail(input: {
       customerEmail: input.email,
       deviceModel: input.deviceModel,
       issue: input.issue,
-      photosCount: input.photoUrls.length,
+      photosCount: String(input.photoUrls.length),
       photosHtml,
     },
   };
@@ -243,7 +245,7 @@ export function repairRequestEmail(input: {
       customerEmail: input.email,
       contactNotes: input.contactNotes,
       shipping: input.shipping,
-      photosCount: input.photoUrls.length,
+      photosCount: String(input.photoUrls.length),
       photosHtml,
     },
   };
