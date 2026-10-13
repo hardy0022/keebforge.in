@@ -26,14 +26,16 @@ const MAINTENANCE_TTL_MS = 30_000;
 const maintenanceCache = new Map<string, { value: boolean; expires: number }>();
 
 async function isMaintenanceOn(hostname: string): Promise<boolean> {
-  const env = detectEnvironment(hostname);
-  const cached = maintenanceCache.get(env);
+  // Maintenance mode is production-only; local/development hosts stay online.
+  if (detectEnvironment(hostname) !== "production") return false;
+
+  const cached = maintenanceCache.get(MAINTENANCE_KEY);
   if (cached && cached.expires > Date.now()) return cached.value;
   const setting = await prisma.siteSetting.findUnique({
-    where: { key: MAINTENANCE_KEY[env] },
+    where: { key: MAINTENANCE_KEY },
   });
   const value = setting?.value === true;
-  maintenanceCache.set(env, {
+  maintenanceCache.set(MAINTENANCE_KEY, {
     value,
     expires: Date.now() + MAINTENANCE_TTL_MS,
   });
@@ -86,8 +88,7 @@ export async function proxy(request: NextRequest) {
 
   // Maintenance mode: redirect public routes to /maintenance.
   // Bypass admin, auth, maintenance itself, and API/static (excluded by matcher).
-  // Determine the environment FIRST from the host, then check ONLY that
-  // environment's maintenance setting so production and development are isolated.
+  // Production-only: local/development hosts always stay online.
   if (!isBypassPath(pathname)) {
     if (await isMaintenanceOn(request.nextUrl.hostname)) {
       const url = request.nextUrl.clone();

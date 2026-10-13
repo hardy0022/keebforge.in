@@ -27,6 +27,7 @@ import {
   logSuppressedDelivery,
   resolveOutboundRecipient,
 } from "@/lib/email/outbound";
+import { canSendEmail } from "@/lib/email/email-settings";
 import { readTemplateIds, repairRequestEmail } from "@/lib/email/templates";
 import { workTypesField } from "@/lib/validation/customer-input";
 import {
@@ -342,6 +343,13 @@ export async function submitRepairRequest(
   }
 
   try {
+    // Admin toggle (first gate). The request is already persisted and the
+    // admin notification is the only mail here, so a disabled toggle means
+    // nothing is sent — it still reports success, exactly like suppression.
+    if (!(await canSendEmail("repairRequest"))) {
+      console.warn("[email] repair request notification suppressed (disabled in settings)");
+      return { ok: true, orderNumber };
+    }
     // Test/suppression policy: redirect or skip. The request is already
     // persisted, and suppression is intentional, so it still reports success.
     const plan = resolveOutboundRecipient("contact@keebforge.in");

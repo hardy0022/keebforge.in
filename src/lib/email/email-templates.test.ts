@@ -95,7 +95,7 @@ const modsOrder: PaidConfirmationOrder = {
 };
 
 function fakeDeps(outcome: SendOutcome) {
-  const calls = { claim: 0, sent: 0, failed: 0, review: 0 };
+  const calls = { claim: 0, sent: 0, failed: 0, review: 0, suppressed: 0 };
   let lastMessage: Parameters<PaidConfirmationDeps["send"]>[0] | null = null;
   const deps: PaidConfirmationDeps = {
     claimPending: async (orderId) => {
@@ -114,6 +114,9 @@ function fakeDeps(outcome: SendOutcome) {
     },
     markNeedsReview: async () => {
       calls.review += 1;
+    },
+    markSuppressed: async () => {
+      calls.suppressed += 1;
     },
     send: async (message) => {
       lastMessage = message;

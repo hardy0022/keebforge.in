@@ -28,10 +28,14 @@ const REPO = path.resolve(__dirname, "../../..");
 
 /**
  * `send-verification-email.ts` now resolves its recipient through the
- * server-only outbound policy (`@/lib/email/outbound`). `server-only` is
- * supplied by Next.js and has no node resolution, so tsx cannot load the module
- * unless we answer it with an empty object — which is what it resolves to on the
- * server anyway. Same approach as payment-endpoints.test.ts.
+ * server-only outbound policy (`@/lib/email/outbound`) and consults the
+ * per-email-type sending toggle (`@/lib/email/email-settings`, which reads the
+ * `SiteSetting` table). `server-only` is supplied by Next.js and has no node
+ * resolution, so tsx cannot load the module unless we answer it with an empty
+ * object — which is what it resolves to on the server anyway. Same approach as
+ * payment-endpoints.test.ts. The Prisma client is replaced with an empty
+ * settings table so no database connection is opened and every toggle keeps its
+ * "all on" default.
  */
 function installServerOnlyStub() {
   const mod = Module as unknown as {
@@ -47,6 +51,11 @@ function installServerOnlyStub() {
   const orig = mod._load;
   mod._load = function (request, parent, main) {
     if (request === "server-only") return {};
+    if (request === "@/lib/db/prisma") {
+      return {
+        prisma: { siteSetting: { findMany: async () => [] } },
+      };
+    }
     return orig.call(this, request, parent, main);
   };
   mod.__rvStubbed = true;

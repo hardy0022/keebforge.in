@@ -38,6 +38,7 @@
     "check:resend-verification": "tsx src/lib/auth/resend-verification.test.ts",
     "check:outbound-policy": "tsx src/lib/email/outbound-policy.test.ts",
     "check:email-paths": "tsx src/lib/email/outbound-paths.test.ts && npm run check:email-templates",
+    "check:email-settings": "tsx src/lib/email/email-settings.test.ts",
     "check:email-templates": "tsx src/lib/email/email-templates.test.ts",
     "check:resend-template": "tsx scripts/email/resend-shop-order-paid.test.ts",
     "check:register-error": "tsx src/lib/auth/register-error.test.ts",
@@ -50,7 +51,7 @@
     "e2e:server": "tsx scripts/e2e/e2e-server.ts",
     "e2e:order-success-page": "tsx scripts/e2e/run-order-success-page.ts",
     "e2e:notification-outbox": "tsx scripts/e2e/run-notification-outbox.ts",
-    "check:security": "npm run check:rate-limit && npm run check:input-hardening && npm run check:payment-signature && npm run check:webhook && npm run check:payment-status && npm run check:refund-accounting && npm run check:payment-endpoints && npm run check:order-refund-evidence && npm run check:claim-guest-orders && npm run check:reconcile-cron && npm run check:paid-triggers && npm run check:outbound-policy && npm run check:email-paths && npm run check:preview-guard && npm run check:revalidate",
+    "check:security": "npm run check:rate-limit && npm run check:input-hardening && npm run check:payment-signature && npm run check:webhook && npm run check:payment-status && npm run check:refund-accounting && npm run check:payment-endpoints && npm run check:order-refund-evidence && npm run check:claim-guest-orders && npm run check:reconcile-cron && npm run check:paid-triggers && npm run check:outbound-policy && npm run check:email-paths && npm run check:email-settings && npm run check:preview-guard && npm run check:revalidate",
     "architecture:map": "node scripts/architecture/architecture-map.mjs"
   },
   "dependencies": {

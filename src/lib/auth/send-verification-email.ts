@@ -4,6 +4,7 @@ import {
   logSuppressedDelivery,
   resolveOutboundRecipient,
 } from "@/lib/email/outbound";
+import { canSendEmail } from "@/lib/email/email-settings";
 import { readTemplateIds, verificationEmail } from "@/lib/email/templates";
 import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
 
@@ -83,6 +84,16 @@ export async function sendVerificationEmailMessage(
       message: "Verification email could not be sent.",
     });
   };
+
+  // Admin toggle (first gate). Disabled: nothing is sent and the caller is not
+  // told anything different — verification is not required to sign in, so this
+  // resolves quietly rather than reporting a delivery failure.
+  if (!(await canSendEmail("emailVerification"))) {
+    console.warn(
+      "[auth] verification email suppressed (disabled in settings)",
+    );
+    return;
+  }
 
   // Test/suppression policy: an env override redirects this to a single test
   // address and EMAIL_SEND_DISABLED suppresses it entirely. Neither is a

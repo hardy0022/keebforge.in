@@ -2,7 +2,6 @@ import {
   adminPanelEnabled,
   detectEnvironment,
   MAINTENANCE_KEY,
-  type Environment,
 } from "@/lib/config/environment";
 import { resolvePickupLocation } from "@/lib/shipping/pickup-config";
 
@@ -30,62 +29,26 @@ for (const h of [
     `host ${JSON.stringify(h)} should be development`,
   );
 
+// Maintenance mode is production-only: there is a single key, and local/
+// development hosts are never placed into maintenance.
 assert(
-  MAINTENANCE_KEY.production !== MAINTENANCE_KEY.development,
-  "keys must be distinct",
+  MAINTENANCE_KEY === "maintenanceMode.production",
+  "maintenance key must be the production key",
 );
 
-// Simulate the proxy decision: host -> env -> that env's key only.
-function blocked(
-  host: string,
-  settings: Record<Environment, boolean>,
-): boolean {
-  return settings[detectEnvironment(host)] === true;
+// Simulate the proxy decision: only a production host consults the switch.
+function blocked(host: string, productionOn: boolean): boolean {
+  return detectEnvironment(host) === "production" && productionOn;
 }
 
-const setUp = (p: boolean, d: boolean): Record<Environment, boolean> => ({
-  production: p,
-  development: d,
-});
+assert(!blocked("keebforge.in", false), "prod offline when prod OFF");
+assert(blocked("keebforge.in", true), "prod blocked when prod ON");
+assert(!blocked("localhost:3000", false), "dev offline when prod OFF");
+assert(!blocked("localhost:3000", true), "dev unaffected by prod ON");
+assert(!blocked("192.168.1.10", true), "private host unaffected by prod ON");
+assert(!blocked("dev.local", true), ".local host unaffected by prod ON");
 
-// prod OFF + dev OFF
-assert(
-  !blocked("keebforge.in", setUp(false, false)),
-  "prod offline when prod OFF",
-);
-assert(
-  !blocked("localhost:3000", setUp(false, false)),
-  "dev offline when dev OFF",
-);
-
-// prod ON + dev OFF -> only production
-assert(
-  blocked("keebforge.in", setUp(true, false)),
-  "prod blocked when prod ON",
-);
-assert(
-  !blocked("localhost:3000", setUp(true, false)),
-  "dev NOT affected by prod ON",
-);
-
-// prod OFF + dev ON -> only development
-assert(
-  !blocked("keebforge.in", setUp(false, true)),
-  "prod NOT affected by dev ON",
-);
-assert(
-  blocked("localhost:3000", setUp(false, true)),
-  "dev blocked when dev ON",
-);
-
-// prod ON + dev ON -> both
-assert(blocked("keebforge.in", setUp(true, true)), "prod blocked when both ON");
-assert(
-  blocked("localhost:3000", setUp(true, true)),
-  "dev blocked when both ON",
-);
-
-console.log("maintenance isolation (4 cases) OK");
+console.log("maintenance policy (production-only, 6 cases) OK");
 
 // ── Admin panel enablement ───────────────────────────────────────────────────
 // Defaults must be ON for both environments: production admin access is

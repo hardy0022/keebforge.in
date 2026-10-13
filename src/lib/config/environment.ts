@@ -1,9 +1,10 @@
 export type Environment = "production" | "development";
 
-export const MAINTENANCE_KEY: Record<Environment, string> = {
-  production: "maintenanceMode.production",
-  development: "maintenanceMode.development",
-};
+/**
+ * Site maintenance switch. Production only — local/development hosts are never
+ * placed into maintenance mode, so no separate development key exists.
+ */
+export const MAINTENANCE_KEY = "maintenanceMode.production";
 
 /** Site-wide "still under development" notice. One key, every environment. */
 export const DEVELOPMENT_NOTICE_KEY = "developmentNotice.enabled";
@@ -21,7 +22,7 @@ export function detectEnvironment(host: string): Environment {
 }
 
 /**
- * Admin panel enablement, per environment (same shape as MAINTENANCE_KEY).
+ * Admin panel enablement, per environment.
  *
  * Defaults to ENABLED in both environments so existing order/shipment/review
  * workflows keep working. Set the production flag to false to hide /admin from

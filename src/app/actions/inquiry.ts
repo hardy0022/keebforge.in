@@ -23,6 +23,7 @@ import {
   logSuppressedDelivery,
   resolveOutboundRecipient,
 } from "@/lib/email/outbound";
+import { canSendEmail } from "@/lib/email/email-settings";
 import { contactInquiryEmail, readTemplateIds } from "@/lib/email/templates";
 import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
 import {
@@ -153,6 +154,19 @@ export async function sendInquiry(
   }
 
   try {
+    // Admin toggle (first gate). The inquiry is email-only and is NOT persisted,
+    // so a disabled toggle means the submission would be dropped. Report an
+    // honest failure (with a direct-email fallback) instead of silently claiming
+    // the inquiry was delivered.
+    if (!(await canSendEmail("contactInquiry"))) {
+      console.warn(
+        "[email] contact inquiry suppressed (disabled in settings)",
+      );
+      return {
+        error:
+          "The inquiry could not be sent right now. Please email contact@keebforge.in directly.",
+      };
+    }
     // Test/suppression policy: redirect or skip. Suppression is intentional, so
     // the inquiry still reports success rather than a misleading send failure.
     const plan = resolveOutboundRecipient("contact@keebforge.in");

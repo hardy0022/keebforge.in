@@ -12,6 +12,7 @@ import {
   logSuppressedDelivery,
   resolveOutboundRecipient,
 } from "@/lib/email/outbound";
+import { canSendEmail } from "@/lib/email/email-settings";
 import { passwordResetEmail, readTemplateIds } from "@/lib/email/templates";
 import { resendErrorDiagnostic } from "@/lib/notifications/resend-diagnostics";
 
@@ -35,6 +36,14 @@ export const auth = betterAuth({
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
       try {
+        // Admin toggle (first gate). Disabled: nothing is sent and the request
+        // still succeeds — Better Auth must not leak that mail was withheld.
+        if (!(await canSendEmail("passwordReset"))) {
+          console.warn(
+            "[auth] password reset email suppressed (disabled in settings)",
+          );
+          return;
+        }
         // Test/suppression policy. Suppressed: nothing is sent and the request
         // still succeeds (Better Auth must not leak that mail was withheld).
         const plan = resolveOutboundRecipient(user.email);

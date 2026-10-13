@@ -39,7 +39,8 @@ import { allowedNavHrefs } from "@/lib/auth/roles";
  *   3. At most one automatic send per order: exactly one claimant wins the
  *      atomic PENDING claim, even under concurrency.
  *   4. Only a Resend `accepted` result is recorded as SENT. Definitive 4xx
- *      rejections go to FAILED (retryable); ambiguous outcomes (timeout /
+ *      rejections go to FAILED (retryable); an admin-disabled type goes to
+ *      SUPPRESSED (terminal, never retryable); ambiguous outcomes (timeout /
  *      network / 5xx / throw) go to NEEDS_REVIEW (never auto-retried).
  *   5. Delivery never throws and never touches payment state.
  */
@@ -145,6 +146,10 @@ function fakeDeps(send: (message: EmailMessage) => Promise<SendOutcome>) {
     markNeedsReview: async (id, reason) => {
       mark.push(`NEEDS_REVIEW:${id}:${reason}`);
       statusStore.set(id.slice(2), "NEEDS_REVIEW");
+    },
+    markSuppressed: async (id, reason) => {
+      mark.push(`SUPPRESSED:${id}:${reason}`);
+      statusStore.set(id.slice(2), "SUPPRESSED");
     },
     send,
   };
@@ -590,6 +595,19 @@ for (const [label, patch, reason] of [
 }
 
 {
+  const { deps, statusStore, mark } = fakeDeps(async () => ({
+    kind: "suppressed",
+    reason: "disabled:shopOrderPaid",
+  }));
+  const result = await runPaidConfirmation(deps, shopOrder);
+  assert.equal(result.status, "suppressed");
+  assert.equal((result as { reason: string }).reason, "disabled:shopOrderPaid");
+  assert.equal(statusStore.get(shopOrder.id), "SUPPRESSED");
+  assert.deepEqual(mark, [`SUPPRESSED:n:${shopOrder.id}:disabled:shopOrderPaid`]);
+  pass("an admin-disabled type records SUPPRESSED (terminal, never sent)");
+}
+
+{
   const { deps, statusStore } = fakeDeps(async () => {
     throw new Error("socket hang up");
   });
@@ -628,7 +646,7 @@ for (const [label, patch, reason] of [
 
 {
   assert.equal(isRetryableNotificationStatus("FAILED"), true);
-  for (const s of ["PENDING", "IN_PROGRESS", "SENT", "NEEDS_REVIEW"]) {
+  for (const s of ["PENDING", "IN_PROGRESS", "SENT", "NEEDS_REVIEW", "SUPPRESSED"]) {
     assert.equal(isRetryableNotificationStatus(s), false, `${s} is not auto-retryable`);
   }
   pass("only confirmed FAILED notifications are retry-elgible");
@@ -705,6 +723,11 @@ for (const [label, patch, reason] of [
   assert.equal(kind(rec({ status: "PENDING" })), "pending");
   assert.equal(kind(rec({ status: "SENT", providerMessageId: "re_1" })), "already-sent");
   assert.equal(kind(rec({ status: "FAILED" })), "retryable");
+  assert.equal(
+    kind(rec({ status: "SUPPRESSED", lastError: "disabled:shopOrderPaid" })),
+    "suppressed",
+    "an admin-disabled row is terminal and never retryable",
+  );
   assert.equal(kind(rec({ status: "NEEDS_REVIEW" })), "ambiguous");
   assert.equal(
     kind(rec({ status: "IN_PROGRESS", claimedAt: new Date(now.getTime() - 60_000) })),
@@ -734,6 +757,7 @@ for (const [label, patch, reason] of [
   );
   for (const p of [
     { kind: "retryable", reason: null } as const,
+    { kind: "suppressed", reason: "disabled:shopOrderPaid" } as const,
     { kind: "pending" } as const,
     { kind: "already-sent", providerMessageId: "re" } as const,
     { kind: "in-flight", ageMs: 1 } as const,
@@ -820,6 +844,31 @@ for (const [label, patch, reason] of [
   assert.equal(second.examined, 0, "the order no longer looks missing");
   assert.equal(second.queued, 0, "the gap is closed exactly once");
   pass("reconciliation backfills the post-commit crash window exactly once");
+}
+
+// ── Suppressed rows are terminal: never re-queued or auto-sent ───────────────
+
+{
+  // A SUPPRESSED row already exists, so the order is not "missing" and a
+  // reconciliation pass (and the scheduled backfill) must leave it alone —
+  // re-enabling the toggle never silently resumes the backlog.
+  const store = new Map<string, string>([["o1", "SUPPRESSED"]]);
+  const deps: ReconciliationDeps = {
+    listMissing: async () =>
+      store.has("o1")
+        ? []
+        : [{ id: "o1", orderNumber: "KF-1", type: "PRODUCT", paymentStatus: "PAID", customerEmail: "a@b.c" }],
+    queue: async (id) => {
+      const had = store.has(id);
+      if (!had) store.set(id, "PENDING");
+      return had ? "exists" : "created";
+    },
+  };
+  const report = await reconcilePaidConfirmations(deps, { dryRun: false, orderIds: ["o1"] });
+  assert.equal(report.examined, 0, "a suppressed row is not a missing order");
+  assert.equal(report.queued, 0, "a suppressed row must never be re-queued");
+  assert.equal(store.get("o1"), "SUPPRESSED", "the suppressed state is preserved");
+  pass("a suppressed confirmation is never re-queued when the toggle returns");
 }
 
 // ── Resend outcome classification / diagnostics ─────────────────────────────
@@ -922,6 +971,41 @@ for (const [label, patch, reason] of [
     "every mutating operator action must be gated on order:update",
   );
   pass("operator actions are permission-gated with dry-run, queue, reconcile, retry and resend");
+}
+
+// ── Suppressed disposition is wired end-to-end (source pin) ─────────────────
+
+{
+  const src = fs.readFileSync(
+    path.join(REPO, "src/lib/notifications/send-paid-confirmation.ts"),
+    "utf8",
+  );
+  assert.ok(src.includes('status: "SUPPRESSED"'), "markSuppressed must write SUPPRESSED");
+  assert.ok(
+    src.includes('kind: "suppressed"'),
+    "the admin-toggle gate must return a suppressed outcome",
+  );
+  assert.ok(src.includes("markSuppressed"), "the deps must implement markSuppressed");
+  assert.ok(
+    src.includes('status: { in: ["PENDING", "IN_PROGRESS", "FAILED", "NEEDS_REVIEW"] }'),
+    "the attention list must exclude SUPPRESSED (terminal, no operator action)",
+  );
+
+  // The automatic retry resets FAILED only — never SUPPRESSED.
+  const retryStart = src.indexOf("export async function retryFailedPaidConfirmation");
+  const retryEnd = src.indexOf("export async function", retryStart + 10);
+  const retryBody = src.slice(retryStart, retryEnd);
+  assert.ok(retryStart >= 0 && retryEnd > retryStart, "retry function must be locatable");
+  assert.ok(retryBody.includes('status: "FAILED"'), "retry must target FAILED");
+  assert.ok(!retryBody.includes("SUPPRESSED"), "retry must never reset a suppressed row");
+
+  // Reconciliation's gap-fill is row-absence based, so a SUPPRESSED row (which
+  // exists) is never treated as missing.
+  assert.ok(
+    src.includes("notifications: { none: { type: NOTIFICATION_TYPE } }"),
+    "reconciliation must key on the absence of a notification row",
+  );
+  pass("SUPPRESSED is terminal end-to-end: written, excluded, never auto-resent");
 }
 
 // ── Admin page authorization (page, not just actions) ───────────────────────

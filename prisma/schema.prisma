@@ -194,12 +194,16 @@ enum NotificationType {
 ///                   Confirmed not delivered, so an explicit retry is safe.
 ///   NEEDS_REVIEW  — an ambiguous outcome (timeout/network/5xx): the message may
 ///                   or may not have been accepted. Never auto-retried.
+///   SUPPRESSED    — the admin disabled this email type: nothing was sent and
+///                   nothing should be. Terminal and NOT retryable, and distinct
+///                   from FAILED so a disabled type is never auto-resent.
 enum NotificationStatus {
   PENDING
   IN_PROGRESS
   SENT
   FAILED
   NEEDS_REVIEW
+  SUPPRESSED
 }
 
 // ─── Authentication (Better Auth 1.7.1 — generated schema) ─────────────────

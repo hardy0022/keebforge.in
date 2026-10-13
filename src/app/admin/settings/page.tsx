@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
 import { getSiteSetting } from "@/lib/catalog/data";
 import { MAINTENANCE_KEY, DEVELOPMENT_NOTICE_KEY } from "@/lib/config/environment";
+import { readEmailSettings } from "@/lib/email/email-settings";
 import { MaintenanceModeCard } from "./MaintenanceModeCard";
 import { DevelopmentNoticeCard } from "./DevelopmentNoticeCard";
+import { EmailNotificationsCard } from "./EmailNotificationsCard";
 
 export const metadata: Metadata = {
   title: "Settings | KeebForge Admin",
@@ -14,11 +16,11 @@ export const metadata: Metadata = {
 export default async function AdminSettingsPage() {
   await requirePermission("setting", "view");
 
-  const [productionEnabled, developmentEnabled, developmentNoticeEnabled] =
+  const [productionEnabled, developmentNoticeEnabled, emailSettings] =
     await Promise.all([
-      (await getSiteSetting(MAINTENANCE_KEY.production)) === true,
-      (await getSiteSetting(MAINTENANCE_KEY.development)) === true,
+      (await getSiteSetting(MAINTENANCE_KEY)) === true,
       (await getSiteSetting(DEVELOPMENT_NOTICE_KEY)) === true,
+      readEmailSettings(),
     ]);
 
   return (
@@ -122,24 +124,12 @@ export default async function AdminSettingsPage() {
       </div>
 
       <MaintenanceModeCard
-        environment="production"
         name="KEEBFORGE.IN"
         url="https://keebforge.in"
         enabled={productionEnabled}
         prominent
         confirmationTitle="Enable production maintenance?"
         confirmationBody="Visitors to keebforge.in will temporarily be unable to access the website."
-        confirmationNote="This will NOT affect localhost:3000."
-      />
-
-      <MaintenanceModeCard
-        environment="development"
-        name="LOCALHOST:3000"
-        url="http://localhost:3000"
-        enabled={developmentEnabled}
-        confirmationTitle="Enable development maintenance?"
-        confirmationBody="localhost:3000 will temporarily show the maintenance page."
-        confirmationNote="This will NOT affect keebforge.in."
       />
 
       <div>
@@ -157,6 +147,22 @@ export default async function AdminSettingsPage() {
       </div>
 
       <DevelopmentNoticeCard enabled={developmentNoticeEnabled} />
+
+      <div>
+        <h2
+          style={{
+            fontFamily: "var(--ff-display)",
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            marginBottom: 12,
+          }}
+        >
+          Email Notifications
+        </h2>
+      </div>
+
+      <EmailNotificationsCard read={emailSettings} />
     </div>
   );
 }

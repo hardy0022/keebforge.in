@@ -7,28 +7,22 @@ import {
   type ActionState,
 } from "@/components/admin/ActionForm";
 import { toggleMaintenanceMode } from "@/app/admin/actions/settings";
-import type { Environment } from "@/lib/config/environment";
 
 export function MaintenanceModeCard({
-  environment,
   name,
   url,
   enabled: initialEnabled,
   prominent,
   confirmationTitle,
   confirmationBody,
-  confirmationNote,
 }: {
-  environment: Environment;
   name: string;
   url: string;
   enabled: boolean;
   prominent?: boolean;
   confirmationTitle: string;
   confirmationBody: string;
-  confirmationNote: string;
 }) {
-  const isProduction = environment === "production";
   const [enabled, setEnabled] = useState(initialEnabled);
   const [confirming, setConfirming] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -41,8 +35,6 @@ export function MaintenanceModeCard({
     }
     return result;
   };
-
-  const envColor = isProduction ? "var(--warn)" : "#5b8cff";
 
   return (
     <>
@@ -80,11 +72,11 @@ export function MaintenanceModeCard({
                 padding: "3px 8px",
                 borderRadius: "var(--r-sm)",
                 color: "#0b0e14",
-                background: envColor,
+                background: "var(--warn)",
                 whiteSpace: "nowrap",
               }}
             >
-              {isProduction ? "PRODUCTION" : "DEVELOPMENT"}
+              PRODUCTION
             </span>
             <span
               style={{
@@ -153,15 +145,13 @@ export function MaintenanceModeCard({
                 textAlign: "right",
               }}
             >
-              {isProduction
-                ? "Controls the live production website only."
-                : "Controls the local development website only."}
+              Controls the live production website only.
             </p>
 
             <ActionForm action={runAction} label={(s) => s.message ?? "Maintenance mode saved"}>
               {(pending) => (
                 <>
-                  <input type="hidden" name="environment" value={environment} />
+                  <input type="hidden" name="environment" value="production" />
                   {enabled ? (
                     <button
                       type="submit"
@@ -217,22 +207,11 @@ export function MaintenanceModeCard({
                 fontSize: "0.84rem",
                 color: "var(--t2)",
                 lineHeight: 1.55,
-                marginBottom: 8,
+                marginBottom: 20,
               }}
             >
               {confirmationBody} Admins will still be able to access the admin
               panel.
-            </p>
-            <p
-              style={{
-                fontSize: "0.84rem",
-                fontWeight: 600,
-                color: envColor,
-                lineHeight: 1.5,
-                marginBottom: 20,
-              }}
-            >
-              {confirmationNote}
             </p>
             <div
               style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}
@@ -251,7 +230,7 @@ export function MaintenanceModeCard({
                     <input
                       type="hidden"
                       name="environment"
-                      value={environment}
+                      value="production"
                     />
                     <button
                       type="submit"

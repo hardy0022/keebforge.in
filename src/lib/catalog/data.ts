@@ -63,8 +63,7 @@ export const getWorkProjects = defineCached(
 );
 
 /** Single siteSetting read, cached short and invalidated on admin save.
- *  Env-specific keys (maintenanceMode.production vs .development) stay
- *  separate — one key, one cache entry, never merged. */
+ *  Each key is its own cache entry, never merged. */
 export const getSiteSetting = defineCached(
   (key: string) =>
     prisma.siteSetting

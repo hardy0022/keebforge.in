@@ -30,6 +30,7 @@ import {
   logSuppressedDelivery,
   resolveOutboundRecipient,
 } from "@/lib/email/outbound";
+import { canSendEmail } from "@/lib/email/email-settings";
 import { readTemplateIds } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/seo";
 
@@ -51,6 +52,27 @@ function getResend(): Resend | null {
 }
 
 export async function sendViaResend(message: EmailMessage): Promise<SendOutcome> {
+  // Admin toggles are the FIRST gate. A disabled type is a deliberate,
+  // terminal suppression (nothing left the building and nothing should), so the
+  // outbox records it as SUPPRESSED rather than FAILED: it must never look like
+  // a retryable provider rejection and must never be auto-resent.
+  // `emailType` is set by the builders; a manual caller without one is
+  // intentionally ungated.
+  if (message.emailType) {
+    if (!(await canSendEmail(message.emailType))) {
+      console.warn(
+        `[email] paid confirmation suppressed (${message.emailType} disabled in settings)`,
+      );
+      return { kind: "suppressed", reason: `disabled:${message.emailType}` };
+    }
+    if (message.isGuest && !(await canSendEmail("guestOrderConfirmation"))) {
+      console.warn(
+        "[email] guest paid confirmation suppressed (guestOrderConfirmation disabled in settings)",
+      );
+      return { kind: "suppressed", reason: "disabled:guestOrderConfirmation" };
+    }
+  }
+
   const resend = getResend();
   if (!resend) {
     // Unconfigured (e.g. local dev). Definitive — nothing was sent, so an
@@ -115,6 +137,7 @@ async function loadOrder(
     customerName: order.customerName,
     customerEmail: order.customerEmail,
     paymentStatus: order.paymentStatus,
+    isGuest: order.profileId == null,
     total: order.total,
     subtotal: order.subtotal,
     shipping: order.shipping,
@@ -200,6 +223,12 @@ const deps: PaidConfirmationDeps = {
       data: { status: "NEEDS_REVIEW", lastError: reason },
     });
   },
+  markSuppressed: async (id, reason) => {
+    await prisma.orderNotification.updateMany({
+      where: { id },
+      data: { status: "SUPPRESSED", lastError: reason },
+    });
+  },
   send: sendViaResend,
 };
 
@@ -232,8 +261,10 @@ export async function notifyPaidOrder(
  * Resend rejection (4xx) or an unconfigured provider, where the message is known
  * not to have been delivered. `NEEDS_REVIEW` and `IN_PROGRESS` are deliberately
  * NOT retryable here — their outcome is ambiguous and an automatic resend could
- * duplicate a message that was already accepted. Those require an operator to
- * reconcile against the Resend dashboard first.
+ * duplicate a message that was already accepted. `SUPPRESSED` is NOT retryable
+ * either: the admin turned the type off, so re-enabling it must not silently
+ * resume the backlog. Those ambiguous states require an operator to reconcile
+ * against the Resend dashboard first.
  */
 export async function retryFailedPaidConfirmation(
   orderId: string,

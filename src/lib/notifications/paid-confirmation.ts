@@ -5,6 +5,7 @@ import {
   type EmailTemplateIds,
   type EmailTemplateRef,
 } from "@/lib/email/templates";
+import type { EmailType } from "@/lib/email/email-policy";
 
 // Re-exported so the existing call sites/tests keep one canonical escaper.
 export { esc };
@@ -36,6 +37,11 @@ export type PaidConfirmationOrder = {
   customerEmail: string;
   /** Current `Order.paymentStatus`. Must be PAID to send. */
   paymentStatus: string;
+  /**
+   * True when the order has no owning profile (a guest checkout). The adapter
+   * sets this so the `guestOrderConfirmation` toggle can gate guest mail.
+   */
+  isGuest?: boolean;
   total: number;
   /** Gross collected from verified payment rows (paise). */
   paidAmount: number;
@@ -84,20 +90,31 @@ export type EmailMessage = {
    */
   template?: EmailTemplateRef;
   html?: string;
+  /**
+   * Which email-toggle governs this message. The builders set it; the adapter
+   * consults `@/lib/email/email-settings` before the real send. Optional so
+   * direct/manual callers that predate the toggles keep working (no gate).
+   */
+  emailType?: EmailType;
+  /** Guest (account-less) orders also require `guestOrderConfirmation`. */
+  isGuest?: boolean;
 };
 
 /**
  * Result of asking the provider to accept a message.
  *
- *   accepted  — Resend returned an email id. The ONLY outcome that may be
- *               recorded as SENT.
- *   rejected  — a definitive 4xx rejection: not accepted, safe to retry.
- *   ambiguous — timeout/network/5xx: may or may not have been accepted. Must
- *               never be auto-retried.
+ *   accepted   — Resend returned an email id. The ONLY outcome that may be
+ *                recorded as SENT.
+ *   rejected   — a definitive 4xx rejection: not accepted, safe to retry.
+ *   suppressed — an admin toggle disabled this type: nothing was sent and
+ *                nothing should be. Terminal and NOT retryable.
+ *   ambiguous  — timeout/network/5xx: may or may not have been accepted. Must
+ *                never be auto-retried.
  */
 export type SendOutcome =
   | { kind: "accepted"; providerMessageId: string | null }
   | { kind: "rejected"; reason: string }
+  | { kind: "suppressed"; reason: string }
   | { kind: "ambiguous"; reason: string };
 
 export type PaidConfirmationDeps = {
@@ -118,6 +135,7 @@ export type PaidConfirmationDeps = {
   ) => Promise<void>;
   markFailed: (notificationId: string, reason: string) => Promise<void>;
   markNeedsReview: (notificationId: string, reason: string) => Promise<void>;
+  markSuppressed: (notificationId: string, reason: string) => Promise<void>;
   send: (message: EmailMessage) => Promise<SendOutcome>;
 };
 
@@ -130,6 +148,7 @@ export type PaidConfirmationResult =
   | { status: "sent" }
   | { status: "failed"; reason: string }
   | { status: "needs-review"; reason: string }
+  | { status: "suppressed"; reason: string }
   | { status: "error"; reason: string };
 
 export type PaidConfirmationSkipReason =
@@ -208,6 +227,14 @@ export async function runPaidConfirmation(
       .markSent(claim.notificationId, outcome.providerMessageId)
       .catch(() => {});
     return { status: "sent" };
+  }
+  if (outcome.kind === "suppressed") {
+    // The admin disabled this type. Nothing left the building and nothing
+    // should, so this is a terminal SUPPRESSED state — never SENT, never
+    // retryable, and never picked up by reconciliation (its row already
+    // exists).
+    await deps.markSuppressed(claim.notificationId, outcome.reason).catch(() => {});
+    return { status: "suppressed", reason: outcome.reason };
   }
   if (outcome.kind === "rejected") {
     await deps.markFailed(claim.notificationId, outcome.reason).catch(() => {});
@@ -347,6 +374,8 @@ export function buildShopPaidConfirmation(
   return {
     to: order.customerEmail,
     subject: `Order ${order.orderNumber} — Payment Confirmed | KeebForge.in`,
+    emailType: "shopOrderPaid",
+    isGuest: order.isGuest ?? false,
     template: templates.shopOrderPaid
       ? {
           id: templates.shopOrderPaid,
@@ -425,6 +454,8 @@ export function buildModsPaidConfirmation(
   return {
     to: order.customerEmail,
     subject: `Payment received — mods order ${order.orderNumber}`,
+    emailType: "modsOrderPaid",
+    isGuest: order.isGuest ?? false,
     template: templates.modsOrderPaid
       ? {
           id: templates.modsOrderPaid,
@@ -704,6 +735,8 @@ export type NotificationRecoveryRecord = {
  * - `pending`                      — never attempted, or reset for an explicit resend.
  * - `already-sent`                 — terminal success; nothing to do.
  * - `retryable`                    — a definitive provider rejection (FAILED).
+ * - `suppressed`                   — the admin disabled this type; terminal and
+ *                                    never retryable (nothing was ever sent).
  * - `in-flight`                    — claimed recently; leave it alone.
  * - `ambiguous-stale-in-flight`    — claimed but abandoned; needs a human.
  * - `ambiguous`                    — NEEDS_REVIEW or an unknown status.
@@ -713,6 +746,7 @@ export type NotificationRecoveryPlan =
   | { kind: "pending" }
   | { kind: "already-sent"; providerMessageId: string | null }
   | { kind: "retryable"; reason: string | null }
+  | { kind: "suppressed"; reason: string | null }
   | { kind: "in-flight"; ageMs: number }
   | { kind: "ambiguous-stale-in-flight"; ageMs: number }
   | { kind: "ambiguous"; reason: string | null };
@@ -730,6 +764,10 @@ export function planNotificationRecovery(
       return { kind: "already-sent", providerMessageId: record.providerMessageId };
     case "FAILED":
       return { kind: "retryable", reason: record.lastError };
+    case "SUPPRESSED":
+      // Admin-disabled: terminal. Never retryable and never ambiguous, so the
+      // retry path and reconciliation both leave it alone.
+      return { kind: "suppressed", reason: record.lastError };
     case "NEEDS_REVIEW":
       return { kind: "ambiguous", reason: record.lastError };
     case "IN_PROGRESS": {

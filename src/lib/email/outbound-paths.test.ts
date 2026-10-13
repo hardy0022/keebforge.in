@@ -42,6 +42,7 @@ const pass = (msg: string) => {
 };
 
 /** The fake Prisma client. Nothing here connects anywhere. */
+const emailSettingRows: Array<{ key: string; value: unknown }> = [];
 const fakePrisma = {
   order: {
     create: async () => ({ id: "order_test_1" }),
@@ -55,6 +56,9 @@ const fakePrisma = {
     findUnique: async () => null,
     updateMany: async () => ({ count: 0 }),
   },
+  // Backs the per-email-type send toggles. Empty by default → every type keeps
+  // its "all on" default, so the existing policy assertions are unaffected.
+  siteSetting: { findMany: async () => emailSettingRows.slice() },
 };
 
 /**
@@ -330,6 +334,91 @@ function restoreEnv() {
       assert.equal(captured.length, 0, "disabled must suppress the repair request email");
 
       pass("repair request redirects/suppresses/sends per policy");
+    }
+
+    // ── 5. per-email-type admin toggles (the first gate) ──────────────────────
+    // A disabled toggle must stop the send even when every other policy would
+    // allow it. The `emailNotifications.<type>` rows are the only thing changed.
+    {
+      const setToggle = (type: string, enabled: boolean) => {
+        const key = `emailNotifications.${type}`;
+        const existing = emailSettingRows.findIndex((r) => r.key === key);
+        if (existing >= 0) emailSettingRows.splice(existing, 1);
+        emailSettingRows.push({ key, value: enabled });
+      };
+      const clearToggles = () => {
+        emailSettingRows.length = 0;
+      };
+
+      const { sendInquiry } = await import("@/app/actions/inquiry");
+      const inquiryForm = () => {
+        const fd = new FormData();
+        fd.set("name", "Test Customer");
+        fd.set("phone", "9876543210");
+        fd.set("email", REAL);
+        fd.set("deviceModel", "Test Board");
+        fd.set("issue", "The device does not power on after a spill.");
+        return fd;
+      };
+      resetPolicyEnv();
+
+      // Disabled → honest failure (the inquiry is email-only and not persisted,
+      // so success would be a lie) and nothing is sent. The default/enabled
+      // inquiry behaviour is already covered by section 3.
+      clearToggles();
+      setToggle("contactInquiry", false);
+      captured.length = 0;
+      const disabledInquiry = await sendInquiry({}, inquiryForm());
+      assert.ok(
+        disabledInquiry.error,
+        "disabled contact inquiry must report an honest failure, not success",
+      );
+      assert.equal(captured.length, 0, "disabled contact inquiry must not send");
+
+      // Paid confirmation: disabled type → terminal suppression (never sent,
+      // never a retryable rejection).
+      const { sendViaResend } = await import(
+        "@/lib/notifications/send-paid-confirmation"
+      );
+      const paid = {
+        to: REAL,
+        subject: "Order confirmed",
+        template: { id: "tpl_shop", variables: { orderNumber: "KF-1" } },
+        emailType: "shopOrderPaid" as const,
+      };
+      clearToggles();
+      setToggle("shopOrderPaid", false);
+      captured.length = 0;
+      const disabled = await sendViaResend(paid);
+      assert.deepEqual(
+        disabled,
+        { kind: "suppressed", reason: "disabled:shopOrderPaid" },
+        "a disabled paid type must be a terminal suppression",
+      );
+      assert.equal(captured.length, 0, "disabled paid type must not send");
+
+      // Guest order: core toggle on, guest toggle off → gated by the guest one.
+      clearToggles();
+      setToggle("shopOrderPaid", true);
+      setToggle("guestOrderConfirmation", false);
+      captured.length = 0;
+      const guestDisabled = await sendViaResend({ ...paid, isGuest: true });
+      assert.deepEqual(
+        guestDisabled,
+        { kind: "suppressed", reason: "disabled:guestOrderConfirmation" },
+        "a guest order must also honour the guest toggle",
+      );
+      assert.equal(captured.length, 0, "guest-disabled order must not send");
+
+      // Both on → sends.
+      clearToggles();
+      captured.length = 0;
+      const accepted = await sendViaResend({ ...paid, isGuest: true });
+      assert.equal(accepted.kind, "accepted", "guest order with both on must send");
+      assert.equal(captured.length, 1, "guest order with both on must reach provider");
+
+      clearToggles();
+      pass("per-email-type toggles gate inquiry and paid confirmations");
     }
 
     console.log(`\nPASS all ${n} outbound path tests`);
