@@ -18,6 +18,7 @@ import {
   bookPickupDelivery,
 } from "@/app/admin/actions/orders";
 import { ActionForm, Spinner } from "@/components/admin/ActionForm";
+import { shippingSpeedLabel } from "@/lib/orders/shipping-choice";
 
 const SHIP_STATUSES: ShippingStatus[] = [
   "NOT_DISPATCHED",
@@ -112,7 +113,7 @@ export function ShippingPanel({
             </span>
             {shippingMode && (
               <span className="muted">
-                Mode: <b>{shippingMode}</b>
+                Mode: <b>{shippingSpeedLabel(shippingMode) || shippingMode}</b>
               </span>
             )}
             <div
@@ -311,7 +312,7 @@ export function ShippingPanel({
           ) : null}
           {shippingMode ? (
             <span>
-              Mode: <b>{shippingMode}</b>
+              Mode: <b>{shippingSpeedLabel(shippingMode) || shippingMode}</b>
             </span>
           ) : null}
         </div>

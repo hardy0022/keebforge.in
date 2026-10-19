@@ -269,6 +269,7 @@ export async function submitRepairRequest(
           condition: d.condition || null,
           budget: d.budget || null,
           contactNotes: d.contactNotes || null,
+          shippingMethod: d.shippingMethod,
           hasQuotes: true,
         },
         ...(ship

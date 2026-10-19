@@ -33,6 +33,8 @@
     "check:shipping": "tsx src/lib/shipping/delhivery.ts && npm run check:shipping-legs",
     "check:shipping-legs": "tsx src/lib/shipping/service-legs.test.ts",
     "check:product-options": "tsx src/lib/catalog/product-options.test.ts",
+    "check:variant-info": "tsx src/lib/orders/variant-info.test.ts",
+    "check:shipping-choice": "tsx src/lib/orders/shipping-choice.test.ts",
     "check:auth-error": "tsx src/lib/auth/auth-error.test.ts",
     "check:account-linking": "tsx src/lib/auth/account-linking.test.ts",
     "check:resend-verification": "tsx src/lib/auth/resend-verification.test.ts",

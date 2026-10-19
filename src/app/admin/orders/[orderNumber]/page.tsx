@@ -22,6 +22,8 @@ import { OrderNoteAdd } from "@/components/admin/orders/OrderNoteAdd";
 import { ShippingPanel } from "@/components/admin/orders/ShippingPanel";
 import { DeleteOrderForm } from "@/components/admin/orders/DeleteOrderForm";
 import { OrderAddressForm } from "@/components/admin/orders/OrderAddressForm";
+import { parseVariantInfo } from "@/lib/orders/variant-info";
+import { shippingChoiceRows } from "@/lib/orders/shipping-choice";
 
 export const metadata: Metadata = {
   title: "Order | KeebForge Admin",
@@ -154,6 +156,47 @@ function repairNotes(notes: string | null): {
   }
 }
 
+/**
+ * Renders the customer's configuration snapshot for a product line. The
+ * snapshot is written to `OrderItem.variantInfo` at checkout; anything the
+ * parser does not recognize renders nothing rather than guessing.
+ */
+function ItemConfiguration({ variantInfo }: { variantInfo: unknown }) {
+  const view = parseVariantInfo(variantInfo);
+  if (!view) return null;
+  const style = {
+    marginTop: 4,
+    fontSize: "0.78rem",
+    color: "var(--t3)",
+    lineHeight: 1.5,
+  } as const;
+  if (view.kind === "variant") {
+    return (
+      <div style={style}>
+        <div>Variant: {view.name}</div>
+        {view.options.length > 0 && (
+          <div>
+            {view.options
+              .map((o) => `${o.key}: ${o.value}`)
+              .join(" · ")}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div style={style}>
+      {view.selections.map((s, idx) => (
+        <div key={`${s.optionId || s.groupName}-${idx}`}>
+          <span style={{ color: "var(--t2)" }}>{s.groupName}:</span>{" "}
+          {s.optionName}
+          {s.addon > 0 ? ` (+${formatINR(s.addon)})` : ""}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function OverviewCard({
   title,
   children,
@@ -194,6 +237,7 @@ export default async function AdminOrderDetail({
     order.services.length > 0 ||
     order.repairs.length > 0;
   const stage = ORDER_STATUS_STAGES[order.status];
+  const shippingChoice = shippingChoiceRows(order);
   const adminCtx = await getAdminContext();
   const canDeleteOrder = adminCtx && canAction(adminCtx.profile.role, "order", "delete");
 
@@ -504,7 +548,10 @@ export default async function AdminOrderDetail({
                       <td>
                         <span className="badge badge-purple">Product</span>
                       </td>
-                      <td>{i.name}</td>
+                      <td>
+                        {i.name}
+                        <ItemConfiguration variantInfo={i.variantInfo} />
+                      </td>
                       <td className="num">{i.quantity}</td>
                       <td className="num">{formatINR(i.unitPrice)}</td>
                       <td className="num" style={{ textAlign: "right" }}>
@@ -1033,6 +1080,16 @@ export default async function AdminOrderDetail({
       {/* ── 6. Delivery / Shipping ─────────────────────────────────────── */}
       <div className="admin-card" id="delivery">
         <h3 style={{ marginBottom: 10 }}>Delivery</h3>
+        {shippingChoice.length > 0 && (
+          <dl className="pill-grid" style={{ marginBottom: 12 }}>
+            {shippingChoice.map((row) => (
+              <div className="kv" key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
         <ShippingPanel
           orderId={order.id}
           shipment={

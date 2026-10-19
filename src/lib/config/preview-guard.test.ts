@@ -724,6 +724,7 @@ function codeOf(fn: () => unknown): string {
     "src/app/api/payments/pay-inline/route.ts": PREVIEW,
     "src/app/api/payments/verify/route.ts": DB,
     "src/app/api/payments/webhook/route.ts": DB,
+    "src/app/api/revalidate/route.ts": INDIRECT,
     "src/app/api/services/create-order/route.ts": PREVIEW,
     "src/app/api/settings/public/route.ts": INDIRECT,
     "src/app/api/shipping/calculate/route.ts": PREVIEW,
