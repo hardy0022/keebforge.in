@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getCurrentAuth } from "@/lib/auth/session";
 import { availableQuantity, getCartWithItems } from "@/lib/cart";
 import { configSnapshot, resolveConfiguredPrice } from "@/lib/catalog/product-options";
+import { resolveProductAddon } from "@/lib/catalog/product-addon";
 import {
   calculateShipping,
   chargeableWeightGrams,
@@ -397,8 +398,10 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const addonSelected = !!(item as any).addonSelected && (product as any).addonEnabled;
-      const addonPriceSnapshot = addonSelected ? ((product as any).addonPrice ?? 0) : 0;
+      // Browser input is only the boolean selection; the title/description/
+      // price snapshot is always resolved from the live product row.
+      const addon = resolveProductAddon(product, !!(item as any).addonSelected);
+      const addonPriceSnapshot = addon.price;
       const colorOptions: any[] = (product as any).colorOptions ?? [];
       const baseColors = colorOptions.filter(
         (c: any) => (c.group ?? "BASE") !== "SECONDARY",
@@ -490,10 +493,10 @@ export async function POST(req: NextRequest) {
               },
             }
           : {}),
-        addonSelected,
-        addonTitle: addonSelected ? ((product as any).addonTitle ?? null) : null,
-        addonDescription: addonSelected ? ((product as any).addonDescription ?? null) : null,
-        addonPrice: addonSelected ? addonPriceSnapshot : null,
+        addonSelected: addon.selected,
+        addonTitle: addon.title,
+        addonDescription: addon.description,
+        addonPrice: addon.selected ? addon.price : null,
         colorOptionId: colorOptionIdSnap,
         colorName: colorNameSnap,
         colorCode: colorCodeSnap,

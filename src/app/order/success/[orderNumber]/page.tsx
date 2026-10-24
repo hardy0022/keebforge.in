@@ -400,6 +400,34 @@ export default async function OrderSuccessPage({
                       vi?.kind === "options" && Array.isArray(vi.selections)
                         ? vi.selections
                         : [];
+                    const addonSelected = !!(item as any).addonSelected;
+                    const addonTitle = (item as any).addonTitle as
+                      | string
+                      | null;
+                    const addonPrice =
+                      addonSelected && typeof (item as any).addonPrice === "number"
+                        ? (item as any).addonPrice
+                        : 0;
+                    const selectionAddons = optionSelections.reduce(
+                      (sum, opt) => sum + (opt.addon ?? 0),
+                      0,
+                    );
+                    const colorPrice =
+                      typeof (item as any).colorPrice === "number"
+                        ? (item as any).colorPrice
+                        : 0;
+                    const secondaryColorPrice =
+                      typeof (item as any).secondaryColorPrice === "number"
+                        ? (item as any).secondaryColorPrice
+                        : 0;
+                    const baseUnitPrice = Math.max(
+                      0,
+                      item.unitPrice -
+                        addonPrice -
+                        selectionAddons -
+                        colorPrice -
+                        secondaryColorPrice,
+                    );
                     const optionId = (o: number) => `opt-${item.id}-${o}`;
                     return (
                       <li key={item.id} className="os-line">
@@ -429,6 +457,15 @@ export default async function OrderSuccessPage({
                               Qty {item.quantity} · {formatINR(item.unitPrice)}{" "}
                               each
                             </p>
+                            {addonSelected && addonTitle ? (
+                              <p className="os-line-meta">
+                                Product base {formatINR(baseUnitPrice)} ·
+                                Add-on: {addonTitle}
+                                {addonPrice > 0
+                                  ? ` +${formatINR(addonPrice)}`
+                                  : " Free"}
+                              </p>
+                            ) : null}
                             {(item as any).colorName && (
                               <p className="os-line-meta">
                                 Color: {(item as any).colorName}
@@ -469,14 +506,7 @@ export default async function OrderSuccessPage({
                                 ))}
                               </ul>
                             )}
-                            {(item as any).addonSelected && (item as any).addonTitle && (
-                              <p className="os-line-meta">
-                                {(item as any).addonTitle}
-                                {(item as any).addonPrice > 0
-                                  ? ` · +${formatINR((item as any).addonPrice)}`
-                                  : ""}
-                              </p>
-                            )}
+
                           </div>
                         </div>
                         <span className="os-line-total">

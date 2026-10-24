@@ -582,7 +582,8 @@ export function ProductForm({
       <Section title="2b · Product Add-on">
         <p className="muted" style={{ fontSize: "0.75rem", margin: 0 }}>
           One optional checkbox add-on per product (e.g. extended warranty).
-          Completely separate from product options.
+          Completely separate from product options. A title is required when
+          enabled; price 0 makes the add-on free.
         </p>
         <label
           style={{

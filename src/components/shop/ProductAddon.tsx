@@ -36,13 +36,16 @@ export function ProductAddon({
             {title}
             <span className="product-addon-optional">Optional</span>
           </span>
-          {price > 0 && (
-            <span className="product-addon-price">+{formatINR(price)}</span>
-          )}
+          <span className="product-addon-price">
+            {price > 0 ? `+${formatINR(price)}` : "Free"}
+          </span>
         </span>
         {description ? (
           <span className="product-addon-desc">{description}</span>
         ) : null}
+        <span className="product-addon-note">
+          Added to your order as a separate item.
+        </span>
       </span>
     </label>
   );

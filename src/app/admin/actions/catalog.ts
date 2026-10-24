@@ -381,6 +381,8 @@ export async function saveProduct(
   const addonTitle = (d.addonTitle || "").trim() || null;
   const addonDescription = (d.addonDescription || "").trim() || null;
   const addonPrice = Math.round((d.addonPrice ?? 0) * 100);
+  if (addonEnabled && !addonTitle)
+    return { error: "Add-on title is required when the add-on is enabled." };
 
   const data: Prisma.ProductUncheckedCreateInput = {
     ...(d.id ? { id: d.id } : {}),

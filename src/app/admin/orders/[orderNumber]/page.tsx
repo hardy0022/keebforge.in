@@ -590,7 +590,10 @@ export default async function AdminOrderDetail({
                                   {" "}
                                   (+{formatINR((i as any).addonPrice)})
                                 </>
-                              ) : null}
+                              ) : (
+                                " (Free)"
+                              )}
+                              {" · included in unit price"}
                             </div>
                           ) : null}
                           <ItemConfiguration variantInfo={i.variantInfo} />

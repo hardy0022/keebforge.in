@@ -6,8 +6,8 @@ import { AddToCart } from "@/components/shop/AddToCart";
 import { ProductConfigurator } from "@/components/shop/ProductConfigurator";
 import { ProductGallery } from "@/components/shop/ProductGallery";
 import { ColorSelector } from "@/components/shop/ColorSelector";
-import { formatINR, formatINRRange } from "@/lib/utils/money";
 import type { ShopProduct } from "@/lib/catalog/data";
+import { resolveProductAddon } from "@/lib/catalog/product-addon";
 
 export function ProductClient({
   product,
@@ -61,12 +61,13 @@ export function ProductClient({
     ? { url: selectedColor.imageUrl, alt: selectedColor.name }
     : null;
 
-  const addon = (product as any).addonEnabled && (product as any).addonTitle
+  const resolvedAddon = resolveProductAddon(product as any, true);
+  const addon = resolvedAddon.selected
     ? {
         enabled: true,
-        title: (product as any).addonTitle,
-        description: (product as any).addonDescription ?? null,
-        price: (product as any).addonPrice ?? 0,
+        title: resolvedAddon.title,
+        description: resolvedAddon.description,
+        price: resolvedAddon.price,
       }
     : null;
 

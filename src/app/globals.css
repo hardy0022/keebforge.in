@@ -5098,6 +5098,13 @@ a.shop-pager-num:hover {
   color: var(--t3);
 }
 
+.product-addon-note {
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--t3);
+  opacity: 0.8;
+}
+
 @media (max-width: 640px) {
   .product-addon {
     padding: 16px;

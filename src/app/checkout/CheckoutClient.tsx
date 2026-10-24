@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatINR } from "@/lib/utils/money";
+import { resolveProductAddon } from "@/lib/catalog/product-addon";
 import { PHONE_INPUT } from "@/lib/utils/phone";
 import { EMAIL_INPUT } from "@/lib/utils/email";
 import { cldUrl } from "@/lib/images/cloudinary-url";
@@ -910,6 +911,7 @@ function CfgRow({ label, value }: { label: string; value: string }) {
 interface CheckoutLine {
   id: string;
   quantity: number;
+  addonSelected?: boolean;
   config: {
     kind?: string;
     selections?: { optionName?: string; addon?: number }[];
@@ -920,18 +922,21 @@ interface CheckoutLine {
     price: number;
     image?: string | null;
     freeShipping?: boolean;
+    addonEnabled?: boolean;
+    addonTitle?: string | null;
+    addonDescription?: string | null;
+    addonPrice?: number | null;
   };
   variant: { name: string; price: number | null } | null;
 }
 
 function lineUnitPrice(it: CheckoutLine): number {
-  if (it.config?.kind === "options" && it.config.selections?.length) {
-    return (
-      it.product.price +
-      it.config.selections.reduce((s, sel) => s + (sel.addon ?? 0), 0)
-    );
-  }
-  return it.variant?.price ?? it.product.price;
+  const base =
+    it.config?.kind === "options" && it.config.selections?.length
+      ? it.product.price +
+        it.config.selections.reduce((s, sel) => s + (sel.addon ?? 0), 0)
+      : (it.variant?.price ?? it.product.price);
+  return base + resolveProductAddon(it.product, !!it.addonSelected).price;
 }
 
 interface DeliveryForm {
@@ -1667,14 +1672,21 @@ export function ProductCheckout({
               <div className="flex flex-col gap-3 mb-4 pb-4 border-b border-[var(--bdr)]">
                 {lines.map((it) => {
                   const unit = lineUnitPrice(it);
-                  const configLine =
+                  const addon = resolveProductAddon(
+                    it.product,
+                    !!it.addonSelected,
+                  );
+                  const parts =
                     it.config?.kind === "options" &&
                     it.config.selections?.length
                       ? it.config.selections
                           .map((sel) => sel.optionName)
-                          .filter(Boolean)
-                          .join(" · ")
-                      : it.variant?.name;
+                          .filter((name): name is string => Boolean(name))
+                      : it.variant?.name
+                        ? [it.variant.name]
+                        : [];
+                  if (addon.selected && addon.title) parts.push(addon.title);
+                  const configLine = parts.join(" · ");
                   return (
                     <div key={it.id} className="flex items-center gap-3">
                       {it.product.image ? (

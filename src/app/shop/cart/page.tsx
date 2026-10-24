@@ -7,6 +7,7 @@ import {
   resolveConfiguredPrice,
   type ProductConfigSnapshot,
 } from "@/lib/catalog/product-options";
+import { resolveProductAddon } from "@/lib/catalog/product-addon";
 
 export const metadata: Metadata = buildMetadata({
   title: "Your Cart | KeebForge",
@@ -37,8 +38,8 @@ export default async function ShopCartPage() {
     const colorAdd =
       (color?.priceAdjustment ?? 0) +
       (secondaryColor?.priceAdjustment ?? 0);
-    const addonAdd = item.addonSelected && item.product.addonEnabled ? (item.product.addonPrice ?? 0) : 0;
-    const unitPrice = baseUnitPrice + colorAdd + addonAdd;
+    const addon = resolveProductAddon(item.product, item.addonSelected);
+    const unitPrice = baseUnitPrice + colorAdd + addon.price;
     const selections =
       cfg?.kind === "options"
         ? resolved?.ok
@@ -63,13 +64,13 @@ export default async function ShopCartPage() {
         addon: secondaryColor.priceAdjustment ?? 0,
       });
     }
-    if (addonAdd > 0 && item.product.addonTitle) {
+    if (addon.selected && addon.title) {
       selections.push({
         optionId: `addon:${item.product.id}`,
         groupId: "addon",
         groupName: "Add-on",
-        optionName: item.product.addonTitle,
-        addon: addonAdd,
+        optionName: addon.title,
+        addon: addon.price,
       });
     }
     const available = item.variant

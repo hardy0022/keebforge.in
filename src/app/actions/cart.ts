@@ -14,6 +14,7 @@ import {
   resolveConfiguredPrice,
   type ProductConfigSnapshot,
 } from "@/lib/catalog/product-options";
+import { resolveProductAddon } from "@/lib/catalog/product-addon";
 import { optionIdsJson } from "@/lib/validation/customer-input";
 import { MAX_CART_LINES, MAX_CART_QUANTITY } from "@/lib/utils/limits";
 import {
@@ -206,7 +207,9 @@ if (check) return { error: check };
 
 // Identical configurations merge into one line; different ones stay separate.
 // Made-to-order units never merge — each build is its own quantity-1 line.
-const wantAddon = addonSelected && product.addonEnabled ? true : false;
+// The add-on is valid only while the product still enables it and has a title.
+// Ignore a stale/crafted flag rather than persisting an unusable selection.
+const wantAddon = resolveProductAddon(product, addonSelected).selected;
 const baseColors = product.colorOptions.filter(
   (c) => (c as any).group !== "SECONDARY",
 );
