@@ -8,6 +8,7 @@ import {
   getAdminBrands,
 } from "@/lib/admin/catalog";
 import { ProductForm } from "@/components/admin/products/ProductForm";
+import { ProductColorOptions } from "@/components/admin/products/ProductColorOptions";
 
 export const metadata: Metadata = {
   title: "Edit Product | KeebForge Admin",
@@ -60,11 +61,18 @@ export default async function EditProductPage({
           options: g.options.map((o) => ({
             id: o.id,
             name: o.name,
-            addon: String(o.priceAddon / 100),
+            addon: o.priceAddon / 100,
           })),
         }))}
         categories={categories}
         brands={brands}
+      />
+      <ProductColorOptions
+        productId={product.id}
+        colorOptions={(product as any).colorOptions ?? []}
+        secondaryColorHeading={
+          (product as any).secondaryColorHeading ?? null
+        }
       />
     </div>
   );

@@ -287,6 +287,10 @@ const productSchema = z.object({
   status: z.string().optional(),
   productType: z.string().optional(),
   condition: z.string().optional(),
+  addonEnabled: z.string().optional(),
+  addonTitle: z.string().trim().optional(),
+  addonDescription: z.string().trim().optional(),
+  addonPrice: z.coerce.number().int().min(0).optional().or(z.literal(0)),
 });
 
 export async function saveProduct(
@@ -336,6 +340,10 @@ export async function saveProduct(
     status: formData.get("status") || undefined,
     productType: formData.get("productType") || undefined,
     condition: formData.get("condition") || undefined,
+    addonEnabled: formData.get("addonEnabled") || undefined,
+    addonTitle: formData.get("addonTitle") || undefined,
+    addonDescription: formData.get("addonDescription") || undefined,
+    addonPrice: formData.get("addonPrice") || undefined,
   });
   if (!parsed.success)
     return {
@@ -368,6 +376,11 @@ export async function saveProduct(
   ].includes(d.condition ?? "")
     ? (d.condition as never)
     : null;
+
+  const addonEnabled = formData.get("addonEnabled") === "on";
+  const addonTitle = (d.addonTitle || "").trim() || null;
+  const addonDescription = (d.addonDescription || "").trim() || null;
+  const addonPrice = Math.round((d.addonPrice ?? 0) * 100);
 
   const data: Prisma.ProductUncheckedCreateInput = {
     ...(d.id ? { id: d.id } : {}),
@@ -423,6 +436,10 @@ export async function saveProduct(
     featured: d.featured === "on",
     popular: d.popular === "on",
     isNew: d.isNew === "on",
+    addonEnabled,
+    addonTitle,
+    addonDescription,
+    addonPrice,
   };
 
   try {
@@ -1191,4 +1208,116 @@ export async function importProducts(
     ok: true,
     message: `Imported ${created} product${created === 1 ? "" : "s"}, skipped ${skipped}.`,
   };
+}
+
+
+export async function saveProductColorOption(
+  _prev: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  await requirePermission("product", "update");
+  const productId = String(formData.get("productId") || "");
+  const id = String(formData.get("id") || "");
+  const name = String(formData.get("name") || "").trim();
+  const colorCode = String(formData.get("colorCode") || "").trim();
+  const priceAdjustmentRupees = Number(formData.get("priceAdjustment") || 0);
+  const imageUrl = String(formData.get("imageUrl") || "").trim() || null;
+  const imagePublicId = String(formData.get("imagePublicId") || "").trim() || null;
+  const enabled = formData.get("enabled") === "on";
+  const sortOrder = Number(formData.get("sortOrder") || 0);
+  const group = String(formData.get("group") || "BASE") === "SECONDARY" ? "SECONDARY" : "BASE";
+
+  if (!productId) return { error: "Product required." };
+  if (!name) return { error: "Color name required." };
+  if (!/^#[0-9a-fA-F]{6}$/.test(colorCode))
+    return { error: "Enter a valid HEX color code (e.g. #000000)." };
+
+  const priceAdjustment = Math.round(priceAdjustmentRupees * 100);
+
+  try {
+    if (id) {
+      await prisma.productColorOption.update({
+        where: { id },
+        data: {
+          name,
+          colorCode: colorCode.toUpperCase(),
+          priceAdjustment,
+          imageUrl,
+          imagePublicId,
+          enabled,
+          sortOrder: Number.isNaN(sortOrder) ? 0 : sortOrder,
+          group,
+        },
+      });
+    } else {
+      await prisma.productColorOption.create({
+        data: {
+          productId,
+          name,
+          colorCode: colorCode.toUpperCase(),
+          priceAdjustment,
+          imageUrl,
+          imagePublicId,
+          enabled,
+          sortOrder: Number.isNaN(sortOrder) ? 0 : sortOrder,
+          group,
+        },
+      });
+    }
+    revalidatePath(`/admin/products/${productId}`);
+    revalidatePath(`/admin/products/${productId}/edit`);
+    revalidatePath("/shop");
+    invalidateProducts();
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { error: "Duplicate color option." };
+    }
+    throw e;
+  }
+}
+
+export async function saveProductSecondaryColorHeading(
+  _prev: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  await requirePermission("product", "update");
+  const productId = String(formData.get("productId") || "");
+  const heading = String(formData.get("secondaryColorHeading") || "").trim();
+  if (!productId) return { error: "Product required." };
+  try {
+    await prisma.product.update({
+      where: { id: productId },
+      data: { secondaryColorHeading: heading || null },
+    });
+    revalidatePath(`/admin/products/${productId}`);
+    revalidatePath(`/admin/products/${productId}/edit`);
+    revalidatePath("/shop");
+    invalidateProducts();
+    return { ok: true };
+  } catch {
+    return { error: "Failed to save heading." };
+  }
+}
+
+export async function deleteProductColorOption(
+  _prev: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  await requirePermission("product", "update");
+  const id = String(formData.get("id") || "");
+  const productId = String(formData.get("productId") || "");
+  if (!id) return { error: "Invalid request." };
+  try {
+    await prisma.productColorOption.delete({ where: { id } });
+    if (productId) {
+      revalidatePath(`/admin/products/${productId}`);
+      revalidatePath(`/admin/products/${productId}/edit`);
+    }
+    revalidatePath("/shop");
+    invalidateProducts();
+    return { ok: true };
+  } catch {
+    return { error: "Failed to delete color option." };
+  }
 }

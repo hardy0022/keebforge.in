@@ -268,6 +268,10 @@ export const getProductBySlug = defineCached(
             },
           },
         },
+        colorOptions: {
+          where: { enabled: true },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        },
         images: {
           where: { active: true },
           orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],

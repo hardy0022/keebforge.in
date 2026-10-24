@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePermission } from "@/lib/auth/admin";
-import { getAdminCustomers } from "@/lib/admin";
+import { getAdminCustomers, parseCustomerKind } from "@/lib/admin";
 import { parsePage } from "@/lib/admin/pagination";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { formatINR } from "@/lib/utils/money";
@@ -21,8 +21,10 @@ export default async function AdminCustomersPage({
   const sp = await searchParams;
   const one = (k: string) => (typeof sp[k] === "string" ? sp[k] : sp[k]?.[0]);
 
+  const kind = parseCustomerKind(one("kind"));
   const result = await getAdminCustomers({
     q: one("q"),
+    kind,
     page: parsePage(one("page")),
   });
   const { items: customers, total, pages, page, withOrders } = result;
@@ -61,8 +63,12 @@ export default async function AdminCustomersPage({
         }}
       >
         <div className="admin-stat lime">
-          <b>{total}</b>
+          <b>{result.registered}</b>
           <span>Registered</span>
+        </div>
+        <div className="admin-stat warn">
+          <b>{result.guests}</b>
+          <span>Guest Checkouts</span>
         </div>
         <div className="admin-stat">
           <b>{withOrders}</b>
@@ -87,11 +93,21 @@ export default async function AdminCustomersPage({
           placeholder="Search name, username, email or phone"
           style={{ flex: "1 1 240px" }}
         />
+        <select
+          className="select"
+          name="kind"
+          defaultValue={kind}
+          style={{ flex: "0 1 190px" }}
+        >
+          <option value="all">All customers</option>
+          <option value="registered">Registered only</option>
+          <option value="guest">Guest checkouts only</option>
+        </select>
         <div className="admin-actions" style={{ marginLeft: "auto" }}>
           <button type="submit" className="btn-admin primary">
             Search
           </button>
-          {one("q") && (
+          {(one("q") || kind !== "all") && (
             <Link href="/admin/customers" className="btn-admin">
               Clear
             </Link>
@@ -129,19 +145,46 @@ export default async function AdminCustomersPage({
                       {(c.name || c.email)[0]?.toUpperCase() ?? "?"}
                     </span>
                     <div>
-                      <div style={{ fontWeight: 600 }}>
-                        {c.name || "Unnamed"}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>
+                          {c.name || "Unnamed"}
+                        </span>
+                        {c.isGuest && (
+                          <span
+                            className="badge badge-warn"
+                            title="Checked out without an account — no registered profile"
+                          >
+                            GUEST
+                          </span>
+                        )}
                       </div>
                       {c.username && (
                         <div className="muted" style={{ fontSize: "0.7rem" }}>
                           @{c.username}
                         </div>
                       )}
+                      {c.isGuest && (
+                        <div className="muted" style={{ fontSize: "0.7rem" }}>
+                          Guest checkout — no account
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>
                 <td>
-                  <div style={{ fontSize: "0.82rem" }}>{c.email}</div>
+                  <Link
+                    href={`/admin/orders?q=${encodeURIComponent(c.email)}`}
+                    style={{ fontSize: "0.82rem", color: "var(--acc)" }}
+                  >
+                    {c.email}
+                  </Link>
                   {c.phone && (
                     <div className="muted" style={{ fontSize: "0.72rem" }}>
                       {c.phone}
@@ -155,6 +198,9 @@ export default async function AdminCustomersPage({
                 </td>
                 <td className="muted" style={{ whiteSpace: "nowrap" }}>
                   {join(c.createdAt)}
+                  {c.isGuest && (
+                    <div style={{ fontSize: "0.68rem" }}>First order</div>
+                  )}
                 </td>
                 <td className="num">{c.orderCount}</td>
                 <td className="num">{formatINR(c.totalSpent)}</td>
@@ -167,7 +213,9 @@ export default async function AdminCustomersPage({
                   className="muted"
                   style={{ textAlign: "center", padding: 30 }}
                 >
-                  No registered customers yet.
+                  {one("q") || kind !== "all"
+                    ? "No customers match this filter."
+                    : "No customers yet."}
                 </td>
               </tr>
             )}

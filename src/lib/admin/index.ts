@@ -386,115 +386,16 @@ export const getAdminShipments = cache(
 
 // ─── Customers (admin) ───────────────────────────────────────────────────────
 
-export type AdminCustomerRow = {
-  id: string;
-  name: string | null;
-  username: string | null;
-  email: string;
-  phone: string | null;
-  discordHandle: string | null;
-  createdAt: Date;
-  orderCount: number;
-  totalSpent: number;
-};
-
-/**
- * Customer list, newest first.
- *
- * The header KPIs ("with orders", "total spent") are all-time aggregates over
- * every matching customer computed in SQL — NOT derived from the current page,
- * which would silently change their meaning once paginated.
- *
- * Previously this loaded every Customer row *plus every one of their Order
- * rows* to total them in JS. Spend is now a groupBy over the ≤15 profiles on
- * the current page, so the row count no longer scales with order volume.
- */
-export const getAdminCustomers = cache(
-  async ({
-    q,
-    page = 1,
-    pageSize = ADMIN_PAGE_SIZE,
-  }: {
-    q?: string;
-    page?: number;
-    pageSize?: number;
-  } = {}): Promise<
-    Paginated<AdminCustomerRow> & { withOrders: number; allTimeSpent: number }
-  > => {
-    const where: Prisma.ProfileWhereInput = {
-      role: "CUSTOMER",
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { username: { contains: q, mode: "insensitive" } },
-              { email: { contains: q, mode: "insensitive" } },
-              { phone: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    };
-
-    const [total, items] = await Promise.all([
-      prisma.profile.count({ where }),
-      prisma.profile.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        select: {
-          id: true,
-          name: true,
-          username: true,
-          email: true,
-          phone: true,
-          createdAt: true,
-          customer: { select: { discordHandle: true } },
-          _count: { select: { orders: { where: { isDeleted: false } } } },
-        },
-      }),
-    ]);
-
-    // Spend for just the profiles on this page (≤ pageSize rows back).
-    const [spentByProfile, withOrders, allTimeSpent] = await Promise.all([
-      prisma.order.groupBy({
-        by: ["profileId"],
-        where: { isDeleted: false, profileId: { in: items.map((c) => c.id) } },
-        _sum: { total: true },
-      }),
-      prisma.profile.count({
-        where: { ...where, orders: { some: { isDeleted: false } } },
-      }),
-      // All-time revenue across every matching customer, via the Profile
-      // relation so no customer id list is materialised.
-      prisma.order.aggregate({
-        where: { isDeleted: false, profile: where },
-        _sum: { total: true },
-      }),
-    ]);
-
-    const spent = new Map(
-      spentByProfile.map((s) => [s.profileId, s._sum.total ?? 0]),
-    );
-    const rows: AdminCustomerRow[] = items.map((c) => ({
-      id: c.id,
-      name: c.name,
-      username: c.username,
-      email: c.email,
-      phone: c.phone,
-      discordHandle: c.customer?.discordHandle ?? null,
-      createdAt: c.createdAt,
-      orderCount: c._count.orders,
-      totalSpent: spent.get(c.id) ?? 0,
-    }));
-
-    return {
-      ...paginate(rows, total, page, pageSize),
-      withOrders,
-      allTimeSpent: allTimeSpent._sum.total ?? 0,
-    };
-  },
-);
+// The customer list (registered accounts + guest checkouts) lives in its own
+// module: it merges two different data sources and carries its own SQL.
+export {
+  getAdminCustomers,
+  parseCustomerKind,
+  type AdminCustomerKind,
+  type AdminCustomerQuery,
+  type AdminCustomerRow,
+  type AdminCustomersResult,
+} from "./customers";
 
 // ─── Order detail ───────────────────────────────────────────────────────────
 

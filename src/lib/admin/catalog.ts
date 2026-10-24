@@ -211,6 +211,7 @@ export const getAdminProduct = cache((id: string) =>
           options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
         },
       },
+      colorOptions: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
       images: {
         where: { active: true },
         orderBy: [{ primary: "desc" }, { sortOrder: "asc" }],

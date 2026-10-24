@@ -429,24 +429,53 @@ export default async function OrderSuccessPage({
                               Qty {item.quantity} · {formatINR(item.unitPrice)}{" "}
                               each
                             </p>
+                            {(item as any).colorName && (
+                              <p className="os-line-meta">
+                                Color: {(item as any).colorName}
+                                {(item as any).colorPrice > 0
+                                  ? ` · +${formatINR((item as any).colorPrice)}`
+                                  : ""}
+                              </p>
+                            )}
+                            {(item as any).secondaryColorName && (
+                              <p className="os-line-meta">
+                                {(item as any).secondaryColorHeading ||
+                                  "Color"}
+                                : {(item as any).secondaryColorName}
+                                {(item as any).secondaryColorPrice > 0
+                                  ? ` · +${formatINR(
+                                      (item as any).secondaryColorPrice,
+                                    )}`
+                                  : ""}
+                              </p>
+                            )}
                             {optionSelections.length > 0 && (
                               <ul className="os-line-options">
-                                {optionSelections.map((s, i) => (
-                                  <li key={optionId(i)}>
-                                    <span className="os-line-option-group">
-                                      {s.groupName}:
+                                {optionSelections.map((opt, oi) => (
+                                  <li key={optionId(oi)}>
+                                    <span className="os-line-opt-group">
+                                      {opt.groupName}:
                                     </span>{" "}
-                                    {s.optionName}
-                                    {typeof s.addon === "number" &&
-                                      s.addon > 0 && (
-                                        <span className="os-line-option-addon">
-                                          {" "}
-                                          (+{formatINR(s.addon)})
+                                    <span className="os-line-opt-name">
+                                      {opt.optionName}
+                                    </span>
+                                    {typeof opt.addon === "number" &&
+                                      opt.addon > 0 && (
+                                        <span className="os-line-opt-addon">
+                                          +{formatINR(opt.addon)}
                                         </span>
                                       )}
                                   </li>
                                 ))}
                               </ul>
+                            )}
+                            {(item as any).addonSelected && (item as any).addonTitle && (
+                              <p className="os-line-meta">
+                                {(item as any).addonTitle}
+                                {(item as any).addonPrice > 0
+                                  ? ` · +${formatINR((item as any).addonPrice)}`
+                                  : ""}
+                              </p>
                             )}
                           </div>
                         </div>

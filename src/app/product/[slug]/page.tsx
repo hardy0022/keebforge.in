@@ -3,11 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { AddToCart } from "@/components/shop/AddToCart";
-import { ProductConfigurator } from "@/components/shop/ProductConfigurator";
 import { ShippingWarranty } from "@/components/shop/ShippingWarranty";
 import { WhyForge } from "@/components/home/WhyForge";
-import { ProductGallery } from "@/components/shop/ProductGallery";
 import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { RelatedProducts } from "@/components/shop/RelatedProducts";
 import {
@@ -20,6 +17,7 @@ import { isDraftImage } from "@/lib/images/cloudinary-url";
 import { availableQuantity } from "@/lib/cart";
 import { formatINR, formatINRRange } from "@/lib/utils/money";
 import { isPurchasable, CONDITION_LABELS } from "@/lib/catalog/shop";
+import { ProductClient } from "./product-client";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -158,109 +156,65 @@ export default async function ProductPage({
       <section className="svc-section" aria-labelledby="product-heading">
         <div className="wrap">
           <div className="product-layout">
-            <div className="product-gallery-column">
-              <ProductGallery
-                images={product.images}
-                productName={product.name}
-              />
-            </div>
-
-            <div className="product-info-column">
-              <div className="product-meta">
-                <p className="product-kicker-row">
-                  {product.brand && (
-                    <Link
-                      href={`/shop/${product.category.slug}?brand=${product.brand.slug}`}
-                      className="product-brand"
-                    >
-                      {product.brand.name}
-                    </Link>
-                  )}
-                  <Link
-                    href={`/shop/${product.category.slug}`}
-                    className="product-cat"
-                  >
-                    {product.category.name}
-                  </Link>
-                  {custom && (
-                    <span className="product-type-chip acc">Custom Order</span>
-                  )}
-                  {conditionLabel && (
-                    <span className="product-type-chip">{conditionLabel}</span>
-                  )}
-                </p>
-                <h1 id="product-heading" className="product-title">
-                  {product.name}
-                </h1>
-              </div>
-
-              {!configurable && (
-                <div className="product-price-section">
-                  <div className="product-price">
-                    <span className="product-price-amount">
-                      {showRange
-                        ? formatINRRange(minPrice, maxPrice)
-                        : formatINR(minPrice)}
+            {!configurable && (
+              <div className="product-price-section" style={{ gridColumn: "1 / -1" }}>
+                <div className="product-price">
+                  <span className="product-price-amount">
+                    {showRange
+                      ? formatINRRange(minPrice, maxPrice)
+                      : formatINR(minPrice)}
+                  </span>
+                  {compareAt && (
+                    <span className="product-price-compare">
+                      {formatINR(compareAt)}
                     </span>
-                    {compareAt && (
-                      <span className="product-price-compare">
-                        {formatINR(compareAt)}
-                      </span>
-                    )}
-                    {savePct != null && (
-                      <span className="product-discount-badge">
-                        Save {savePct}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {configurable ? (
-                <ProductConfigurator
-                  productId={product.id}
-                  groups={optionGroups}
-                  basePrice={product.price}
-                  baseAvailable={available}
-                  madeToOrder={custom}
-                />
-              ) : (
-                <AddToCart
-                  productId={product.id}
-                  variants={product.variants.map((v) => ({
-                    id: v.id,
-                    name: v.name,
-                    price: v.price,
-                    compareAtPrice: v.compareAtPrice,
-                    stock: v.stock,
-                    reservedQuantity: v.reservedQuantity,
-                    options: (v.options && typeof v.options === "object"
-                      ? (v.options as Record<string, unknown>)
-                      : null) as Record<string, string> | null,
-                  }))}
-                  baseAvailable={available}
-                  madeToOrder={custom}
-                />
-              )}
-
-              {(product.sku || product.type) && (
-                <div className="product-meta-tags">
-                  {product.sku && (
-                    <span className="meta-tag">SKU: {product.sku}</span>
                   )}
-                  {product.type && (
-                    <span className="meta-tag">{labelize(product.type)}</span>
+                  {savePct != null && (
+                    <span className="product-discount-badge">
+                      Save {savePct}%
+                    </span>
                   )}
                 </div>
-              )}
+              </div>
+            )}
 
-              {!custom && (
-                <p className="product-custom-note">
-                  Want this modified or part of a full build?{" "}
-                  <Link href="/workshop">Start a custom build →</Link>
-                </p>
-              )}
-            </div>
+            <ProductClient
+              product={product as any}
+              basePrice={configurable ? product.price : minPrice}
+              baseAvailable={available}
+              configurable={configurable}
+              custom={custom}
+              optionGroups={optionGroups as any[]}
+              brand={
+                product.brand
+                  ? { name: product.brand.name, slug: product.brand.slug }
+                  : null
+              }
+              category={{
+                name: product.category.name,
+                slug: product.category.slug,
+              }}
+              conditionLabel={conditionLabel}
+            />
+          </div>
+          <div className="wrap">
+            {(product.sku || product.type) && (
+              <div className="product-meta-tags">
+                {product.sku && (
+                  <span className="meta-tag">SKU: {product.sku}</span>
+                )}
+                {product.type && (
+                  <span className="meta-tag">{labelize(product.type)}</span>
+                )}
+              </div>
+            )}
+
+            {!custom && (
+              <p className="product-custom-note">
+                Want this modified or part of a full build?{" "}
+                <Link href="/workshop">Start a custom build →</Link>
+              </p>
+            )}
           </div>
         </div>
       </section>

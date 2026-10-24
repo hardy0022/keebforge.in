@@ -29,15 +29,49 @@ export default async function ShopCartPage() {
             cfg.optionIds,
           )
         : null;
-    const unitPrice = resolved?.ok
+    const baseUnitPrice = resolved?.ok
       ? resolved.unitPrice
       : (item.variant?.price ?? item.product.price);
+    const color = (item as any).colorOption ?? null;
+    const secondaryColor = (item as any).secondaryColorOption ?? null;
+    const colorAdd =
+      (color?.priceAdjustment ?? 0) +
+      (secondaryColor?.priceAdjustment ?? 0);
+    const addonAdd = item.addonSelected && item.product.addonEnabled ? (item.product.addonPrice ?? 0) : 0;
+    const unitPrice = baseUnitPrice + colorAdd + addonAdd;
     const selections =
       cfg?.kind === "options"
         ? resolved?.ok
           ? resolved.selections
           : cfg.selections
         : [];
+    if (color) {
+      selections.push({
+        optionId: `color:${color.id}`,
+        groupId: "color",
+        groupName: "Color",
+        optionName: color.name,
+        addon: color.priceAdjustment ?? 0,
+      });
+    }
+    if (secondaryColor) {
+      selections.push({
+        optionId: `color:${secondaryColor.id}`,
+        groupId: "secondary-color",
+        groupName: item.product.secondaryColorHeading?.trim() || "Color",
+        optionName: secondaryColor.name,
+        addon: secondaryColor.priceAdjustment ?? 0,
+      });
+    }
+    if (addonAdd > 0 && item.product.addonTitle) {
+      selections.push({
+        optionId: `addon:${item.product.id}`,
+        groupId: "addon",
+        groupName: "Add-on",
+        optionName: item.product.addonTitle,
+        addon: addonAdd,
+      });
+    }
     const available = item.variant
       ? availableQuantity(item.variant.stock, item.variant.reservedQuantity)
       : availableQuantity(item.product.stock, item.product.reservedQuantity);

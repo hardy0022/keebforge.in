@@ -118,6 +118,9 @@ const cartPageSelect = {
       id: true,
       quantity: true,
       config: true,
+      addonSelected: true,
+      colorOptionId: true,
+      secondaryColorOptionId: true,
       product: {
         select: {
           id: true,
@@ -127,6 +130,16 @@ const cartPageSelect = {
           productType: true,
           stock: true,
           reservedQuantity: true,
+          addonEnabled: true,
+          addonTitle: true,
+          addonDescription: true,
+          addonPrice: true,
+          secondaryColorHeading: true,
+          colorOptions: {
+            where: { enabled: true },
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            select: { id: true, name: true, colorCode: true, priceAdjustment: true },
+          },
           brand: { select: { name: true } },
           images: {
             where: { active: true },
@@ -164,6 +177,12 @@ const cartPageSelect = {
           stock: true,
           reservedQuantity: true,
         },
+      },
+      colorOption: {
+        select: { id: true, name: true, colorCode: true, priceAdjustment: true },
+      },
+      secondaryColorOption: {
+        select: { id: true, name: true, colorCode: true, priceAdjustment: true },
       },
     },
   },

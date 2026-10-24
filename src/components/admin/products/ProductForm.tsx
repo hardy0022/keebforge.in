@@ -89,6 +89,10 @@ type ProductProp = {
   status: "DRAFT" | "ACTIVE" | "OUT_OF_STOCK" | "ARCHIVED";
   productType: "CUSTOM" | "NEW" | "CLEARANCE";
   condition: string | null;
+  addonEnabled?: boolean;
+  addonTitle?: string | null;
+  addonDescription?: string | null;
+  addonPrice?: number;
   images: ImageProp[];
 };
 
@@ -569,6 +573,80 @@ export function ProductForm({
               min={0}
               max={100}
               step="0.01"
+              disabled={pending}
+            />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="2b · Product Add-on">
+        <p className="muted" style={{ fontSize: "0.75rem", margin: 0 }}>
+          One optional checkbox add-on per product (e.g. extended warranty).
+          Completely separate from product options.
+        </p>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "4px 0",
+          }}
+        >
+          <input
+            type="checkbox"
+            name="addonEnabled"
+            defaultChecked={product?.addonEnabled ?? false}
+            disabled={pending}
+          />
+          <span
+            style={{
+              fontFamily: "var(--ff-display)",
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--t2)",
+            }}
+          >
+            Enable add-on
+          </span>
+        </label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <Field
+            label="Title"
+            hint="Text displayed as the add-on name on the product page."
+          >
+            <input
+              className="input"
+              name="addonTitle"
+              defaultValue={product?.addonTitle ?? ""}
+              placeholder="Extended Warranty"
+              disabled={pending}
+            />
+          </Field>
+          <Field
+            label="Description"
+            hint="Short explanation shown below the title. Leave empty to hide."
+          >
+            <textarea
+              className="textarea"
+              name="addonDescription"
+              defaultValue={product?.addonDescription ?? ""}
+              placeholder="Add 6 months of additional coverage."
+              disabled={pending}
+            />
+          </Field>
+          <Field
+            label="Additional price (₹)"
+            hint="Amount added when the customer selects the add-on."
+          >
+            <input
+              className="input"
+              type="number"
+              name="addonPrice"
+              defaultValue={product?.addonPrice ? product.addonPrice / 100 : ""}
+              min={0}
+              step="1"
               disabled={pending}
             />
           </Field>

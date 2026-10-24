@@ -26,6 +26,12 @@ const addSchema = z.object({
   variantId: z.string().min(1).optional(),
   quantity: z.coerce.number().int().min(1).max(MAX_CART_QUANTITY),
   optionIds: optionIdsJson(),
+  addonSelected: z
+    .string()
+    .optional()
+    .transform((v) => v === "on" || v === "true"),
+  colorOptionId: z.string().min(1).optional(),
+  secondaryColorOptionId: z.string().min(1).optional(),
 });
 
 const qtySchema = z.object({
@@ -103,11 +109,14 @@ const parsed = addSchema.safeParse({
   variantId: formData.get("variantId") || undefined,
   quantity: formData.get("quantity"),
   optionIds: formData.get("optionIds"),
+  addonSelected: formData.get("addonSelected") || undefined,
+  colorOptionId: formData.get("colorOptionId") || undefined,
+  secondaryColorOptionId: formData.get("secondaryColorOptionId") || undefined,
 });
 if (!parsed.success)
   return { error: parsed.error.issues[0]?.message ?? "Invalid request." };
 
-const { productId, variantId, quantity, optionIds } = parsed.data;
+const { productId, variantId, quantity, optionIds, addonSelected, colorOptionId, secondaryColorOptionId } = parsed.data;
 if (variantId && optionIds)
   return { error: "Choose either a variant or options, not both." };
 
@@ -124,6 +133,15 @@ const [product, cart] = await Promise.all([
       price: true,
       stock: true,
       reservedQuantity: true,
+      addonEnabled: true,
+      addonTitle: true,
+      addonDescription: true,
+      addonPrice: true,
+      colorOptions: {
+        where: { enabled: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: { id: true, name: true, colorCode: true, priceAdjustment: true, imageUrl: true, group: true },
+      },
       variants: {
         where: { active: true },
         select: {
@@ -188,19 +206,61 @@ if (check) return { error: check };
 
 // Identical configurations merge into one line; different ones stay separate.
 // Made-to-order units never merge — each build is its own quantity-1 line.
+const wantAddon = addonSelected && product.addonEnabled ? true : false;
+const baseColors = product.colorOptions.filter(
+  (c) => (c as any).group !== "SECONDARY",
+);
+const secondaryColors = product.colorOptions.filter(
+  (c) => (c as any).group === "SECONDARY",
+);
+let selectedColor: any = null;
+if (baseColors.length > 0) {
+  if (!colorOptionId) {
+    selectedColor = baseColors[0];
+  } else {
+    selectedColor = baseColors.find((c) => c.id === colorOptionId) ?? null;
+    if (!selectedColor) return { error: "Invalid color selection." };
+  }
+} else if (colorOptionId) {
+  return { error: "Color selection not available for this product." };
+}
+
+let selectedSecondaryColor: any = null;
+if (secondaryColors.length > 0) {
+  if (!secondaryColorOptionId) {
+    selectedSecondaryColor = secondaryColors[0];
+  } else {
+    selectedSecondaryColor =
+      secondaryColors.find((c) => c.id === secondaryColorOptionId) ?? null;
+    if (!selectedSecondaryColor)
+      return { error: "Invalid secondary color selection." };
+  }
+} else if (secondaryColorOptionId) {
+  return { error: "Secondary color selection not available for this product." };
+}
+
 const candidates = await prisma.cartItem.findMany({
   where: { cartId: cart.id, productId, variantId: variantId ?? null },
-  select: { id: true, quantity: true, config: true },
+  select: {
+    id: true,
+    quantity: true,
+    config: true,
+    addonSelected: true,
+    colorOptionId: true,
+    secondaryColorOptionId: true,
+  },
 });
 const key = config ? configKey(config.optionIds) : null;
 const existing = madeToOrder
   ? undefined
-  : key === null
-    ? candidates.find((c) => !c.config)
-    : candidates.find((c) => {
-        const cfg = c.config as ProductConfigSnapshot | null;
-        return cfg?.kind === "options" && configKey(cfg.optionIds) === key;
-      });
+  : candidates.find((c) => {
+      const cfg = c.config as ProductConfigSnapshot | null;
+      const sameCfg =
+        key === null
+          ? !cfg || cfg.kind !== "options"
+          : cfg?.kind === "options" && configKey(cfg.optionIds) === key;
+      return sameCfg && (c.addonSelected === wantAddon) && ((c as any).colorOptionId ?? null) === (selectedColor?.id ?? null) && ((c as any).secondaryColorOptionId ?? null) === (selectedSecondaryColor?.id ?? null);
+    });
 const nextQty = existing ? existing.quantity + qty : qty;
 // Re-validate combined quantity against live stock (same item may already be in cart).
 const checkAgain = checkQuantity(product, variantId ?? null, nextQty);
@@ -225,6 +285,9 @@ if (existing) {
       variantId: variantId ?? null,
       quantity: qty,
       ...(config ? { config } : {}),
+      addonSelected: wantAddon,
+      colorOptionId: selectedColor?.id ?? null,
+      secondaryColorOptionId: selectedSecondaryColor?.id ?? null,
     },
   });
 }

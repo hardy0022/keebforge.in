@@ -167,7 +167,7 @@ export function SiteFooter() {
           Jammu &amp; Kashmir · India
         </p>
         <a
-          href="https://portfolio.shadow269.in/"
+          href="https://sakshithshetty.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="footer-dev-credit"

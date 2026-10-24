@@ -300,6 +300,10 @@ export async function POST(req: NextRequest) {
               options: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
             },
           },
+          colorOptions: {
+            where: { enabled: true },
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          },
         },
       }),
       prisma.productVariant.findMany({ where: { id: { in: variantIds } } }),
@@ -325,6 +329,19 @@ export async function POST(req: NextRequest) {
       lineTotal: number;
       imageUrl: string | null;
       variantInfo?: Prisma.InputJsonValue;
+      addonTitle?: string | null;
+      addonDescription?: string | null;
+      addonPrice?: number | null;
+      addonSelected?: boolean;
+      colorOptionId?: string | null;
+      colorName?: string | null;
+      colorCode?: string | null;
+      colorPrice?: number | null;
+      secondaryColorOptionId?: string | null;
+      secondaryColorHeading?: string | null;
+      secondaryColorName?: string | null;
+      secondaryColorCode?: string | null;
+      secondaryColorPrice?: number | null;
     }> = [];
 
     for (const item of items) {
@@ -380,6 +397,70 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const addonSelected = !!(item as any).addonSelected && (product as any).addonEnabled;
+      const addonPriceSnapshot = addonSelected ? ((product as any).addonPrice ?? 0) : 0;
+      const colorOptions: any[] = (product as any).colorOptions ?? [];
+      const baseColors = colorOptions.filter(
+        (c: any) => (c.group ?? "BASE") !== "SECONDARY",
+      );
+      const secondaryColors = colorOptions.filter(
+        (c: any) => c.group === "SECONDARY",
+      );
+      let colorOptionIdSnap: string | null = (item as any).colorOptionId ?? null;
+      let colorNameSnap: string | null = null;
+      let colorCodeSnap: string | null = null;
+      let colorPriceSnap: number | null = null;
+      if (baseColors.length) {
+        if (!colorOptionIdSnap) {
+          colorOptionIdSnap = baseColors[0].id;
+        }
+        const co = baseColors.find((c: any) => c.id === colorOptionIdSnap);
+        if (!co) {
+          return NextResponse.json({ error: "Invalid color selection." }, { status: 400 });
+        }
+        colorOptionIdSnap = co.id;
+        colorNameSnap = co.name;
+        colorCodeSnap = co.colorCode;
+        colorPriceSnap = co.priceAdjustment ?? 0;
+        unitPrice = unitPrice + (colorPriceSnap ?? 0);
+      } else if (colorOptionIdSnap) {
+        return NextResponse.json({ error: "Color selection not available for this product." }, { status: 400 });
+      }
+
+      let secondaryColorOptionIdSnap: string | null =
+        (item as any).secondaryColorOptionId ?? null;
+      let secondaryColorNameSnap: string | null = null;
+      let secondaryColorCodeSnap: string | null = null;
+      let secondaryColorPriceSnap: number | null = null;
+      let secondaryColorHeadingSnap: string | null = null;
+      if (secondaryColors.length) {
+        if (!secondaryColorOptionIdSnap) {
+          secondaryColorOptionIdSnap = secondaryColors[0].id;
+        }
+        const co = secondaryColors.find(
+          (c: any) => c.id === secondaryColorOptionIdSnap,
+        );
+        if (!co) {
+          return NextResponse.json(
+            { error: "Invalid secondary color selection." },
+            { status: 400 },
+          );
+        }
+        secondaryColorOptionIdSnap = co.id;
+        secondaryColorNameSnap = co.name;
+        secondaryColorCodeSnap = co.colorCode;
+        secondaryColorPriceSnap = co.priceAdjustment ?? 0;
+        secondaryColorHeadingSnap =
+          (product as any).secondaryColorHeading?.trim() || "Color";
+        unitPrice = unitPrice + (secondaryColorPriceSnap ?? 0);
+      } else if (secondaryColorOptionIdSnap) {
+        return NextResponse.json(
+          { error: "Secondary color selection not available for this product." },
+          { status: 400 },
+        );
+      }
+      unitPrice = unitPrice + addonPriceSnapshot;
+
       const lineTotal = unitPrice * item.quantity;
       subtotal += lineTotal;
       weightRows.push({
@@ -409,6 +490,19 @@ export async function POST(req: NextRequest) {
               },
             }
           : {}),
+        addonSelected,
+        addonTitle: addonSelected ? ((product as any).addonTitle ?? null) : null,
+        addonDescription: addonSelected ? ((product as any).addonDescription ?? null) : null,
+        addonPrice: addonSelected ? addonPriceSnapshot : null,
+        colorOptionId: colorOptionIdSnap,
+        colorName: colorNameSnap,
+        colorCode: colorCodeSnap,
+        colorPrice: colorPriceSnap,
+        secondaryColorOptionId: secondaryColorOptionIdSnap,
+        secondaryColorHeading: secondaryColorHeadingSnap,
+        secondaryColorName: secondaryColorNameSnap,
+        secondaryColorCode: secondaryColorCodeSnap,
+        secondaryColorPrice: secondaryColorPriceSnap,
       });
     }
 

@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { addToCart } from "@/app/actions/cart";
 import { formatINR } from "@/lib/utils/money";
@@ -13,6 +19,7 @@ import {
 } from "@/lib/catalog/product-options";
 import CartIcon from "@/components/icons/cart-icon";
 import type { AnimatedIconHandle } from "@/components/icons/types";
+import { ProductAddon } from "@/components/shop/ProductAddon";
 
 /**
  * Configurator for products with admin-defined option groups
@@ -34,12 +41,25 @@ export function ProductConfigurator({
   basePrice,
   baseAvailable,
   madeToOrder = false,
+  addon,
+  colorOptionId,
+  secondaryColorOptionId,
+  colorSelector,
 }: {
   productId: string;
   groups: OptionGroupLike[];
   basePrice: number;
   baseAvailable: number;
   madeToOrder?: boolean;
+  addon?: {
+    enabled: boolean;
+    title: string | null;
+    description: string | null;
+    price: number;
+  } | null;
+  colorOptionId?: string | null;
+  secondaryColorOptionId?: string | null;
+  colorSelector?: ReactNode;
 }) {
   const router = useRouter();
   const active = groups.filter((g) => g.enabled);
@@ -57,6 +77,7 @@ export function ProductConfigurator({
   });
   const [qty, setQty] = useState(1);
   const [buyNow, setBuyNow] = useState(false);
+  const [addonChecked, setAddonChecked] = useState(false);
   const [state, action, pending] = useActionState(addToCart, null);
   const cartIconRef = useRef<AnimatedIconHandle>(null);
   const prevPendingRef = useRef(pending);
@@ -77,7 +98,10 @@ export function ProductConfigurator({
     (g) => !g.required || (picks[g.id]?.length ?? 0) > 0,
   );
   const optionIds = active.flatMap((g) => picks[g.id] ?? []);
-  const configuredPrice = basePrice + sumSelectedAddons(active, optionIds);
+  const configuredPrice =
+    basePrice +
+    sumSelectedAddons(active, optionIds) +
+    (addon?.enabled && addonChecked ? (addon.price ?? 0) : 0);
   const out = baseAvailable <= 0;
 
   const toggle = (g: OptionGroupLike, optionId: string) => {
@@ -112,6 +136,17 @@ export function ProductConfigurator({
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="quantity" value={qty} />
       <input type="hidden" name="optionIds" value={JSON.stringify(optionIds)} />
+      {colorOptionId ? <input type="hidden" name="colorOptionId" value={colorOptionId} /> : null}
+      {secondaryColorOptionId ? (
+        <input
+          type="hidden"
+          name="secondaryColorOptionId"
+          value={secondaryColorOptionId}
+        />
+      ) : null}
+      {addon?.enabled && addonChecked ? (
+        <input type="hidden" name="addonSelected" value="on" />
+      ) : null}
 
       <div className="product-price-section">
         <div className="product-price">
@@ -120,6 +155,8 @@ export function ProductConfigurator({
           </span>
         </div>
       </div>
+
+      {colorSelector}
 
       <div className="option-groups">
         {active.map((g) => {
@@ -188,6 +225,16 @@ export function ProductConfigurator({
           );
         })}
       </div>
+
+      {addon?.enabled && addon.title ? (
+        <ProductAddon
+          title={addon.title}
+          description={addon.description}
+          price={addon.price ?? 0}
+          checked={addonChecked}
+          onChange={setAddonChecked}
+        />
+      ) : null}
 
       <div className="product-buy-actions">
         <button

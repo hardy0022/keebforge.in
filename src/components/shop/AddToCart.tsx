@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { addToCart } from "@/app/actions/cart";
 import CartIcon from "@/components/icons/cart-icon";
 import type { AnimatedIconHandle } from "@/components/icons/types";
+import { ProductAddon } from "@/components/shop/ProductAddon";
 
 type VariantProp = {
   id: string;
@@ -51,11 +52,22 @@ export function AddToCart({
   variants,
   baseAvailable,
   madeToOrder = false,
+  addon,
+  colorOptionId,
+  secondaryColorOptionId,
 }: {
   productId: string;
   variants: VariantProp[];
   baseAvailable: number;
   madeToOrder?: boolean;
+  addon?: {
+    enabled: boolean;
+    title: string | null;
+    description: string | null;
+    price: number;
+  } | null;
+  colorOptionId?: string | null;
+  secondaryColorOptionId?: string | null;
 }) {
   const router = useRouter();
   const groups = useMemo(() => buildGroups(variants), [variants]);
@@ -65,6 +77,7 @@ export function AddToCart({
   const [variantId, setVariantId] = useState("");
   const [qty, setQty] = useState(1);
   const [buyNow, setBuyNow] = useState(false);
+  const [addonChecked, setAddonChecked] = useState(false);
   const [state, action, pending] = useActionState(addToCart, null);
   const prevPendingRef = useRef(pending);
   const added = state?.ok === true && !pending;
@@ -122,6 +135,17 @@ export function AddToCart({
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={selected?.id ?? ""} />
       <input type="hidden" name="quantity" value={qty} />
+      {colorOptionId ? <input type="hidden" name="colorOptionId" value={colorOptionId} /> : null}
+      {secondaryColorOptionId ? (
+        <input
+          type="hidden"
+          name="secondaryColorOptionId"
+          value={secondaryColorOptionId}
+        />
+      ) : null}
+      {addon?.enabled && addonChecked ? (
+        <input type="hidden" name="addonSelected" value="on" />
+      ) : null}
 
       {groups.length > 0 ? (
         <div className="option-groups">
@@ -193,6 +217,16 @@ export function AddToCart({
           </label>
         )
       )}
+
+      {addon?.enabled && addon.title ? (
+        <ProductAddon
+          title={addon.title}
+          description={addon.description}
+          price={addon.price ?? 0}
+          checked={addonChecked}
+          onChange={setAddonChecked}
+        />
+      ) : null}
 
       <div className="product-buy-actions">
         <button

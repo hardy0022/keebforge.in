@@ -21,6 +21,7 @@
     "check:environment": "tsx src/lib/environment.test.ts",
     "check:preview-guard": "tsx src/lib/config/preview-guard.test.ts && tsx src/lib/config/preview-action-guards.test.ts",
     "check:revalidate": "tsx src/lib/caching/revalidate-request.test.ts",
+    "check:admin-customers": "tsx src/lib/admin/customers.test.ts",
     "check:webhook": "tsx src/lib/security/razorpay-webhook.test.ts",
     "check:payment-status": "tsx src/lib/payments/payment-status.test.ts",
     "check:payment-signature": "tsx src/lib/security/razorpay-signature.test.ts",

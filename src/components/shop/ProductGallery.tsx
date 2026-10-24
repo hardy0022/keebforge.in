@@ -8,12 +8,14 @@ interface ProductGalleryProps {
   images: ShopProduct["images"];
   productName: string;
   variantImages?: ShopProduct["images"];
+  colorImage?: { url: string; alt?: string | null } | null;
 }
 
 export function ProductGallery({
   images,
   productName,
   variantImages,
+  colorImage,
 }: ProductGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -22,8 +24,15 @@ export function ProductGallery({
   // actually switches images, and even then they are short (150ms).
   const [interacted, setInteracted] = useState(false);
 
-  const allImages = variantImages?.length ? variantImages : images;
-  const currentImage = allImages[selectedIndex];
+  const allImages = colorImage?.url
+    ? [{ url: colorImage.url, alt: colorImage.alt ?? productName }]
+    : variantImages?.length
+      ? variantImages
+      : images;
+  const currentImage = allImages[selectedIndex] ?? allImages[0];
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [colorImage?.url]);
 
   const select = useCallback(
     (i: number) => {

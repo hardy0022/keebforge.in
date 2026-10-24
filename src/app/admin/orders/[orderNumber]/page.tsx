@@ -550,7 +550,51 @@ export default async function AdminOrderDetail({
                       </td>
                       <td>
                         {i.name}
-                        <ItemConfiguration variantInfo={i.variantInfo} />
+                        <div>
+                          {(i as any).colorName ? (
+                            <div style={{ marginBottom: 6 }}>
+                              <span style={{ fontWeight: 600 }}>Color:</span>{" "}
+                              {(i as any).colorName}
+                              {(i as any).colorPrice > 0 ? (
+                                <>
+                                  {" "}
+                                  (+{formatINR((i as any).colorPrice)})
+                                </>
+                              ) : null}
+                            </div>
+                          ) : null}
+                          {(i as any).secondaryColorName ? (
+                            <div style={{ marginBottom: 6 }}>
+                              <span style={{ fontWeight: 600 }}>
+                                {(i as any).secondaryColorHeading || "Color"}:
+                              </span>{" "}
+                              {(i as any).secondaryColorName}
+                              {(i as any).secondaryColorPrice > 0 ? (
+                                <>
+                                  {" "}
+                                  (+
+                                  {formatINR(
+                                    (i as any).secondaryColorPrice,
+                                  )}
+                                  )
+                                </>
+                              ) : null}
+                            </div>
+                          ) : null}
+                          {(i as any).addonSelected && (i as any).addonTitle ? (
+                            <div style={{ marginBottom: 6 }}>
+                              <span style={{ fontWeight: 600 }}>Add-on:</span>{" "}
+                              {(i as any).addonTitle}
+                              {(i as any).addonPrice > 0 ? (
+                                <>
+                                  {" "}
+                                  (+{formatINR((i as any).addonPrice)})
+                                </>
+                              ) : null}
+                            </div>
+                          ) : null}
+                          <ItemConfiguration variantInfo={i.variantInfo} />
+                        </div>
                       </td>
                       <td className="num">{i.quantity}</td>
                       <td className="num">{formatINR(i.unitPrice)}</td>
