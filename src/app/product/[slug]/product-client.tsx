@@ -5,9 +5,39 @@ import Link from "next/link";
 import { AddToCart } from "@/components/shop/AddToCart";
 import { ProductConfigurator } from "@/components/shop/ProductConfigurator";
 import { ProductGallery } from "@/components/shop/ProductGallery";
-import { ColorSelector } from "@/components/shop/ColorSelector";
+import {
+  ColorSelector,
+  type ColorOptionView,
+} from "@/components/shop/ColorSelector";
 import type { ShopProduct } from "@/lib/catalog/data";
+import type { OptionGroupLike } from "@/lib/catalog/product-options";
 import { resolveProductAddon } from "@/lib/catalog/product-addon";
+
+type ProductColorOption = ColorOptionView & {
+  enabled: boolean;
+  group: "BASE" | "SECONDARY";
+  sortOrder: number;
+};
+
+type ProductVariantView = {
+  id: string;
+  name: string;
+  price: number | null;
+  compareAtPrice: number | null;
+  stock: number;
+  reservedQuantity: number;
+  options: unknown;
+};
+
+type ProductClientProduct = Omit<ShopProduct, "variants"> & {
+  variants: ProductVariantView[];
+  addonEnabled: boolean;
+  addonTitle: string | null;
+  addonDescription: string | null;
+  addonPrice: number;
+  secondaryColorHeading: string | null;
+  colorOptions: ProductColorOption[];
+};
 
 export function ProductClient({
   product,
@@ -20,21 +50,20 @@ export function ProductClient({
   category,
   conditionLabel,
 }: {
-  product: ShopProduct & { colorOptions?: any[] };
+  product: ProductClientProduct;
   basePrice: number;
   baseAvailable: number;
   configurable: boolean;
   custom: boolean;
-  optionGroups: any[];
+  optionGroups: OptionGroupLike[];
   brand?: { name: string; slug: string } | null;
   category: { name: string; slug: string };
   conditionLabel?: string | null;
 }) {
-  const colors = (product.colorOptions ?? []).filter((c: any) => c.enabled);
-  const baseColors = colors.filter((c: any) => (c.group ?? "BASE") === "BASE");
-  const secondaryColors = colors.filter((c: any) => c.group === "SECONDARY");
-  const secondaryHeading =
-    (product as any).secondaryColorHeading?.trim() || "Color";
+  const colors = product.colorOptions.filter((c) => c.enabled);
+  const baseColors = colors.filter((c) => (c.group ?? "BASE") === "BASE");
+  const secondaryColors = colors.filter((c) => c.group === "SECONDARY");
+  const secondaryHeading = product.secondaryColorHeading?.trim() || "Color";
   const [colorId, setColorId] = useState<string | null>(
     baseColors[0]?.id ?? null,
   );
@@ -42,12 +71,12 @@ export function ProductClient({
     secondaryColors[0]?.id ?? null,
   );
   const selectedColor = useMemo(
-    () => baseColors.find((c: any) => c.id === colorId) ?? baseColors[0] ?? null,
+    () => baseColors.find((c) => c.id === colorId) ?? baseColors[0] ?? null,
     [baseColors, colorId],
   );
   const selectedSecondaryColor = useMemo(
     () =>
-      secondaryColors.find((c: any) => c.id === secondaryColorId) ??
+      secondaryColors.find((c) => c.id === secondaryColorId) ??
       secondaryColors[0] ??
       null,
     [secondaryColors, secondaryColorId],
@@ -61,7 +90,7 @@ export function ProductClient({
     ? { url: selectedColor.imageUrl, alt: selectedColor.name }
     : null;
 
-  const resolvedAddon = resolveProductAddon(product as any, true);
+  const resolvedAddon = resolveProductAddon(product, true);
   const addon = resolvedAddon.selected
     ? {
         enabled: true,
@@ -155,16 +184,17 @@ export function ProductClient({
             )}
             <AddToCart
               productId={product.id}
-              variants={product.variants.map((v: any) => ({
+              variants={product.variants.map((v) => ({
                 id: v.id,
                 name: v.name,
                 price: v.price,
                 compareAtPrice: v.compareAtPrice,
                 stock: v.stock,
                 reservedQuantity: v.reservedQuantity,
-                options: (v.options && typeof v.options === "object"
-                  ? (v.options as Record<string, unknown>)
-                  : null) as Record<string, string> | null,
+                options:
+                  v.options && typeof v.options === "object"
+                    ? (v.options as Record<string, string>)
+                    : null,
               }))}
               baseAvailable={baseAvailable}
               madeToOrder={custom}

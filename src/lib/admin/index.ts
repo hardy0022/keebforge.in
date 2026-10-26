@@ -11,6 +11,11 @@ import type {
 import { prisma } from "@/lib/db/prisma";
 import { defineCached, TAG, TTL } from "@/lib/caching/cache";
 import { ADMIN_PAGE_SIZE, paginate, type Paginated } from "@/lib/admin/pagination";
+import {
+  adminOrderStatusFilter,
+  COMPLETED_STATUSES,
+} from "@/lib/admin/order-filters";
+export { COMPLETED_STATUSES } from "@/lib/admin/order-filters";
 
 import {
   fmtIST,
@@ -229,12 +234,6 @@ export type AdminOrdersQuery = {
   excludeCompleted?: boolean;
 };
 
-/** Statuses treated as a finished/completed order. */
-export const COMPLETED_STATUSES: OrderStatus[] = [
-  "DELIVERED",
-  "ORDER_COMPLETED",
-];
-
 export const getAdminOrders = cache((params: AdminOrdersQuery) => {
   const {
     q,
@@ -248,13 +247,11 @@ export const getAdminOrders = cache((params: AdminOrdersQuery) => {
     completed,
     excludeCompleted,
   } = params;
-  const statusFilter = completed
-    ? { status: { in: COMPLETED_STATUSES } }
-    : excludeCompleted
-      ? { status: { notIn: COMPLETED_STATUSES } }
-      : status
-        ? { status }
-        : {};
+  const statusFilter = adminOrderStatusFilter({
+    status,
+    completed,
+    excludeCompleted,
+  });
   const where: Prisma.OrderWhereInput = {
     isDeleted: false,
     ...statusFilter,
@@ -520,7 +517,7 @@ const cachedAdminReviews = defineCached(adminReviewsPage, {
 
 export function getAdminReviews(params: AdminReviewsQuery) {
   // Search text is unbounded user input — route it around the persistent
-  // cache (same rule as the public shop search); moderation status/type/rating
-  // filters stay cache-keyed because admin actions invalidate on every change.
+  // cache; moderation status/type/rating filters stay cache-keyed because admin
+  // actions invalidate on every change.
   return params.q ? adminReviewsPage(params) : cachedAdminReviews(params);
 }

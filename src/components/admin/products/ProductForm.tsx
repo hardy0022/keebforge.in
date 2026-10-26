@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -188,6 +188,15 @@ export function ProductForm({
     saveProduct,
     {},
   );
+
+  // A create has no product page of its own until save returns the new id.
+  // Move to the edit URL so subsequent saves update that product instead of
+  // repeatedly creating new rows and leaving the admin on /new.
+  useEffect(() => {
+    if (product || !state.ok || !state.id) return;
+    router.replace(`/admin/products/${state.id}/edit`);
+  }, [product, router, state.id, state.ok]);
+
   const [images, setImages] = useState<ImageProp[]>(product?.images ?? []);
   const [primaryIdx, setPrimaryIdx] = useState(
     product?.images.findIndex((i) => i.primary) ?? 0,

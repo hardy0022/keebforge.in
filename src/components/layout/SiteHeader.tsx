@@ -3,7 +3,7 @@
 import { authClient } from "@/lib/auth/auth-client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useEffect, useState, useRef } from "react";
 import CartIcon from "@/components/icons/cart-icon";
 import type { AnimatedIconHandle } from "@/components/icons/types";
@@ -65,6 +65,7 @@ export function SiteHeader() {
   const profileRef = useRef<HTMLDivElement>(null);
   const shopRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = authClient.useSession();
 
   useEffect(() => {
@@ -118,6 +119,11 @@ export function SiteHeader() {
     await authClient.signOut();
     closeMenu();
     setProfileOpen(false);
+    if (pathname.startsWith("/account")) {
+      router.replace("/");
+      return;
+    }
+    router.refresh();
   };
 
   const userInitials = session?.user

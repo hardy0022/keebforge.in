@@ -1730,6 +1730,10 @@ const LOCAL_SCRATCH_URL = `postgresql://keebforge:keebforge@localhost:${SCRATCH_
       "20261002120001_refund_razorpay_payment_id",
       "20261007000000_add_product_option_selection_mode",
       "20261010120000_order_paid_notifications",
+      "20261012120000_add_notification_suppressed_status",
+      "20261016000000_add_product_single_addon",
+      "20261016010000_add_product_color_options",
+      "20261024000000_add_secondary_product_color_options",
     ];
     const migrations = readdirSync(migrationDir, { withFileTypes: true })
       .filter((e) => e.isDirectory())

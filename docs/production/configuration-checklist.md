@@ -1,6 +1,6 @@
 # Production Configuration Checklist (Read-Only Verification)
 
-**Status:** PARTIALLY VERIFIED. As of 2026-10-11 the scheduled-reconciliation variables (`CRON_SECRET`, `PAID_NOTIFICATION_RECONCILE_SINCE`) and the cron registration are presence-verified in Production. All other items remain UNVERIFIED. Verification requires separately authorized read-only review of deployment configuration. No secrets are to be inspected or printed.
+**Status:** PARTIALLY VERIFIED. As of 2026-10-11 the scheduled-reconciliation variables (`CRON_SECRET`, `PAID_NOTIFICATION_RECONCILE_SINCE`) and the cron registration are presence-verified in Production. All other items remain UNVERIFIED. Verification requires separately authorized read-only review of deployment configuration. No secrets are to be inspected or printed. Names below were rechecked against the source tree on 2026-10-26; the complete variable map is in [`docs/code-map.md` §24](../code-map.md#24-environment-variables).
 
 ## Database
 - [ ] DATABASE_URL (connection) — Purpose: app DB connectivity. Config: deployment env (Vercel/Supabase). Verify: format/target, not local/scratch; no secret values exposed.
@@ -16,12 +16,14 @@
 ## Razorpay
 - [ ] RAZORPAY_KEY_ID — Purpose: API access. Config: deployment env. Verify: production key. UNVERIFIED.
 - [ ] RAZORPAY_KEY_SECRET — Purpose: API signing. Config: deployment env. Verify: present. UNVERIFIED.
-- [ ] RAZORPAY_WEBHOOK_SECRET — Purpose: webhook signature validation. Config: deployment env. Verify: present and matches webhook endpoint. UNVERIFIED.
-- [ ] RAZORPAY_WEBHOOK_URL — Purpose: webhook endpoint configuration. Config: deployment/env. Verify: correct production URL. UNVERIFIED.
+- [ ] NEXT_PUBLIC_RAZORPAY_KEY_ID — Purpose: browser checkout key. Config: deployment env/build. Verify: matches the production key. UNVERIFIED.
+- [ ] RAZORPAY_WEBHOOK_SECRET — Purpose: webhook signature validation. Config: deployment env. Verify: present and matches the webhook endpoint. UNVERIFIED.
+- [ ] Razorpay webhook endpoint (dashboard configuration, not an app env var) — Purpose: deliver payment/refund events to `/api/payments/webhook`. Verify: production URL and required events enabled. UNVERIFIED.
 
 ## Email (Resend)
 - [ ] RESEND_API_KEY — Purpose: transactional emails. Config: deployment env. Verify: present. UNVERIFIED.
-- [ ] RESEND_FROM_EMAIL — Purpose: sender identity. Config: deployment env. Verify: verified domain. UNVERIFIED.
+- [ ] EMAIL_FROM — Purpose: sender identity. Config: deployment env. Verify: verified domain. UNVERIFIED.
+- [ ] RESEND_TEMPLATE_PASSWORD_RESET, RESEND_TEMPLATE_EMAIL_VERIFICATION, RESEND_TEMPLATE_CONTACT_INQUIRY, RESEND_TEMPLATE_REPAIR_REQUEST, RESEND_TEMPLATE_SHOP_ORDER_PAID, RESEND_TEMPLATE_MODS_ORDER_PAID — Purpose: required remote templates; there is no inline-HTML fallback. Verify: all six set and published. UNVERIFIED.
 
 ## Cloudinary
 - [ ] CLOUDINARY_CLOUD_NAME — Purpose: media. Config: deployment env. Verify: correct cloud. UNVERIFIED.
@@ -29,13 +31,19 @@
 - [ ] CLOUDINARY_API_SECRET — Purpose: API. Config: deployment env. Verify: present. UNVERIFIED.
 
 ## Delhivery
-- [ ] DELHIVERY_API_KEY — Purpose: shipping. Config: deployment env. Verify: present. UNVERIFIED.
-- [ ] DELHIVERY_SECRET_KEY — Purpose: shipping auth. Config: deployment env. Verify: present. UNVERIFIED.
-- [ ] DELHIVERY_BASE_URL — Purpose: API endpoint (staging/prod). Config: deployment env. Verify: correct for prod. UNVERIFIED.
+- [ ] DELHIVERY_API_URL — Purpose: API base endpoint. Config: deployment env. Verify: correct production endpoint. UNVERIFIED.
+- [ ] DELHIVERY_API_TOKEN — Purpose: shipping authentication. Config: deployment env. Verify: present. UNVERIFIED.
+- [ ] DELHIVERY_ORIGIN_PINCODE — Purpose: warehouse origin. Config: deployment env. Verify: correct production pincode. UNVERIFIED.
+- [ ] DELHIVERY_DEFAULT_MODE and DELHIVERY_MODES — Purpose: default/allowed service speeds. Config: deployment env. Verify: valid production modes. UNVERIFIED.
+- [ ] DELHIVERY_SURFACE_DAYS and DELHIVERY_EXPRESS_DAYS — Optional ETA overrides; not in `.env.example`. Verify: unset or valid positive integers. UNVERIFIED.
+- [ ] DELHIVERY_PICKUP_* — Pickup identity/address: `DELHIVERY_PICKUP_NAME`, `DELHIVERY_PICKUP_ADDRESS`, `DELHIVERY_PICKUP_CITY`, `DELHIVERY_PICKUP_PIN`, `DELHIVERY_PICKUP_STATE`, `DELHIVERY_PICKUP_COUNTRY`, `DELHIVERY_PICKUP_PHONE`, `DELHIVERY_PICKUP_EMAIL`, `DELHIVERY_PICKUP_ACCOUNT_NAME`. Purpose: pickup and return consignor. Verify: complete and production-correct. UNVERIFIED.
+- [ ] DELHIVERY_PICKUP_RETURN_* — Return address: `DELHIVERY_PICKUP_RETURN_ADDRESS`, `DELHIVERY_PICKUP_RETURN_PIN`, `DELHIVERY_PICKUP_RETURN_CITY`, `DELHIVERY_PICKUP_RETURN_STATE`, `DELHIVERY_PICKUP_RETURN_COUNTRY`. Verify: complete and production-correct. UNVERIFIED.
 
 ## Application
 - [ ] NEXT_PUBLIC_APP_URL — Purpose: public URLs. Config: deployment env. Verify: production domain. UNVERIFIED.
-- [ ] ADMIN_PANEL_PRODUCTION_ENABLED — Purpose: admin access gating. Config: deployment env. Verify: correct for prod. UNVERIFIED.
+- [ ] NEXT_PUBLIC_GTM_ID — Optional analytics tag. Verify: correct production container or unset. UNVERIFIED.
+- [ ] FREE_SHIPPING_THRESHOLD — Optional store-wide threshold in paise; supported in code but not in `.env.example`. Verify: intended production value or unset. UNVERIFIED.
+- [ ] ADMIN_PANEL_ENABLED / ADMIN_PANEL_PRODUCTION_ENABLED — Purpose: admin panel master/production switch. Config: deployment env. Verify: intended production value. UNVERIFIED.
 - [ ] NODE_ENV — Purpose: runtime mode. Config: deployment. Verify: production. UNVERIFIED.
 
 ## Scheduled paid-order reconciliation (Vercel Cron)

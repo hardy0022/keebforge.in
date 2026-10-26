@@ -9,8 +9,8 @@
 ## 1. Migration & Schema
 | Test | What it proves | Method | Evidence | Blocking | Status | Owner Phase |
 |---|---|---|---|---|---|---|
-| Migration replay (clean) | Current history builds a clean schema | Scratch DB (authorized) | 41 replayed on scratch (Phase 2B); migrations 42–44 applied and verified in production | YES | Existing (Phase 2B validated) | 5B/7 |
-| Migration status (prod) | Prod ledger consistent | Prod read-only (authorized) | 45 completed, 8 rolled_back, 0 unfinished/anomalous (verified 2026-10-11) | YES | Existing | 7/8 |
+| Migration replay (clean) | Current history builds a clean schema | Scratch DB (authorized) | 41 migrations replayed on scratch in Phase 2B. Migrations 42–48 were not part of that replay; they are applied to and verified in production. This matrix does not claim a full 48-migration scratch replay. | YES | Existing/Partial | 5B/7 |
+| Migration status (prod) | Prod ledger consistent | Prod read-only (authorized) | 58 ledger rows: 49 completed, 9 rolled_back, 0 unfinished, 0 anomalous; 48 repository migrations + 1 production-only (verified 2026-10-26) | YES | Existing | 7/8 |
 | Paid-notification outbox migration | Outbox schema present in prod | Prod read-only (authorized) | `OrderNotification` + `NotificationType`/`NotificationStatus` enums + unique `(orderId,type)` index + FK present | YES | New | 8 |
 | Migration history documented | Divergence understood | Doc review | migration-history.md complete | YES | New (5A) | 5A |
 

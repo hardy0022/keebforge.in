@@ -352,25 +352,6 @@ export function buildShopPaidConfirmation(
     shippingAddress: formatAddress(order.shippingAddress),
     orderUrl,
   };
-  const inlineHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#18181b">
-  <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden">
-    <div style="padding:20px 24px;border-bottom:1px solid #e4e4e7">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-weight:700;font-size:16px">KeebForge.in</div>
-        <div style="margin-left:auto;color:#71717a;font-size:14px">ORDER #${esc(order.orderNumber)}</div>
-      </div>
-    </div>
-    <div style="padding:24px">
-      <h1 style="margin:0 0 12px;font-size:20px">Thank you for your order!</h1>
-      <p style="margin:0 0 16px;color:#71717a">Your payment has been confirmed.</p>
-      ${itemsHtml}
-      ${totalsTable(totals)}
-      <p style="margin-top:20px"><a href="${orderUrl}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;text-decoration:none;border-radius:8px;font-weight:600">View your order</a></p>
-    </div>
-  </div>
-</body></html>`;
   return {
     to: order.customerEmail,
     subject: `Order ${order.orderNumber} — Payment Confirmed | KeebForge.in`,
@@ -435,22 +416,6 @@ export function buildModsPaidConfirmation(
     shippingAddress: address,
     orderUrl,
   };
-  const minline = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#18181b">
-  <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden">
-    <div style="padding:20px 24px;border-bottom:1px solid #e4e4e7">
-      <div style="font-weight:700;font-size:16px">KeebForge.in</div>
-      <div style="color:#71717a;font-size:14px">MODS ORDER #${esc(order.orderNumber)}</div>
-    </div>
-    <div style="padding:24px">
-      <h1 style="margin:0 0 12px;font-size:20px">Payment confirmed</h1>
-      ${configHtml}
-      ${servicesHtml}
-      <div style="margin-top:16px">${totalsTable([["Total paid", formatINR(amountPaid), true]])}</div>
-      <p style="margin-top:20px"><a href="${orderUrl}" style="display:inline-block;padding:12px 20px;background:#a3e635;color:#0a0a0a;text-decoration:none;border-radius:8px;font-weight:600">View your order</a></p>
-    </div>
-  </div>
-</body></html>`;
   return {
     to: order.customerEmail,
     subject: `Payment received — mods order ${order.orderNumber}`,

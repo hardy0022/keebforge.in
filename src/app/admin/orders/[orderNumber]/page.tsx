@@ -551,44 +551,44 @@ export default async function AdminOrderDetail({
                       <td>
                         {i.name}
                         <div>
-                          {(i as any).colorName ? (
+                          {i.colorName ? (
                             <div style={{ marginBottom: 6 }}>
                               <span style={{ fontWeight: 600 }}>Color:</span>{" "}
-                              {(i as any).colorName}
-                              {(i as any).colorPrice > 0 ? (
+                              {i.colorName}
+                              {(i.colorPrice ?? 0) > 0 ? (
                                 <>
                                   {" "}
-                                  (+{formatINR((i as any).colorPrice)})
+                                  (+{formatINR(i.colorPrice ?? 0)})
                                 </>
                               ) : null}
                             </div>
                           ) : null}
-                          {(i as any).secondaryColorName ? (
+                          {i.secondaryColorName ? (
                             <div style={{ marginBottom: 6 }}>
                               <span style={{ fontWeight: 600 }}>
-                                {(i as any).secondaryColorHeading || "Color"}:
+                                {i.secondaryColorHeading || "Color"}:
                               </span>{" "}
-                              {(i as any).secondaryColorName}
-                              {(i as any).secondaryColorPrice > 0 ? (
+                              {i.secondaryColorName}
+                              {(i.secondaryColorPrice ?? 0) > 0 ? (
                                 <>
                                   {" "}
                                   (+
                                   {formatINR(
-                                    (i as any).secondaryColorPrice,
+                                    i.secondaryColorPrice ?? 0,
                                   )}
                                   )
                                 </>
                               ) : null}
                             </div>
                           ) : null}
-                          {(i as any).addonSelected && (i as any).addonTitle ? (
+                          {i.addonSelected && i.addonTitle ? (
                             <div style={{ marginBottom: 6 }}>
                               <span style={{ fontWeight: 600 }}>Add-on:</span>{" "}
-                              {(i as any).addonTitle}
-                              {(i as any).addonPrice > 0 ? (
+                              {i.addonTitle}
+                              {(i.addonPrice ?? 0) > 0 ? (
                                 <>
                                   {" "}
-                                  (+{formatINR((i as any).addonPrice)})
+                                  (+{formatINR(i.addonPrice ?? 0)})
                                 </>
                               ) : (
                                 " (Free)"

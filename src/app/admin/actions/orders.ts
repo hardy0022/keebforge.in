@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/admin";
 import { syncTrackingCache } from "@/lib/orders/tracking";
 import {
+  canMarkPaymentReceived,
   derivePaymentStatus,
   settledAmount,
 } from "@/lib/payments/payment-status";
@@ -90,13 +91,25 @@ export async function updateOrderStatus(
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { status: true, orderNumber: true },
+    select: {
+      status: true,
+      orderNumber: true,
+      paymentStatus: true,
+      total: true,
+    },
   });
   if (!order) return { error: "Order not found." };
 
   // Idempotent replay: an identical status with no new note is a no-op, so a
   // double-click or retried request can't mint duplicate timeline entries.
   if (order.status === status && !note) return { ok: true };
+
+  if (status === "PAYMENT_RECEIVED" && !canMarkPaymentReceived(order)) {
+    return {
+      error:
+        "Payment Received needs a paid, priced order. Record or verify the payment first.",
+    };
+  }
 
   try {
     await prisma.$transaction([

@@ -109,7 +109,7 @@ const parsed = addSchema.safeParse({
   productId: formData.get("productId"),
   variantId: formData.get("variantId") || undefined,
   quantity: formData.get("quantity"),
-  optionIds: formData.get("optionIds"),
+  optionIds: formData.get("optionIds") || undefined,
   addonSelected: formData.get("addonSelected") || undefined,
   colorOptionId: formData.get("colorOptionId") || undefined,
   secondaryColorOptionId: formData.get("secondaryColorOptionId") || undefined,
@@ -210,13 +210,15 @@ if (check) return { error: check };
 // The add-on is valid only while the product still enables it and has a title.
 // Ignore a stale/crafted flag rather than persisting an unusable selection.
 const wantAddon = resolveProductAddon(product, addonSelected).selected;
+type ColorOption = (typeof product.colorOptions)[number];
+
 const baseColors = product.colorOptions.filter(
-  (c) => (c as any).group !== "SECONDARY",
+  (c) => c.group !== "SECONDARY",
 );
 const secondaryColors = product.colorOptions.filter(
-  (c) => (c as any).group === "SECONDARY",
+  (c) => c.group === "SECONDARY",
 );
-let selectedColor: any = null;
+let selectedColor: ColorOption | null = null;
 if (baseColors.length > 0) {
   if (!colorOptionId) {
     selectedColor = baseColors[0];
@@ -228,7 +230,7 @@ if (baseColors.length > 0) {
   return { error: "Color selection not available for this product." };
 }
 
-let selectedSecondaryColor: any = null;
+let selectedSecondaryColor: ColorOption | null = null;
 if (secondaryColors.length > 0) {
   if (!secondaryColorOptionId) {
     selectedSecondaryColor = secondaryColors[0];
@@ -262,7 +264,13 @@ const existing = madeToOrder
         key === null
           ? !cfg || cfg.kind !== "options"
           : cfg?.kind === "options" && configKey(cfg.optionIds) === key;
-      return sameCfg && (c.addonSelected === wantAddon) && ((c as any).colorOptionId ?? null) === (selectedColor?.id ?? null) && ((c as any).secondaryColorOptionId ?? null) === (selectedSecondaryColor?.id ?? null);
+      return (
+        sameCfg &&
+        c.addonSelected === wantAddon &&
+        (c.colorOptionId ?? null) === (selectedColor?.id ?? null) &&
+        (c.secondaryColorOptionId ?? null) ===
+          (selectedSecondaryColor?.id ?? null)
+      );
     });
 const nextQty = existing ? existing.quantity + qty : qty;
 // Re-validate combined quantity against live stock (same item may already be in cart).

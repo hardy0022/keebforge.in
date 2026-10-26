@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, toAbsUrl } from "@/lib/seo";
 import { cldUrl, isDraftImage } from "@/lib/images/cloudinary-url";
 import { TAG, TTL } from "@/lib/caching/cache";
 
@@ -68,7 +68,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: p.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.8,
-      images: image ? [cldUrl(image.url, 800)] : undefined,
+      images: image ? [toAbsUrl(cldUrl(image.url, 800))] : undefined,
     };
   });
 

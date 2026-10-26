@@ -114,6 +114,26 @@ export function derivePaymentStatus(
 }
 
 /**
+ * Whether an admin may label an order `PAYMENT_RECEIVED`.
+ *
+ * The order status and payment status are two views of the same fact. QA found
+ * an order marked `PAYMENT_RECEIVED` while `paymentStatus` was `PENDING`, its
+ * total was zero, and it had no payment row — a state that tells the customer
+ * their money arrived when none did. A zero-total order is not an exception:
+ * the schema has no free-order marker, and `derivePaymentStatus` leaves it
+ * PENDING, so there is no positive evidence that it was paid.
+ *
+ * This only guards the admin status editor. Razorpay's captured payments remain
+ * the authority for real settlements; choosing a status must never create one.
+ */
+export function canMarkPaymentReceived(order: {
+  paymentStatus: string;
+  total: number;
+}): boolean {
+  return order.paymentStatus === "PAID" && order.total > 0;
+}
+
+/**
  * The order status to write when a capture lands.
  *
  * Only advances an order that is still in its payment stage. The webhook used to
@@ -152,7 +172,7 @@ export function orderStatusAfterCapture(
 export type PaymentPrompt =
   | { kind: "paid"; label: "Paid ✓" }
   | { kind: "refunded"; label: "Refunded" }
-  | { kind: "awaiting-pricing"; label: "Payment Pending" }
+  | { kind: "awaiting-pricing"; label: "Awaiting Pricing" }
   | { kind: "settled"; label: "Paid ✓" }
   | { kind: "payable"; amountDue: number };
 
@@ -168,7 +188,7 @@ export function paymentPromptFor(args: {
   if (args.paymentStatus === "PAID") return { kind: "paid", label: "Paid ✓" };
   if (args.paymentStatus === "REFUNDED") return { kind: "refunded", label: "Refunded" };
   // No price yet — there is nothing to charge, so nothing may be offered.
-  if (args.total <= 0) return { kind: "awaiting-pricing", label: "Payment Pending" };
+  if (args.total <= 0) return { kind: "awaiting-pricing", label: "Awaiting Pricing" };
   // Settled by the payment rows even though the order status has not caught up.
   if (args.outstanding <= 0) return { kind: "settled", label: "Paid ✓" };
   return { kind: "payable", amountDue: args.outstanding };

@@ -4622,7 +4622,7 @@ a.shop-pager-num:hover {
 
 .product-layout {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
@@ -4637,12 +4637,14 @@ a.shop-pager-num:hover {
 .product-gallery-column {
   position: sticky;
   top: calc(var(--nav-h) + 24px);
+  min-width: 0;
 }
 
 .product-info-column {
   display: flex;
   flex-direction: column;
   gap: 26px;
+  min-width: 0;
 }
 
 .product-meta {
@@ -5853,7 +5855,11 @@ a.shop-pager-num:hover {
   display: grid;
   gap: 16px;
 }
+.admin-grid > * {
+  min-width: 0;
+}
 .admin-card {
+  min-width: 0;
   background: linear-gradient(180deg, var(--surf), transparent), var(--bg2);
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
@@ -6283,10 +6289,10 @@ a.shop-pager-num:hover {
 
 @media (max-width: 900px) {
   .admin-grid.cols-2 {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
   .admin-grid.cols-3 {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }
 

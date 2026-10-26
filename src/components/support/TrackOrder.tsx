@@ -393,6 +393,7 @@ function TrackResult({
   const [timelineOpen, setTimelineOpen] = useState(false);
   const phase = orderPhaseFor(data.status as OrderStatus);
   const shipment = data.shipment;
+  const isDelhivery = shipment?.courier?.trim().toLowerCase() === "delhivery";
   const firstRepair = data.repairs[0];
   const hasLines = data.items.length > 0 || data.services.length > 0;
   const hasShipment = !!(
@@ -606,7 +607,7 @@ function TrackResult({
                 </div>
               )}
 
-              {shipment!.status && !shipment!.trackingNumber && (
+              {shipment!.status && (!shipment!.trackingNumber || !isDelhivery) && (
                 <div className="track-ship-field">
                   <span className="os-section-title">Status</span>
                   <p className="track-info-primary">
@@ -629,7 +630,7 @@ function TrackResult({
                       {shipment!.trackingUrl}
                     </p>
                   )}
-                  {shipment!.trackingNumber ? (
+                  {isDelhivery && shipment!.trackingNumber ? (
                     <Link
                       className="track-ship-link"
                       href={`https://www.delhivery.com/track-v2/package/${shipment!.trackingNumber}`}
@@ -662,7 +663,7 @@ function TrackResult({
                 </div>
               )}
 
-              {shipment!.trackingNumber && (
+              {isDelhivery && shipment!.trackingNumber && (
                 <LiveTracking waybill={shipment!.trackingNumber} />
               )}
             </div>

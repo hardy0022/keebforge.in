@@ -179,12 +179,12 @@ export default async function ProductPage({
             )}
 
             <ProductClient
-              product={product as any}
+              product={product}
               basePrice={configurable ? product.price : minPrice}
               baseAvailable={available}
               configurable={configurable}
               custom={custom}
-              optionGroups={optionGroups as any[]}
+              optionGroups={optionGroups}
               brand={
                 product.brand
                   ? { name: product.brand.name, slug: product.brand.slug }

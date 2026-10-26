@@ -45,7 +45,7 @@ function CardSkeleton() {
   return (
     <div
       className="admin-grid cols-2"
-      style={{ gridTemplateColumns: "2fr 1fr" }}
+      style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)" }}
     >
       <div className="admin-card">
         <h3>—</h3>
@@ -115,7 +115,7 @@ async function RevenueAndPipeline({ rangeDays }: { rangeDays: number }) {
   return (
     <div
       className="admin-grid cols-2"
-      style={{ gridTemplateColumns: "2fr 1fr" }}
+      style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)" }}
     >
       <div className="admin-card">
         <div
@@ -221,7 +221,7 @@ async function RecentOrdersAndActivity() {
   return (
     <div
       className="admin-grid cols-2"
-      style={{ gridTemplateColumns: "2fr 1fr" }}
+      style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)" }}
     >
       <div className="admin-card">
         <div

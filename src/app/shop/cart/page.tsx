@@ -33,8 +33,8 @@ export default async function ShopCartPage() {
     const baseUnitPrice = resolved?.ok
       ? resolved.unitPrice
       : (item.variant?.price ?? item.product.price);
-    const color = (item as any).colorOption ?? null;
-    const secondaryColor = (item as any).secondaryColorOption ?? null;
+    const color = (item as { colorOption?: { id: string; name: string; colorCode: string | null; priceAdjustment: number } | null }).colorOption ?? null;
+    const secondaryColor = (item as { secondaryColorOption?: { id: string; name: string; colorCode: string | null; priceAdjustment: number } | null }).secondaryColorOption ?? null;
     const colorAdd =
       (color?.priceAdjustment ?? 0) +
       (secondaryColor?.priceAdjustment ?? 0);

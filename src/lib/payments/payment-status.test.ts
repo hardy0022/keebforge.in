@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  canMarkPaymentReceived,
   capturedAmount,
   derivePaymentStatus,
   orderStatusAfterCapture,
@@ -218,6 +219,45 @@ pass("orderStatusAfterCapture advances an order that is still awaiting payment")
   );
   assert.equal(orderStatusAfterCapture("WORK_STARTED", false), "WORK_STARTED");
   pass("orderStatusAfterCapture leaves the status alone for a partial capture");
+}
+
+// ── canMarkPaymentReceived ──────────────────────────────────────────────────
+
+{
+  // The defect QA found on KFPDSRHE: status PAYMENT_RECEIVED, paymentStatus
+  // PENDING, total ₹0, no payment row. The admin status editor let that
+  // contradiction be written, telling the customer money had arrived.
+  assert.equal(
+    canMarkPaymentReceived({ paymentStatus: "PENDING", total: 0 }),
+    false,
+    "zero-total PENDING must not become Payment Received",
+  );
+  assert.equal(
+    canMarkPaymentReceived({ paymentStatus: "PENDING", total: 100_000 }),
+    false,
+    "an unpaid priced order must not become Payment Received",
+  );
+  assert.equal(
+    canMarkPaymentReceived({ paymentStatus: "PARTIALLY_PAID", total: 100_000 }),
+    false,
+    "a partly paid order must not be labelled fully received",
+  );
+  assert.equal(
+    canMarkPaymentReceived({ paymentStatus: "REFUNDED", total: 100_000 }),
+    false,
+    "a refunded order must not become Payment Received again",
+  );
+  assert.equal(
+    canMarkPaymentReceived({ paymentStatus: "PAID", total: 0 }),
+    false,
+    "no free-order rule exists, so a zero total is not treated as paid",
+  );
+  assert.equal(
+    canMarkPaymentReceived({ paymentStatus: "PAID", total: 100_000 }),
+    true,
+    "a paid, priced order may be marked Payment Received",
+  );
+  pass("Payment Received requires a paid, positively priced order");
 }
 
 // ── paymentPromptFor (F8) ───────────────────────────────────────────────────

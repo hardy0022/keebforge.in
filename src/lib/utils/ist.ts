@@ -40,11 +40,9 @@ export function endOfTodayIST(): Date {
 
 /** UTC instant for the start of the IST day `offsetDays` before today. */
 export function daysAgoISTDayStart(offsetDays: number): Date {
-  const base = new Date();
-  const todayKey = istDayKey(base);
-  const d = new Date(`${todayKey}T00:00:00${OFFSET}`);
+  const d = startOfTodayIST();
   d.setUTCDate(d.getUTCDate() - offsetDays);
-  return istDayStart(d.toISOString().slice(0, 10));
+  return d;
 }
 
 /** Format a UTC Date for display as IST (throws nothing; returns "" for null). */

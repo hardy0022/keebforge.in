@@ -61,7 +61,7 @@ export default async function EditProductPage({
           options: g.options.map((o) => ({
             id: o.id,
             name: o.name,
-            addon: o.priceAddon / 100,
+            addon: String(o.priceAddon / 100),
           })),
         }))}
         categories={categories}
@@ -69,10 +69,8 @@ export default async function EditProductPage({
       />
       <ProductColorOptions
         productId={product.id}
-        colorOptions={(product as any).colorOptions ?? []}
-        secondaryColorHeading={
-          (product as any).secondaryColorHeading ?? null
-        }
+        colorOptions={product.colorOptions}
+        secondaryColorHeading={product.secondaryColorHeading}
       />
     </div>
   );

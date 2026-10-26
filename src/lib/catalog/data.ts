@@ -1,5 +1,4 @@
 import "server-only";
-import { cache } from "react";
 import type { Prisma, ShopSectionType } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { TAG, TTL, defineCached } from "@/lib/caching/cache";
@@ -94,7 +93,6 @@ export type { ShopSort };
 export type ShopParams = {
   categorySlug?: string;
   productType?: ShopSectionType;
-  search?: string;
   brandSlug?: string;
   minPrice?: number; // paise
   maxPrice?: number; // paise
@@ -148,82 +146,71 @@ export type ShopProduct = Prisma.ProductGetPayload<{
   select: typeof PRODUCT_LIST;
 }>;
 
-/** Deduped raw query (React.cache only) — used for search, whose unbounded
- *  query strings must not grow the persistent cache. */
-const shopProducts = cache(async (params: ShopParams) => {
-  const {
-    categorySlug,
-    productType,
-    search,
-    brandSlug,
-    minPrice,
-    maxPrice,
-    inStock,
-    sort = "newest",
-    page = 1,
-    pageSize = 24,
-  } = params;
-
-  // ponytail: no product.active filter — shop shows all products incl. out-of-stock;
-  // re-add if drafts/unlisted products ever need hiding from the storefront
-  const where: Prisma.ProductWhereInput = {
-    category: { active: true, ...(categorySlug ? { slug: categorySlug } : {}) },
-    ...(productType ? { productType } : {}),
-    ...(search
-      ? {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { description: { contains: search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-    ...(brandSlug ? { brand: { slug: brandSlug } } : {}),
-    ...(minPrice != null || maxPrice != null
-      ? { price: { gte: minPrice ?? undefined, lte: maxPrice ?? undefined } }
-      : {}),
-    // ponytail: availability uses stock > 0 on product OR any active variant;
-    // reservations (stock - reserved) are enforced at add-to-cart/checkout.
-    ...(inStock
-      ? {
-          OR: [
-            { stock: { gt: 0 } },
-            { variants: { some: { active: true, stock: { gt: 0 } } } },
-          ],
-        }
-      : {}),
-  };
-
-  const orderBy: Prisma.ProductOrderByWithRelationInput[] =
-    sort === "price-asc"
-      ? [{ price: "asc" }]
-      : sort === "price-desc"
-        ? [{ price: "desc" }]
-        : sort === "name-asc"
-          ? [{ name: "asc" }]
-          : sort === "name-desc"
-            ? [{ name: "desc" }]
-            : [{ createdAt: "desc" }];
-
-  return Promise.all([
-    prisma.product.count({ where }),
-    prisma.product.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: PRODUCT_LIST,
-    }),
-  ]).then(([total, items]) => ({
-    items,
-    total,
-    page,
-    pages: Math.max(1, Math.ceil(total / pageSize)),
-  }));
-});
-
-/** Cross-request cached listing (all filter variants except search). */
+/** Cross-request cached listing, invalidated by product / category admin
+ *  mutations. */
 const cachedShopProducts = defineCached(
-  (params: ShopParams) => shopProducts(params),
+  async (params: ShopParams) => {
+    const {
+      categorySlug,
+      productType,
+      brandSlug,
+      minPrice,
+      maxPrice,
+      inStock,
+      sort = "newest",
+      page = 1,
+      pageSize = 24,
+    } = params;
+
+    // Drafts and archived products stay out of the storefront. Out-of-stock
+    // products remain visible when active; availability is filtered separately.
+    const where: Prisma.ProductWhereInput = {
+      active: true,
+      category: { active: true, ...(categorySlug ? { slug: categorySlug } : {}) },
+      ...(productType ? { productType } : {}),
+      ...(brandSlug ? { brand: { slug: brandSlug } } : {}),
+      ...(minPrice != null || maxPrice != null
+        ? { price: { gte: minPrice ?? undefined, lte: maxPrice ?? undefined } }
+        : {}),
+      // ponytail: availability uses stock > 0 on product OR any active variant;
+      // reservations (stock - reserved) are enforced at add-to-cart/checkout.
+      ...(inStock
+        ? {
+            OR: [
+              { stock: { gt: 0 } },
+              { variants: { some: { active: true, stock: { gt: 0 } } } },
+            ],
+          }
+        : {}),
+    };
+
+    const orderBy: Prisma.ProductOrderByWithRelationInput[] =
+      sort === "price-asc"
+        ? [{ price: "asc" }]
+        : sort === "price-desc"
+          ? [{ price: "desc" }]
+          : sort === "name-asc"
+            ? [{ name: "asc" }]
+            : sort === "name-desc"
+              ? [{ name: "desc" }]
+              : [{ createdAt: "desc" }];
+
+    return Promise.all([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: PRODUCT_LIST,
+      }),
+    ]).then(([total, items]) => ({
+      items,
+      total,
+      page,
+      pages: Math.max(1, Math.ceil(total / pageSize)),
+    }));
+  },
   {
     keys: ["shop-products"],
     tags: [TAG.products, TAG.categories],
@@ -231,11 +218,10 @@ const cachedShopProducts = defineCached(
   },
 );
 
-/** Search hits the raw query (unbounded user strings must not fill the data
- *  cache); every other listing shape is cached and invalidated by product /
- *  category admin mutations. */
+/** Every listing shape is cached and invalidated by product / category admin
+ *  mutations. */
 export function getShopProducts(params: ShopParams) {
-  const key = {
+  return cachedShopProducts({
     categorySlug: params.categorySlug,
     productType: params.productType,
     brandSlug: params.brandSlug,
@@ -245,9 +231,7 @@ export function getShopProducts(params: ShopParams) {
     sort: params.sort ?? "newest",
     page: params.page ?? 1,
     pageSize: params.pageSize ?? 24,
-  };
-  const q = params.search?.trim();
-  return q ? shopProducts({ ...key, search: q }) : cachedShopProducts(key);
+  });
 }
 
 export const getProductBySlug = defineCached(

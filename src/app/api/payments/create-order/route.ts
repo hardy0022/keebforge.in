@@ -400,16 +400,16 @@ export async function POST(req: NextRequest) {
 
       // Browser input is only the boolean selection; the title/description/
       // price snapshot is always resolved from the live product row.
-      const addon = resolveProductAddon(product, !!(item as any).addonSelected);
+      const addon = resolveProductAddon(product, item.addonSelected);
       const addonPriceSnapshot = addon.price;
-      const colorOptions: any[] = (product as any).colorOptions ?? [];
+      const colorOptions = product.colorOptions;
       const baseColors = colorOptions.filter(
-        (c: any) => (c.group ?? "BASE") !== "SECONDARY",
+        (c) => (c.group ?? "BASE") !== "SECONDARY",
       );
       const secondaryColors = colorOptions.filter(
-        (c: any) => c.group === "SECONDARY",
+        (c) => c.group === "SECONDARY",
       );
-      let colorOptionIdSnap: string | null = (item as any).colorOptionId ?? null;
+      let colorOptionIdSnap: string | null = item.colorOptionId ?? null;
       let colorNameSnap: string | null = null;
       let colorCodeSnap: string | null = null;
       let colorPriceSnap: number | null = null;
@@ -417,7 +417,7 @@ export async function POST(req: NextRequest) {
         if (!colorOptionIdSnap) {
           colorOptionIdSnap = baseColors[0].id;
         }
-        const co = baseColors.find((c: any) => c.id === colorOptionIdSnap);
+        const co = baseColors.find((c) => c.id === colorOptionIdSnap);
         if (!co) {
           return NextResponse.json({ error: "Invalid color selection." }, { status: 400 });
         }
@@ -431,7 +431,7 @@ export async function POST(req: NextRequest) {
       }
 
       let secondaryColorOptionIdSnap: string | null =
-        (item as any).secondaryColorOptionId ?? null;
+        item.secondaryColorOptionId ?? null;
       let secondaryColorNameSnap: string | null = null;
       let secondaryColorCodeSnap: string | null = null;
       let secondaryColorPriceSnap: number | null = null;
@@ -441,7 +441,7 @@ export async function POST(req: NextRequest) {
           secondaryColorOptionIdSnap = secondaryColors[0].id;
         }
         const co = secondaryColors.find(
-          (c: any) => c.id === secondaryColorOptionIdSnap,
+          (c) => c.id === secondaryColorOptionIdSnap,
         );
         if (!co) {
           return NextResponse.json(
@@ -454,7 +454,7 @@ export async function POST(req: NextRequest) {
         secondaryColorCodeSnap = co.colorCode;
         secondaryColorPriceSnap = co.priceAdjustment ?? 0;
         secondaryColorHeadingSnap =
-          (product as any).secondaryColorHeading?.trim() || "Color";
+          product.secondaryColorHeading?.trim() || "Color";
         unitPrice = unitPrice + (secondaryColorPriceSnap ?? 0);
       } else if (secondaryColorOptionIdSnap) {
         return NextResponse.json(

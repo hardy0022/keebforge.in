@@ -200,7 +200,8 @@ export default async function OrderSuccessPage({
   const payment = order.payments[0];
   const paid = order.paymentStatus === "PAID";
   const isService = order.type === "SERVICE";
-  const quoteRequest = isService && !paid && order.subtotal === 0;
+  const isRepair = order.type === "REPAIR";
+  const quoteRequest = (isService || isRepair) && !paid && order.subtotal === 0;
 
   // Quote flags come from the creation snapshot so zero-priced rows stay honest.
   const summaryServices = Array.isArray(
@@ -346,9 +347,9 @@ export default async function OrderSuccessPage({
                 <div className="os-card-head">
                   <h2 className="os-card-title">Order Summary</h2>
                 </div>
-                {isService && deviceRowsOut.length > 0 && (
+                {(isService || isRepair) && deviceRowsOut.length > 0 && (
                   <div className="os-device">
-                    <h3 className="os-device-title">Device</h3>
+                    <h3 className="os-device-title">Device details</h3>
                     <dl className="os-device-rows">
                       {deviceRowsOut.map(([k, v]) => (
                         <div key={k} className="os-device-row">
@@ -400,26 +401,15 @@ export default async function OrderSuccessPage({
                       vi?.kind === "options" && Array.isArray(vi.selections)
                         ? vi.selections
                         : [];
-                    const addonSelected = !!(item as any).addonSelected;
-                    const addonTitle = (item as any).addonTitle as
-                      | string
-                      | null;
-                    const addonPrice =
-                      addonSelected && typeof (item as any).addonPrice === "number"
-                        ? (item as any).addonPrice
-                        : 0;
+                    const addonSelected = item.addonSelected;
+                    const addonTitle = item.addonTitle;
+                    const addonPrice = addonSelected ? (item.addonPrice ?? 0) : 0;
                     const selectionAddons = optionSelections.reduce(
                       (sum, opt) => sum + (opt.addon ?? 0),
                       0,
                     );
-                    const colorPrice =
-                      typeof (item as any).colorPrice === "number"
-                        ? (item as any).colorPrice
-                        : 0;
-                    const secondaryColorPrice =
-                      typeof (item as any).secondaryColorPrice === "number"
-                        ? (item as any).secondaryColorPrice
-                        : 0;
+                    const colorPrice = item.colorPrice ?? 0;
+                    const secondaryColorPrice = item.secondaryColorPrice ?? 0;
                     const baseUnitPrice = Math.max(
                       0,
                       item.unitPrice -
@@ -466,22 +456,22 @@ export default async function OrderSuccessPage({
                                   : " Free"}
                               </p>
                             ) : null}
-                            {(item as any).colorName && (
+                            {item.colorName && (
                               <p className="os-line-meta">
-                                Color: {(item as any).colorName}
-                                {(item as any).colorPrice > 0
-                                  ? ` · +${formatINR((item as any).colorPrice)}`
+                                Color: {item.colorName}
+                                {(item.colorPrice ?? 0) > 0
+                                  ? ` · +${formatINR(item.colorPrice ?? 0)}`
                                   : ""}
                               </p>
                             )}
-                            {(item as any).secondaryColorName && (
+                            {item.secondaryColorName && (
                               <p className="os-line-meta">
-                                {(item as any).secondaryColorHeading ||
+                                {item.secondaryColorHeading ||
                                   "Color"}
-                                : {(item as any).secondaryColorName}
-                                {(item as any).secondaryColorPrice > 0
+                                : {item.secondaryColorName}
+                                {(item.secondaryColorPrice ?? 0) > 0
                                   ? ` · +${formatINR(
-                                      (item as any).secondaryColorPrice,
+                                      item.secondaryColorPrice ?? 0,
                                     )}`
                                   : ""}
                               </p>

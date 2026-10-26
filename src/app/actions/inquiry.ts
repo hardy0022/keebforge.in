@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { Resend, type CreateEmailOptions } from "resend";
 import { z } from "zod";
 import { cloudinaryConfigured, uploadBuffer } from "@/lib/images/cloudinary";
 import {
@@ -189,13 +189,13 @@ export async function sendInquiry(
     const from = process.env.EMAIL_FROM ?? "KeebForge <onboarding@resend.dev>";
     let sendResult;
     if (templateId) {
-      const tplSend: any = {
+      const tplSend: CreateEmailOptions = {
         from,
         to: [plan.to],
         subject: payload.subject,
         template: { id: templateId, variables: payload.variables },
+        ...(email && /@/.test(email) ? { replyTo: email } : {}),
       };
-      if (email && /@/.test(email)) tplSend.replyTo = email;
       sendResult = await resend.emails.send(tplSend);
     } else {
       console.warn("Resend (inquiry): template not configured; falling back to inline email");
@@ -206,10 +206,11 @@ export async function sendInquiry(
               .map((u) => `<p><a href="${esc(u.url)}">${esc(u.url)}</a></p>`)
               .join("")
           : "";
-      const inlineSend: any = {
+      const inlineSend: CreateEmailOptions = {
         from,
         to: [plan.to],
         subject: `Repair Inquiry — ${deviceModel || "Device"} — ${name}`,
+        ...(email && /@/.test(email) ? { replyTo: email } : {}),
         html: `
           <h2>Repair Inquiry — KeebForge.in</h2>
           <table cellpadding="6" style="font-family:sans-serif;font-size:14px;color:#1a1a1a">
@@ -223,7 +224,6 @@ export async function sendInquiry(
           <p style="color:#888">Reply to this inquiry by clicking Reply — it goes straight back to the customer.</p>
         `,
       };
-      if (email && /@/.test(email)) inlineSend.replyTo = email;
       sendResult = await resend.emails.send(inlineSend);
     }
     const { error } = sendResult;

@@ -18,6 +18,7 @@ export function ProductGallery({
   colorImage,
 }: ProductGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [lastColorUrl, setLastColorUrl] = useState(colorImage?.url);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // The initial (LCP) image renders at full opacity with no transition so it
   // can paint immediately; gallery transitions only begin after the customer
@@ -29,10 +30,11 @@ export function ProductGallery({
     : variantImages?.length
       ? variantImages
       : images;
-  const currentImage = allImages[selectedIndex] ?? allImages[0];
-  useEffect(() => {
+  if (colorImage?.url !== lastColorUrl) {
+    setLastColorUrl(colorImage?.url);
     setSelectedIndex(0);
-  }, [colorImage?.url]);
+  }
+  const currentImage = allImages[selectedIndex] ?? allImages[0];
 
   const select = useCallback(
     (i: number) => {
