@@ -4,6 +4,10 @@ KeebForge is a mechanical keyboard store and workshop based in Jammu, India.
 The platform combines the storefront, custom builds, modifications, repairs,
 checkout, payments, shipping, and order tracking in one Next.js application.
 
+This file is the project entry point and documentation index. Start with
+[the code map](./code-map.md) for the current file, route, data, and environment
+map.
+
 ## What it includes
 
 - Product catalog, categories, clearance/custom sections, product options,
@@ -33,11 +37,12 @@ npm run dev
 
 Fill the required values in `.env.local`. The tracked template contains names
 and placeholders only; the complete environment map is in
-[docs/code-map.md §24](docs/code-map.md#24-environment-variables). Never commit
+[the code map §24](./code-map.md#24-environment-variables). Never commit
 `.env.local` or print secret values.
 
-Use a local database for development. Production migrations are operator-only,
-and the normal deploy script refuses the production path on `main`.
+Use a local database for development. Production migrations are operator-only;
+the normal deploy script refuses to run. Validate migrations against the
+disposable scratch database documented in [`production/`](./production/).
 
 ## Common commands
 
@@ -57,34 +62,58 @@ and the normal deploy script refuses the production path on `main`.
 | `npm run check:scratch-db` | Scratch DB safety guard |
 
 Individual checks and E2E commands are listed in `package.json`; the grouped map
-is in [docs/code-map.md §22](docs/code-map.md#22-tests).
+is in [the code map §22](./code-map.md#22-tests).
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
-- [Code map](docs/code-map.md) — routes, APIs, server actions, libraries,
-  Prisma models, scripts, environment variables, and business rules
-- [Production configuration checklist](docs/production/configuration-checklist.md)
-- [Migration history](docs/production/migration-history.md)
-- [Launch test matrix](docs/production/launch-test-matrix.md)
-- [Resend email templates](docs/resend-templates.md)
+- [Code map](./code-map.md) — authoritative orientation for the current tree:
+  routes, APIs, server actions, libraries, Prisma models, scripts, environment
+  variables, and business rules.
+- [Authorization and RLS snapshot](./architecture/authorization-and-rls.md) —
+  enforcement model and open runtime-role verification.
+- [Production configuration checklist](./production/configuration-checklist.md) —
+  read-only production env verification and safety switches.
+- [Migration history](./production/migration-history.md) — authoritative
+  production ledger, checksums, and replay limits.
+- [Launch test matrix](./production/launch-test-matrix.md) — blocking launch
+  verification status.
+- [Resend templates](./resend-templates.md) — template IDs, variables, and
+  operational checks.
+
+Never apply migrations, alter production settings, or print secret values while
+using these documents. Production migration execution is an operator action; the
+normal `main` deploy path refuses it.
 
 ## Architecture
 
 The runtime architecture viewer is generated from the architecture spec and is
 a snapshot, not a live map:
 
+- [Runtime architecture spec](./architecture/keebforge.runtime.json) — canonical
+  generated spec, pinned to revision `4f205ddc3048e13057035b362fcd71110be816cd`.
+- [Runtime architecture viewer](./architecture/keebforge.runtime.html) —
+  generated HTML for the same snapshot (mirrored to
+  [`public/architecture.html`](../public/architecture.html)).
+
 [![KeebForge platform architecture](https://keebforge.in/architecture-share-card.png)](https://keebforge.in/architecture.html)
 
 Regenerate deliberately with `npm run architecture:map` after a tree change is
-committed. For the current code map, use [docs/code-map.md](docs/code-map.md).
+committed. Visual-check screenshots and machine-specific receipts are generated
+locally on demand and are intentionally ignored (`.gitignore`), not stored in the
+repository.
 
 ## Deployment
 
 The application deploys on Vercel (`bom1`) with a PostgreSQL/Supabase database.
 Production environment variables and migration verification are documented in
-`docs/production/`. Preview deployments fail closed for database access,
-checkout, admin, and cron unless explicitly isolated and enabled.
+[`production/`](./production/). Preview deployments fail closed for database
+access, checkout, admin, and cron unless explicitly isolated and enabled.
 
 The paid-notification reconciliation cron runs daily at `03:00` UTC and requires
 `CRON_SECRET` plus `PAID_NOTIFICATION_RECONCILE_SINCE`.
+
+## Maintenance
+
+- Code map: [docs/code-map.md](./code-map.md)
+- Architecture regeneration and generated evidence: [Architecture](#architecture)
+- Deployment and environment facts: [Code map §24–25](./code-map.md#24-environment-variables)

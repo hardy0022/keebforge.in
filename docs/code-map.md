@@ -1,6 +1,6 @@
 # KeebForge Code Map
 
-Authoritative orientation for the current repository. Last reviewed: **2026-10-26**.
+Authoritative orientation for the current repository. Last reviewed: **2026-10-27**.
 
 Use this document to find where a feature lives, what depends on it, and what
 must not be changed casually. For deployment verification and migration history,
@@ -22,8 +22,9 @@ keyboards, peripherals, custom builds, modifications, and repairs.
   route handlers, Prisma/PostgreSQL, Better Auth, Vercel Cron.
 
 Current baseline: Next.js `16.3.1`, React `19.2.8`, Prisma `6.19.x`, 43 Prisma
-models, 23 enums, 48 repository migrations, 23 API route files, 65 page routes,
-and 35 `src/lib` test files.
+models, 23 enums, 48 repository migrations, 65 page routes, 25 route handlers
+(23 under `src/app/api` plus the admin CSV export and the reset-password relay),
+and 37 test files (35 in `src/lib`, 2 in `scripts`).
 
 ## 2. Repository Structure
 
@@ -34,22 +35,149 @@ and 35 `src/lib` test files.
 ├── public/                Served static assets and generated architecture page
 ├── scripts/               Architecture generator, guarded DB tooling, E2E harnesses, email check
 ├── src/
-│   ├── app/               Pages, layouts, API route handlers, server actions
+│   ├── app/               Pages, layouts, globals.css, API route handlers, server actions
 │   ├── components/        Client/server UI grouped by domain
 │   ├── lib/               Business logic, integrations, guards, pure helpers, tests
-│   ├── styles/            Global CSS
 │   └── proxy.ts           Next.js request proxy: admin kill switch, redirects, maintenance
 ├── .env.example           Tracked environment template (names, no real secrets)
 ├── .env.e2e.local.example Scratch DB template (names, loopback-only example values)
 ├── next.config.ts         Redirects, image loader, body limits, headers, tracing excludes
 ├── package.json           Scripts and dependency versions
-├── vercel.json            Region `bom1` + paid-notification reconciliation cron
-└── README.md              Project entry point
+└── vercel.json            Region `bom1` + paid-notification reconciliation cron
 ```
 
 Ignored local state includes `.env*` (except the templates), `.next/`, `node_modules/`,
-coverage, `.vercel/`, `deploy-checklist.md`, `opencode.json`, `.opencode/`, and
-archived audit copies under `docs/MD-FILES/`.
+coverage, `.vercel/`, `deploy-checklist.md`, `opencode.json`, `.opencode/`,
+generated architecture visual-check evidence, and archived audit copies under
+`docs/MD-FILES/`.
+
+### 2.1 Top-level configuration
+
+| Path | Purpose |
+|---|---|
+| `package.json` | Dependency versions and every npm check/E2E command |
+| `package-lock.json` | Locked dependency tree; regenerate with npm, never hand-edit |
+| `next.config.ts` | Redirects, custom Cloudinary image loader, server-action/proxy body limits, CORS headers, Prisma tracing excludes |
+| `tsconfig.json` | TypeScript settings and the `@/*` path alias |
+| `eslint.config.mjs` | ESLint flat config (Next.js rules) |
+| `postcss.config.mjs` | Tailwind CSS 4 PostCSS plugin |
+| `components.json` | shadcn/ui generator configuration |
+| `vercel.json` | Region `bom1` and the daily paid-notification reconciliation cron |
+| `.env.example` | Tracked environment template: names, placeholders, and safety comments only |
+| `.env.e2e.local.example` | Loopback-only scratch database template for guarded E2E commands |
+| `.gitignore` | Excludes secrets, build output, local tooling, and generated visual-check evidence |
+| `.vercelignore` | Prevents local secrets/state from being uploaded by `vercel deploy` |
+
+### 2.2 `src/app`
+
+Route tables are in §4. This table maps the supporting files and route groups.
+
+| Path | Responsibility |
+|---|---|
+| `layout.tsx` | Root metadata/viewport, fonts, analytics, organization/website JSON-LD, site chrome |
+| `page.tsx` | Home page composition and homepage metadata |
+| `globals.css` | Tailwind entry, design tokens, global styles and animations |
+| `not-found.tsx` | Global 404 |
+| `robots.ts`, `sitemap.ts` | Crawler rules and the database-backed sitemap |
+| `(public)/*` | About, contact, FAQ, privacy, returns, shipping information, terms |
+| `(auth)/*` | Login, register, forgot password, OAuth callback/error, auth layout |
+| `account/*` | Account layout, profile, orders, settings, newsletter action |
+| `shop/*` | Main shop, all products, clearance, custom, category, cart, checkout, loading/error states |
+| `product/[slug]/*` | Product detail, metadata, client configurator, product error boundary |
+| `checkout/CheckoutClient.tsx` | Shared product/service checkout implementation used by the shop and mods wrappers |
+| `mods/*` | Mods catalog, mods checkout wrapper, client, loading state |
+| `workshop/*` | Repair intake page and loading state |
+| `work/*` | Portfolio list and project detail |
+| `write-review/*` | Review chooser, composer, and edit flows |
+| `order/success/[orderNumber]/*` | Capability-protected order success and payment-exchange pages |
+| `reset-password/*` | Reset form page and the `[token]` relay to Better Auth |
+| `track-order/page.tsx` | Public order/shipment tracking lookup |
+| `maintenance/*`, `unauthorized/page.tsx` | Maintenance landing and access-denied state |
+| `actions/*` | Storefront server actions; exported actions are listed in §4.5 |
+| `admin/*` | Admin layout, pages, managers, CSV export, and privileged actions |
+| `api/*` | JSON/API route handlers; see §4.4 |
+
+### 2.3 `src/components`
+
+Trivial presentational primitives are grouped rather than documented one by one.
+
+| Group | Key files and responsibility |
+|---|---|
+| `account/` | `AccountLayout`, `AddressBook`, `OrderCard`, `SettingsPanel`, `DeleteReviewButton` |
+| `admin/` | `AdminShell`, `ActionForm`, `AdminPagination`, `RevenueOrdersChart`; `catalog/` brand/category/import forms; `orders/` address, financial, shipping, note, timeline, delete, header panels; `products/` form, detail, color options; `reviews/` moderation; `work/` form/list |
+| `auth/` | `AuthShell`, `SignInForm`, `RegisterForm`, `OAuthButtons`, `ResendVerificationForm` |
+| `cart/`, `checkout/` | `CartView`, `CouponPanel` |
+| `contact/`, `support/` | `InquiryForm`, `SupportSection`, `TrackOrder` |
+| `home/` | Hero, featured build, services ticker, how-we-work, workshop pin/mods, why-forge, reviews, CTA, reveal/scroll animation |
+| `icons/` | Shared inline SVG icons and icon types |
+| `layout/` | `SiteChrome`, `SiteHeader`, `Footer`, `FooterStatus`, `ShowOnSite`, `UnderDevelopmentNotice`, public-settings reader |
+| `mods/` | `ModConfigurator`, `AddressPicker` |
+| `order/`, `payments/` | Order payment summary, copy-payment-id, Razorpay script loader, affordability widget |
+| `repair/` | `RepairIntake` |
+| `reviews/` | Review composer/form/card/summary/stars/body/pagination/photo strip/section |
+| `shop/` | Product card/gallery/configurator/colors/add-on, add-to-cart, catalog/filter/grid/empty/skeletons, image cycler/media, shipping-warranty, related products |
+| `ui/` | Shared primitives: `Field`, `Panel`, `PageHero`, `PasswordField`, `PillRadio`, `PinCodeInput`, `StateSelect`, `Breadcrumbs`, `CartToaster`, `CtaSection`, `FaqList`, `CardIcons`, `AccountModal`, `RouteProgress`, number ticker, text reveal |
+| `work/` | `WorkImageSlider` |
+| `Analytics.tsx` | Vercel Analytics and Speed Insights mount point |
+
+### 2.4 `src/lib`
+
+This is the business-logic and integration layer. Test files sit beside the
+modules they cover.
+
+| Module | Key files and responsibility |
+|---|---|
+| `admin/` | `analytics.ts`, `catalog.ts`, `customers.ts`, `customer-rows.ts`, `index.ts`, `order-filters.ts`, `pagination.ts`, `pricing.ts` — dashboard stats, admin catalog/customer reads, filtered order queries, pagination, paise parsing |
+| `auth/` | `better-auth.ts`, `auth-client.ts`, `session.ts`, `admin.ts`, `roles.ts`, `profile.ts`, `auth-error.ts`, `register-error.ts`, `resend-verification.ts`, `send-verification-email.ts` — Better Auth config, session/profile resolution, RBAC, safe auth errors, verification mail |
+| `caching/` | `cache.ts`, `external-revalidate.ts`, `revalidate-request.ts` — tag/TTL cache helpers, cross-deployment purge client, allow-listed revalidation request parsing |
+| `cart.ts` | Cart owner resolution, guest cookie, content-keyed line identity, atomic guest-to-profile merge, availability |
+| `catalog/` | `data.ts`, `shop.ts`, `product-options.ts`, `product-addon.ts`, `product-labels.ts` — catalog reads, shop sections/filters, option pricing/config keys, single add-on resolution, display labels |
+| `checkout/coupons.ts` | Coupon eligibility, discount math, order-create data, usage recording |
+| `config/` | `deployment.ts`, `environment.ts`, `preview-guard.ts` — deployment mode, admin/maintenance switches, Preview database/operation fail-closed policy |
+| `db/prisma.ts` | Prisma singleton behind a Proxy so the Preview database guard runs before client construction |
+| `email/` | `templates.ts`, `outbound.ts`, `outbound-policy.ts`, `email-policy.ts`, `email-settings.ts` — remote template IDs/builders, send wrapper, recipient suppression/redirect, per-type enablement |
+| `faq.ts`, `home.ts`, `reviews.ts` | Static FAQ, cached homepage data, cached review summaries/lists |
+| `http/read-json-body.ts` | Bounded JSON body reader for route handlers |
+| `images/` | `asset-root.ts`, `cloudinary.ts`, `cloudinary-url.ts`, `loader.ts`, `read-dimensions.ts`, `validation.ts` — app asset detection, Cloudinary upload/delete/rename, URL transforms, custom Next image loader, dimension/MIME validation |
+| `mods/` | `pricing.ts`, `server.ts` — service pricing/totals and active mod configuration loading |
+| `notifications/` | `paid-confirmation.ts`, `send-paid-confirmation.ts`, `reconcile-cron.ts`, `resend-diagnostics.ts` — paid-email builders, outbox claim/send/state transitions, scheduled reconciliation, sanitized Resend diagnostics |
+| `orders/` | `index.ts`, `tracking.ts`, `variant-info.ts`, `claim-guest-orders.ts`, `shipping-choice.ts` — order labels/numbering, tracking projection sync, variant snapshots, guest-order claim, pickup/ship choice |
+| `payments/` | `payment-status.ts`, `razorpay-signature.ts`, `settle-order.ts`, `refund-accounting.ts`, `webhook-core.ts`, `pay-inline-core.ts`, `order-capability.ts`, `order-access.ts`, `razorpay-pay.ts`, `razorpay-customer.ts`, `rate-limit.ts`, `billing-details.ts`, `exchange-href.ts` — state normalization, signatures, idempotent settlement, refunds, capability cookies, retry payments, rate limits |
+| `rate-limit/action.ts` | Server-action rate-limit response helper |
+| `realtime/` | `track-notify.ts`, `track-sub.ts` — Supabase broadcast emit/subscribe for tracking updates |
+| `security/` | Offline security, payment, refund, webhook, capability, and order-success tests |
+| `seo.tsx` | Site URL, default OG image, metadata builder, JSON-LD helpers |
+| `shipping/` | `delhivery.ts`, `package-limits.ts`, `pickup-config.ts`, `pickup-slots.ts`, `shipping-estimate.ts`, `track-phases.ts` — Delhivery client, package rules, pickup/return addresses, pickup slots, service leg derivation, customer phase labels |
+| `utils/` | `cn`, `email`, `ist`, `limits`, `money`, `password`, `phone`, `slugify`, `username` — shared pure helpers and validation limits |
+| `validation/customer-input.ts` | Reusable Zod field schemas for customer-facing forms |
+
+### 2.5 `prisma`
+
+| Path | Responsibility |
+|---|---|
+| `schema.prisma` | 43 models and 23 enums for auth, catalog, cart, orders, payments, shipping, reviews, coupons, work, settings, notifications |
+| `migrations/*/migration.sql` | 48 forward-only production migrations; never edit, rename, delete, or squash |
+| `migrations/migration_lock.toml` | Prisma provider lock |
+
+### 2.6 `scripts`
+
+See §21 for the script-by-script safety map.
+
+### 2.7 `docs`
+
+See §23 for the documentation map.
+
+### 2.8 Public asset map
+
+Every tracked file in `public/` is used. There are no unreferenced public assets.
+
+| Asset | Purpose | Used by |
+|---|---|---|
+| `favicon.png` | Site icon | `src/app/layout.tsx` metadata |
+| `hero-background.webp` | Homepage hero keyboard image | `src/components/home/HomeHero.tsx`, homepage metadata |
+| `og-default.webp` | Default 1200×630 social share image | `src/lib/seo.tsx` |
+| `architecture.html` | Generated public runtime architecture viewer | `docs/README.md` link, `https://keebforge.in/architecture.html` |
+| `architecture-share-card.png` | Social share card for the architecture page | `docs/README.md` image, `https://keebforge.in/architecture-share-card.png` |
 
 ## 3. Application Architecture
 
@@ -125,6 +253,7 @@ archived audit copies under `docs/MD-FILES/`.
 | `/auth/callback` | Public | OAuth callback |
 | `/auth/error` | Public | Sanitized auth error display |
 | `/reset-password` | Public with reset token | Set a new password |
+| `/reset-password/[token]` | Public with emailed token | Route-handler relay to Better Auth's reset callback |
 | `/write-review` | Signed-in customer | Review chooser |
 | `/write-review/[slug]` | Signed-in customer | Product review composer |
 | `/write-review/edit` | Signed-in customer | Edit own review |
@@ -169,7 +298,11 @@ its permission. `STAFF`/`DEVELOPER` permissions are limited by
 | `/admin/work/new` | `setting:update` |
 | `/admin/work/[id]` | `setting:update` |
 
-### 4.4 API route handlers
+### 4.4 Route handlers
+
+This table lists every `route.ts` in the app, including the two outside `/api`
+(admin CSV export and password-reset relay). `sitemap.xml` and `robots.txt` are
+generated by `src/app/sitemap.ts` and `src/app/robots.ts`.
 
 | Route | Methods | Access/notes |
 |---|---|---|
@@ -196,6 +329,8 @@ its permission. `STAFF`/`DEVELOPER` permissions are limited by
 | `/api/settings/public` | `GET` | Public site settings |
 | `/api/cron/reconcile-paid-notifications` | `GET` | Bearer `CRON_SECRET`; paid-order outbox backfill |
 | `/api/revalidate` | `POST` | Bearer `REVALIDATE_SECRET`; allow-listed cache tags/paths |
+| `/admin/products/export` | `GET` | Admin product CSV export; requires `product:view` |
+| `/reset-password/[token]` | `GET` | Validates/forwards an emailed password-reset token to Better Auth |
 
 ### 4.5 Server actions
 
@@ -232,8 +367,9 @@ rendering page is already guarded.
   single service job, server-side quantity/stock checks.
 - **Checkout:** address, coupon, server shipping quote, Razorpay checkout,
   signature verification, success capability page.
-- **Order tracking:** public order lookup with safe tracking/Delhivery scans;
-  `/track/[orderNumber]` is excluded from the proxy matcher.
+- **Order tracking:** public lookup at `/track-order` with safe
+  tracking/Delhivery scans. The proxy matcher excludes the legacy `track/`
+  namespace, `api/`, and static file extensions.
 - **Reviews:** verified purchase/customer policy, image limits, edit/delete own
   review, admin moderation.
 - **Workshop:** repair intake with photos, device/issue fields, shipping
@@ -338,8 +474,9 @@ Critical schema guarantees:
   rules.
 
 Do not run `prisma migrate dev`, `prisma migrate reset`, or direct SQL against
-production. `npm run db:deploy` refuses the production path on `main`; use the
-documented guarded operator process only.
+production. `npm run db:deploy` is an unconditional refusal; there is no enabled
+production migration command in this repository. Use the disposable scratch
+database to validate, and follow the read-only production docs for verification.
 
 ## 9. Payments
 
@@ -442,7 +579,6 @@ Key files:
   config key, pricing.
 - `src/lib/catalog/product-addon.ts` — single add-on eligibility and price.
 - `src/lib/catalog/product-labels.ts` — display labels.
-- `src/lib/catalog/fix-corne-choc-seo.ts` — targeted catalog maintenance helper.
 - `src/lib/admin/catalog.ts` — admin catalog reads/serialization.
 - `src/app/admin/actions/catalog.ts` — catalog mutations.
 - `src/components/shop/*`, `src/components/admin/products/*` — UI.
@@ -535,7 +671,7 @@ Rules:
 
 - Order number alone is not an authorization credential.
 - Guest success access uses the order capability cookie/token.
-- `Order.type` is `PRODUCT`, `SERVICE`, or `REPAIR`.
+- `Order.type` is `PRODUCT`, `SERVICE`, `REPAIR`, or `COMBINED`.
 - Order/payment/refund/shipment/timeline/link records are the history; avoid
   destructive updates.
 - Logical deletion (`isDeleted`) is guarded; orders with refund evidence cannot
@@ -606,26 +742,26 @@ Rules:
 
 ## 21. Scripts
 
-| Script | Purpose | Safety notes |
-|---|---|---|
-| `scripts/db/deploy.ts` | Prisma deploy wrapper | Production path refuses on `main`; do not bypass casually |
-| `scripts/db/production-migration-path.ts` | Guarded operator migration path | Separate/transient; not a normal release step |
-| `scripts/e2e/migrate-scratch.ts` | Scratch deploy/status/diff | Loopback-only; refuse non-local targets |
-| `scripts/e2e/migrate-scratch-plan.ts` | Hostile-value test planner | No DB connection |
-| `scripts/e2e/scratch-guard.ts` | Scratch DB target guard | Shared safety rules; pins migration count |
-| `scripts/e2e/scratch-guard.test.ts` | Guard regression tests | Includes expected 48-migration tripwire |
-| `scripts/e2e/dbcheck.ts` | Scratch schema/data checks | Scratch only |
-| `scripts/e2e/auth-preflight.ts` | Scratch auth readiness | Scratch only |
-| `scripts/e2e/local-env.ts` | E2E env loading | Local-only template handling |
-| `scripts/e2e/e2e-server.ts` | Local E2E server | Loopback |
-| `scripts/e2e/run-order-success-page.ts` | Order success-page E2E | Requires local server/scratch |
-| `scripts/e2e/run-notification-outbox.ts` | Outbox integration harness | Scratch/loopback |
-| `scripts/e2e/seed.ts` | Scratch seed | Refuses unsafe targets |
-| `scripts/e2e/seed.mjs` | Guarded refusal shim | Intentional: does not seed |
-| `scripts/e2e/scratch-auth.sql` | Scratch auth fixture SQL | Scratch only |
-| `scripts/architecture/architecture-map.mjs` | Architecture generator | Writes docs HTML + `public/architecture.html` |
-| `scripts/email/resend-shop-order-paid.ts` | Resend template check/send helper | Never print secrets |
-| `scripts/email/resend-shop-order-paid.test.ts` | Template payload test | Offline |
+| Script | Purpose | Safe environment | Production safe? | Creates/mutates data? | Required env |
+|---|---|---|---|---|---|
+| `scripts/db/deploy.ts` | Unconditional refusal shim replacing the old `prisma migrate deploy` | Any | Yes — writes nothing | No | None |
+| `scripts/db/production-migration-path.ts` | Inert production-plan type/refusal; deliberately has no enabled path | Any | Yes — writes nothing | No | None |
+| `scripts/e2e/migrate-scratch.ts` | Scratch `deploy` / `status` / `diff` | Loopback scratch only | No — refuses non-scratch targets | Scratch DB only | `.env.e2e.local` `DATABASE_URL`, `DIRECT_URL` |
+| `scripts/e2e/migrate-scratch-plan.ts` | Pure planner for hostile-value tests | Offline | Yes | No | None |
+| `scripts/e2e/scratch-guard.ts` | Shared loopback allowlist and target guard; pins the 48-migration set | Offline | Yes | No | None |
+| `scripts/e2e/scratch-guard.test.ts` | Guard regression tests, including the migration-count tripwire | Offline | Yes | No | None |
+| `scripts/e2e/dbcheck.ts` | Verifies the connected server is the approved scratch database | Scratch only | No — read-only, refuses remote | Read-only | `.env.e2e.local` |
+| `scripts/e2e/auth-preflight.ts` | Applies/removes the scratch-only `auth.uid()` / `auth.jwt()` fixture | Scratch only | No — never production | Scratch schema only | `.env.e2e.local`; optional `--database` |
+| `scripts/e2e/local-env.ts` | Validates and pins both DB variables from `.env.e2e.local`; imported by the other E2E entrypoints | Scratch/offline | Yes — no DB access itself | No | `.env.e2e.local` |
+| `scripts/e2e/e2e-server.ts` | Starts `next start` against the guarded scratch DB | Local loopback | No — local server only | No | `.env.e2e.local`; optional `PORT` |
+| `scripts/e2e/run-order-success-page.ts` | Guarded runner for the order-success-page E2E test | Scratch + local server | No | Scratch test rows | `.env.e2e.local`; `SUCCESS_E2E_URL` |
+| `scripts/e2e/run-notification-outbox.ts` | Guarded runner for the outbox integration test | Scratch | No | Transaction, always rolled back | `.env.e2e.local` |
+| `scripts/e2e/seed.ts` | Seeds disposable `E2E_` category/product/cart | Loopback scratch only | No — refuses unsafe targets | Scratch rows only | `.env.e2e.local` |
+| `scripts/e2e/seed.mjs` | Intentional guarded refusal shim; does not seed | Any | Yes — no DB contact | No | None |
+| `scripts/e2e/scratch-auth.sql` | Scratch-only auth-function fixture | Scratch only | No — must not run in production | Scratch schema only | None |
+| `scripts/architecture/architecture-map.mjs` | Generates the architecture viewer and public copy | Local | Yes — writes docs/public HTML only | No DB | `ARCHIFY_BIN`, `HOME` |
+| `scripts/email/resend-shop-order-paid.ts` | Prints the shop paid-order Resend template payload; no network | Offline | Yes | No | None |
+| `scripts/email/resend-shop-order-paid.test.ts` | Verifies the printable template payload | Offline | Yes | No | None |
 
 ## 22. Tests
 
@@ -651,33 +787,32 @@ Run individual checks from `package.json`; key groups:
 - **E2E:** `e2e:seed`, `e2e:server`, `e2e:order-success-page`,
   `e2e:notification-outbox`.
 
-`src/lib` contains 35 test files, including tests not individually exposed as npm
-scripts (`customers.test.ts`, `account-linking.test.ts`,
-`register-error.test.ts`, `email-settings.test.ts`, etc.). When changing shared
-logic, run the closest check plus `npm run typecheck`.
+`src/lib` contains 35 test files and `scripts/` contains 2 more (37 total),
+including tests not individually exposed as npm scripts
+(`customers.test.ts`, `account-linking.test.ts`, `register-error.test.ts`,
+`email-settings.test.ts`, etc.). When changing shared logic, run the closest
+check plus `npm run typecheck`.
 
 ## 23. Documentation
 
 | Path | Role |
 |---|---|
-| `docs/README.md` | Documentation index/status |
+| `docs/README.md` | Project overview, setup/commands, and documentation index |
 | `docs/code-map.md` | This authoritative code/file/route/env map |
 | `docs/architecture/authorization-and-rls.md` | Auth/RLS audit snapshot; runtime DB role unverified |
 | `docs/architecture/keebforge.runtime.json` | Canonical architecture spec, pinned to revision `4f205dd...` |
 | `docs/architecture/keebforge.runtime.html` | Generated architecture viewer |
 | `public/architecture.html` | Public copy generated by the architecture script |
-| `docs/architecture/keebforge.runtime.visual-check.{html,json}` | Visual-check evidence |
-| `docs/architecture/*.visual-check.*.png` | Screenshot evidence (1440×900, 2048×1320; dark/light) |
 | `docs/production/configuration-checklist.md` | Read-only production config verification |
 | `docs/production/launch-test-matrix.md` | Launch verification matrix |
 | `docs/production/migration-history.md` | Authoritative migration ledger/reconciliation |
 | `docs/resend-templates.md` | Resend template variables/operations |
 
-Generated architecture evidence is not a runtime asset. The JSON
-`visual-check.json` contains a machine-specific absolute artifact path; do not
-treat it as portable source. The architecture spec is a snapshot and may lag the
-current tree; do not regenerate it as part of routine cleanup unless explicitly
-requested.
+Architecture visual-check screenshots and receipts are generated evidence, not
+portable source. They are ignored via `.gitignore` and should be produced locally
+when a visual check is needed; do not commit machine-specific artifact paths. The
+architecture spec is a snapshot and may lag the current tree; do not regenerate
+it as part of routine cleanup unless explicitly requested.
 
 ## 24. Environment Variables
 
@@ -767,8 +902,10 @@ governed by RLS/policies. Never expose the service-role key.
   database credential in Vercel; the code guard refuses Preview DB access unless
   an isolated target is allow-listed.
 - **Migrations:** production application is an operator action, not part of
-  `main` deploys. `scripts/db/deploy.ts` refuses the production path on `main`.
-  See `docs/production/migration-history.md`; never rewrite migrations.
+  `main` deploys. `scripts/db/deploy.ts` is an unconditional refusal and
+  `production-migration-path.ts` deliberately has no enabled path. Validate
+  against the disposable scratch database. See
+  `docs/production/migration-history.md`; never rewrite migrations.
 - **Cron:** `GET /api/cron/reconcile-paid-notifications` daily at `03:00` UTC
   (`0 3 * * *`). Requires `CRON_SECRET` and
   `PAID_NOTIFICATION_RECONCILE_SINCE`; fails closed.
@@ -826,6 +963,31 @@ Mods configurator or Workshop intake
   → admin shipment/pickup workflow
 ```
 
+### Repair / custom request
+
+```text
+RepairIntake form (guest or signed-in)
+  → submitRepairRequest: Preview refusal + per-IP rate limit
+  → Zod validation; saved address or manual pickup/shipping address
+  → optional photo bytes sniffed/dimension-checked before any write
+  → Order(type REPAIR, status REQUESTED) + OrderRepair row
+  → optional Cloudinary upload into the order folder
+  → Resend repair-request template to the customer/ops recipient
+  → admin repair queue decides quote / accept / schedule
+```
+
+### Admin product creation
+
+```text
+/admin/products/new
+  → requirePermission("product", "create")
+  → ProductForm → saveProduct action
+  → Zod validation + slug/SKU uniqueness + option/add-on/color parsing
+  → Prisma Product (+ variants/options/images) create
+  → revalidatePath("/admin/products", "/admin/products/inventory", "/shop")
+  → client redirects to /admin/products/[id]/edit
+```
+
 ### Admin catalog update
 
 ```text
@@ -847,17 +1009,39 @@ Admin form
 - Guest checkout is allowed, but success pages require the order capability,
   not just the order number.
 - Product options/add-ons/colors are snapshotted into cart/order rows.
+- Product visibility is server-enforced: `active` must be true, and `DRAFT` /
+  `ARCHIVED` are never purchasable. `CUSTOM` products are orderable unless the
+  status is `OUT_OF_STOCK`; `NEW` / `CLEARANCE` require positive
+  `stock - reservedQuantity` or an active variant with stock.
+- The add-on is a single optional boolean per product, resolved against live
+  product data. It is purchasable only when `addonEnabled` is true and a title
+  exists; a crafted selected flag cannot invent a title or price, and a missing
+  or non-positive price resolves to zero.
+- Colors use two explicit groups, `BASE` and `SECONDARY`. The first color in a
+  non-empty group is the default; a submitted color must belong to the matching
+  group, and a selection is rejected when that group is empty. Both selections
+  are validated server-side and snapshotted.
+- Order notifications have six states: `PENDING` (only claimable state),
+  `IN_PROGRESS` (send in flight or crashed mid-flight; never auto-claimed),
+  `SENT` (provider returned an id), `FAILED` (definitive 4xx; retryable),
+  `NEEDS_REVIEW` (timeout/network/5xx ambiguity; never auto-retried), and
+  `SUPPRESSED` (admin-disabled type; terminal, not retryable). Only one automatic
+  attempt is allowed per `(orderId, type)`; re-queueing `FAILED` is an explicit
+  operator action.
 - Custom/made-to-order cart lines stay separate and quantity-limited.
 - One service job per cart; adding another replaces it.
 - Payment settlement is idempotent; refunds are keyed by Razorpay refund ID and
   clamped to captured amount.
 - Orders with refund evidence cannot be deleted; deletion is logical.
-- Paid email is at most one automatic attempt per `(orderId, type)`.
 - Service shipping requires provider quotes; no invented fallback rates.
 - Package limits: 100 cm per side, 250 cm combined, 30 kg.
 - Admin permissions are deny-by-default for roles outside `ADMIN` except the
   explicit `STAFF_PERMISSIONS` entries.
-- Preview must never operate on production data or integrations.
+- Preview must never touch production data or integrations. Prisma refuses to
+  initialise unless the Postgres target is in `PREVIEW_DATABASE_TARGETS`;
+  dangerous Preview operations additionally require
+  `PREVIEW_DANGEROUS_OPERATIONS_ENABLED`; guest actions that upload to
+  Cloudinary or send mail refuse before any side effect.
 - Maintenance mode is production-only and bypassed for admin/auth/maintenance.
 - Architecture generator output is generated evidence, not an editable source.
 
@@ -865,7 +1049,7 @@ Admin form
 
 Usually low-risk if conventions/tests are respected:
 
-- Documentation in `docs/`, this map, `README.md`.
+- Documentation in `docs/`, including this map and `docs/README.md`.
 - Presentational components and copy in `src/components/**`.
 - Pure utility functions in `src/lib/utils/**` with tests.
 - Formatting/labels in `src/lib/orders/index.ts`, `product-labels.ts`, SEO copy.

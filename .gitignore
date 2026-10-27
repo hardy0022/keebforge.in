@@ -50,3 +50,6 @@ deploy-checklist.md
 
 # archived audit report copies
 /docs/MD-FILES/
+
+# generated architecture visual-check evidence (machine-specific, not portable)
+/docs/architecture/*.visual-check.*
