@@ -239,7 +239,7 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
           <div className="account-danger-item">
             <div>
               <h3>Delete Account</h3>
-              <p>Permanently delete your account and all associated data</p>
+              <p>Permanently delete your account and sign-in data</p>
             </div>
             <button
               type="button"
@@ -398,8 +398,11 @@ export function SettingsPanel({ newsletter, hasPassword }: SettingsPanelProps) {
         >
           <form onSubmit={onDeleteAccount} className="account-form">
               <p className="account-password-hint">
-                This permanently deletes your account, orders, addresses, and
-                all associated data. This action cannot be undone.
+                This permanently deletes your account, profile, sign-in
+                records, sessions, saved addresses, cart and preferences.
+                Orders, payments, refunds and repair records are kept but
+                unlinked from your account, and uploaded images are not
+                automatically deleted. This action cannot be undone.
               </p>
               {hasPassword && (
                 <div className="form-row">

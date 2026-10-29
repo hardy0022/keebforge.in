@@ -8,7 +8,7 @@ import { GENERAL_FAQ } from "@/lib/faq";
 export const metadata: Metadata = buildMetadata({
   title: "FAQ — Keyboard & Mouse Repair in India | KeebForge",
   description:
-    "Everything customers usually ask before sending in a keyboard or mouse for service — what gets repaired, how ordering and shipping work, pricing and payment.",
+    "Frequently asked questions about orders, payments, shipping, repairs/custom work, accounts, privacy, and data rights at KeebForge.in.",
   path: "/faq",
 });
 
@@ -18,7 +18,7 @@ export default function FaqPage() {
       <PageHero
         tag="FAQ"
         title="Frequently Asked Questions"
-        desc="Everything customers usually ask before sending in a keyboard or mouse for service — what gets repaired, how ordering and shipping work, pricing and payment."
+        desc="Everything customers usually ask about orders, services, shipping, payments, accounts, and privacy."
         pills={[
           "Mail-in service across India",
           "Payment before work begins",
@@ -44,7 +44,7 @@ export default function FaqPage() {
             Order Today
           </>
         }
-        desc="Still unsure about something? Ask on Discord or email — replies are fast."
+        desc="Still unsure about something? Ask via our contact page or email — replies are fast."
       />
     </main>
   );

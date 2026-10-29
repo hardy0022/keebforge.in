@@ -53,3 +53,5 @@ deploy-checklist.md
 
 # generated architecture visual-check evidence (machine-specific, not portable)
 /docs/architecture/*.visual-check.*
+
+/docs/fixes.md
