@@ -1454,7 +1454,7 @@ ul {
 }
 .hp-pin-stage {
   position: sticky;
-  top: calc(var(--nav-h) + 16px);
+  top: calc(var(--nav-h) + var(--promo-offset) + 16px);
 }
 
 /* ─── What We Build For — statement (inside the pinned stage) ───────────── */
@@ -2143,7 +2143,7 @@ ul {
   .hp-pin-stage {
     position: sticky;
     /* 10px, not the desktop 16px: every pixel here is a pixel the frame gets */
-    top: calc(var(--nav-h) + 10px);
+    top: calc(var(--nav-h) + var(--promo-offset) + 10px);
   }
   .hp-how {
     padding-top: 0;
@@ -4004,7 +4004,7 @@ ul {
 }
 
 section[id] {
-  scroll-margin-top: calc(var(--nav-h) + 12px);
+  scroll-margin-top: calc(var(--nav-h) + var(--promo-offset) + 12px);
 }
 
 /* Reduced motion */
@@ -4561,7 +4561,7 @@ a.shop-pager-num:hover {
 /* ── Order Summary ── */
 .cart-summary {
   position: sticky;
-  top: calc(var(--nav-h) + 20px);
+  top: calc(var(--nav-h) + var(--promo-offset) + 20px);
   background: var(--surf);
   border: 1px solid var(--bdr);
   border-radius: var(--r-md);
@@ -4893,7 +4893,7 @@ a.shop-pager-num:hover {
 
 .product-gallery-close {
   position: absolute;
-  top: calc(var(--nav-h) + 20px);
+  top: calc(var(--nav-h) + var(--promo-offset) + 20px);
   right: 24px;
   width: 48px;
   height: 48px;
@@ -4987,7 +4987,7 @@ a.shop-pager-num:hover {
 
 .product-gallery-column {
   position: sticky;
-  top: calc(var(--nav-h) + 24px);
+  top: calc(var(--nav-h) + var(--promo-offset) + 24px);
   min-width: 0;
 }
 
@@ -6728,7 +6728,7 @@ a.shop-pager-num:hover {
 @media (min-width: 1024px) {
   .sticky-summary-hub {
     position: sticky;
-    top: calc(var(--nav-h) + 24px);
+    top: calc(var(--nav-h) + var(--promo-offset) + 24px);
     align-self: start;
   }
 }
@@ -8983,7 +8983,7 @@ a.shop-pager-num:hover {
 @media (min-width: 1024px) {
   .ri-side {
     position: sticky;
-    top: calc(var(--nav-h) + 24px);
+    top: calc(var(--nav-h) + var(--promo-offset) + 24px);
   }
 }
 @media (max-width: 1023px) {
@@ -10211,7 +10211,7 @@ a.reviews-page:hover {
 }
 .write-review-side {
   position: sticky;
-  top: calc(var(--nav-h) + 24px);
+  top: calc(var(--nav-h) + var(--promo-offset) + 24px);
   min-width: 0;
 }
 .write-review-form {
@@ -13113,7 +13113,8 @@ body:has(.kf-dev-notice) {
 
 /* ─── Temporary campaign announcement ─────────────────────────────────────── */
 :root {
-  --promo-h: 44px;
+  --promo-h: 46px;
+  --promo-offset: 0px;
 }
 .kf-promo {
   position: fixed;
@@ -13121,131 +13122,209 @@ body:has(.kf-dev-notice) {
   left: 0;
   right: 0;
   z-index: 494;
-  min-height: var(--promo-h);
+  height: var(--promo-h);
   overflow: hidden;
-  border-bottom: 1px solid rgba(255, 177, 74, 0.2);
+  border-top: 1px solid rgba(255, 207, 134, 0.06);
+  border-bottom: 1px solid rgba(255, 177, 74, 0.16);
   background:
     radial-gradient(
-      120% 180% at 50% 120%,
-      rgba(255, 177, 74, 0.12) 0%,
-      transparent 58%
+      70% 200% at 50% 130%,
+      rgba(255, 177, 74, 0.1) 0%,
+      transparent 60%
     ),
-    linear-gradient(
-      90deg,
-      rgba(201, 243, 29, 0.035),
-      rgba(255, 177, 74, 0.07) 50%,
-      rgba(201, 243, 29, 0.035)
+    radial-gradient(
+      24% 160% at 10% 50%,
+      rgba(255, 177, 74, 0.05) 0%,
+      transparent 72%
     ),
-    rgba(8, 7, 12, 0.94);
+    radial-gradient(
+      24% 160% at 90% 50%,
+      rgba(255, 177, 74, 0.05) 0%,
+      transparent 72%
+    ),
+    linear-gradient(180deg, rgba(13, 11, 18, 0.97), rgba(8, 7, 12, 0.99));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 12px 30px -18px rgba(0, 0, 0, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 14px 28px -22px rgba(0, 0, 0, 0.95);
 }
-.kf-promo-link {
+.kf-promo-inner {
   position: relative;
   z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: var(--promo-h);
-  padding: 0 clamp(16px, 4vw, 48px);
+  gap: clamp(9px, 1.15vw, 15px);
+  height: 100%;
+  padding: 0 clamp(16px, 4vw, 56px);
   color: var(--t2);
-  font-size: clamp(0.68rem, 1.5vw, 0.76rem);
+  font-size: clamp(0.72rem, 1.1vw, 0.8rem);
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.13em;
   line-height: 1.2;
   text-transform: uppercase;
   white-space: nowrap;
-  transition:
-    color 0.2s var(--ease-out),
-    background-color 0.2s var(--ease-out);
 }
-.kf-promo-link:hover {
+.kf-promo-main {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(7px, 0.75vw, 10px);
+  min-width: 0;
+  color: var(--t2);
+  border-radius: 6px;
+  transition: color 0.2s var(--ease-out);
+}
+.kf-promo-main:hover {
   color: var(--t1);
-  background: rgba(255, 255, 255, 0.025);
 }
-.kf-promo-link:focus-visible {
+.kf-promo-main:focus-visible,
+.kf-promo-code:focus-visible,
+.kf-promo-shop:focus-visible {
   outline: 2px solid var(--acc);
-  outline-offset: -2px;
+  outline-offset: 3px;
 }
 .kf-promo-diya {
   font-size: 0.95em;
-  filter: drop-shadow(0 0 7px rgba(255, 177, 74, 0.55));
-}
-.kf-promo-text {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+  line-height: 1;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 6px rgba(255, 177, 74, 0.45));
 }
 .kf-promo-title {
   color: #ffcf86;
+  font-family: var(--ff-display);
   font-weight: 700;
+  letter-spacing: 0.16em;
 }
 .kf-promo-off {
   color: var(--acc);
+  font-family: var(--ff-display);
+  font-size: clamp(1rem, 1.4vw, 1.12rem);
   font-weight: 700;
-  text-shadow: 0 0 14px rgba(201, 243, 29, 0.25);
-}
-.kf-promo-until {
-  color: var(--t2);
-}
-.kf-promo-use {
-  color: var(--t2);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 16px rgba(201, 243, 29, 0.22);
 }
 .kf-promo-code {
-  display: inline-block;
-  padding: 1px 6px;
-  border: 1px solid rgba(255, 207, 134, 0.42);
-  border-radius: 4px;
-  background: rgba(255, 177, 74, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  color: #ffdcaa;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 9px 3px 8px;
+  border: 1px solid rgba(255, 207, 134, 0.34);
+  border-radius: 6px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 207, 134, 0.11),
+    rgba(255, 177, 74, 0.04)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.12);
+  color: #ffe0b0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
   line-height: 1.15;
+  text-transform: none;
+  justify-content: center;
+  min-width: 9.2rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out),
+    color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
 }
-.kf-promo-text-mobile {
+.kf-promo-code:hover {
+  border-color: rgba(255, 207, 134, 0.55);
+  background: rgba(255, 177, 74, 0.12);
+  color: #fff0d4;
+}
+.kf-promo-code[data-copied="true"] {
+  border-color: rgba(201, 243, 29, 0.42);
+  background: rgba(201, 243, 29, 0.09);
+  color: var(--acc);
+}
+.kf-promo-code-key {
+  font-family: var(--ff-body);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: rgba(255, 224, 176, 0.55);
+  text-transform: uppercase;
+}
+.kf-promo-code[data-copied="true"] .kf-promo-code-key {
   display: none;
 }
-.kf-promo-dot {
-  color: rgba(255, 207, 134, 0.5);
+.kf-promo-sep {
+  flex: none;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 207, 134, 0.3);
+}
+.kf-promo-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(6px, 0.75vw, 9px);
+  color: var(--t3);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.11em;
+}
+.kf-promo-meta-action {
+  color: var(--t2);
+}
+.kf-promo-meta-dot {
+  color: rgba(255, 207, 134, 0.38);
+}
+.kf-promo-until-short {
+  display: none;
+}
+.kf-promo-shop {
+  display: flex;
+  align-items: center;
+  color: var(--acc);
+  text-decoration: none;
 }
 .kf-promo-arrow {
-  color: var(--acc);
-  font-size: 1em;
+  font-size: 1.05em;
   transition: transform 0.2s var(--ease-out);
 }
-.kf-promo-link:hover .kf-promo-arrow {
+.kf-promo-shop:hover .kf-promo-arrow {
   transform: translateX(3px);
 }
-.kf-promo-fx {
+.kf-promo-spark {
   position: absolute;
-  inset: 0;
+  top: 50%;
   z-index: 0;
-  width: 100%;
-  height: 100%;
   pointer-events: none;
-  opacity: 0.9;
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    #000 10%,
-    #000 90%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    #000 10%,
-    #000 90%,
-    transparent 100%
-  );
+  color: rgba(255, 207, 134, 0.55);
+  font-size: 9px;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255, 177, 74, 0.6);
+  transform: translateY(-50%);
+  animation: kf-promo-twinkle 3.8s ease-in-out infinite;
+}
+.kf-promo-spark-l {
+  left: clamp(10px, 2vw, 26px);
+}
+.kf-promo-spark-r {
+  right: clamp(10px, 2vw, 26px);
+  animation-delay: 1.9s;
+}
+@keyframes kf-promo-twinkle {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 /* Reserve the fixed bar's height; stack cleanly with the dev notice. */
 body:has(.kf-promo) {
   padding-top: var(--promo-h);
+  --promo-offset: var(--promo-h);
 }
 body:has(.kf-promo):has(.kf-dev-notice) {
   padding-top: calc(var(--promo-h) + var(--notice-h));
@@ -13253,33 +13332,51 @@ body:has(.kf-promo):has(.kf-dev-notice) {
 body:has(.kf-promo) .kf-dev-notice {
   top: calc(var(--nav-h) + var(--promo-h));
 }
-@media (max-width: 560px) {
-  .kf-promo-text-desktop {
+@media (max-width: 700px) {
+  :root {
+    --promo-h: 48px;
+  }
+  .kf-promo-inner {
+    gap: 8px;
+    padding-inline: 14px;
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+  }
+  .kf-promo-title,
+  .kf-promo-meta-action,
+  .kf-promo-meta-dot,
+  .kf-promo-until-long,
+  .kf-promo-shop {
     display: none;
   }
-  .kf-promo-text-mobile {
-    display: inline-flex;
+  .kf-promo-until-short {
+    display: inline;
+  }
+  .kf-promo-off {
+    font-size: 1rem;
+  }
+  .kf-promo-code {
+    font-size: 0.78rem;
+    min-width: 8rem;
   }
 }
-@media (max-width: 640px) {
-  :root {
-    --promo-h: 46px;
+@media (max-width: 380px) {
+  .kf-promo-inner {
+    gap: 6px;
+    padding-inline: 10px;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
   }
-  .kf-promo-link {
-    gap: 7px;
-    padding-inline: 14px;
-    letter-spacing: 0.08em;
-  }
-  .kf-promo-text {
-    gap: 7px;
-  }
-  .kf-promo-arrow {
-    display: none;
+  .kf-promo-code {
+    gap: 4px;
+    padding: 3px 7px;
+    min-width: 7.6rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kf-promo-fx {
-    display: none;
+  .kf-promo-spark {
+    animation: none;
+    opacity: 0.35;
   }
   .kf-promo-arrow {
     transition: none;

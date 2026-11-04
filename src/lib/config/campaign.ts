@@ -7,7 +7,7 @@
  * announcement hides itself automatically.
  *
  * The storefront never computes discounts. Checkout validates and applies the
- * `DIWALI10` coupon server-side through the existing coupon pipeline.
+ * `DIWALI15` coupon server-side through the existing coupon pipeline.
  *
  * `heroAnimationEnabled` controls the separate Diwali canvas layer inside the
  * homepage hero. Turn it off to keep the announcement without the animation.
@@ -16,12 +16,12 @@ export const DIWALI_CAMPAIGN = {
   id: "diwali-2026",
   enabled: true,
   title: "Diwali Offer",
-  discountPercent: 10,
+  discountPercent: 15,
   endsOnLabel: "15 November",
   endsOnShortLabel: "15 Nov",
   endsAt: "2026-11-15T23:59:59+05:30",
   href: "/shop",
-  couponCode: "DIWALI10" as string | null,
+  couponCode: "DIWALI15" as string | null,
   heroAnimationEnabled: true,
 } as const;
 
