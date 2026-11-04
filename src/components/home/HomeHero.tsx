@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
+import { DiwaliHeroFireworks } from "@/components/home/DiwaliHeroFireworks";
 import TravelBag from "@/components/icons/travel-bag";
 import SlidersHorizontalIcon from "@/components/icons/sliders-horizontal-icon";
 import CpuIcon from "@/components/icons/cpu-icon";
@@ -55,7 +56,7 @@ function ServiceItem({ service }: { service: Service }) {
   );
 }
 
-export function HomeHero() {
+export function HomeHero({ showDiwali = false }: { showDiwali?: boolean }) {
   return (
     <section
       className="hp-hero"
@@ -107,6 +108,7 @@ export function HomeHero() {
                 </span>
               </div>
               <div className="hp-hero-visual-frame">
+                {showDiwali ? <DiwaliHeroFireworks /> : null}
                 <Image
                   src="/hero-background.webp"
                   alt="KeebForge custom mechanical keyboard"

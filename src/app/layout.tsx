@@ -5,6 +5,7 @@ import { SiteChrome } from "@/components/layout/SiteChrome";
 import { SiteFooter } from "@/components/layout/Footer";
 import { ShowOnSite } from "@/components/layout/ShowOnSite";
 import { UnderDevelopmentNotice } from "@/components/layout/UnderDevelopmentNotice";
+import { DiwaliAnnouncement } from "@/components/campaign/DiwaliAnnouncement";
 import Analytics from "@/components/Analytics";
 import "./globals.css";
 
@@ -75,7 +76,12 @@ export default function RootLayout({
     >
       <body className="antialiased page-layout">
         <JsonLd data={SITE_JSONLD} />
-        <SiteChrome footer={<SiteFooter />}>{children}</SiteChrome>
+        <SiteChrome
+          footer={<SiteFooter />}
+          banner={<DiwaliAnnouncement />}
+        >
+          {children}
+        </SiteChrome>
         <ShowOnSite exclude={["/maintenance"]}>
           <UnderDevelopmentNotice />
         </ShowOnSite>

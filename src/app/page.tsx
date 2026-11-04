@@ -8,6 +8,7 @@ import { CustomerReviews } from "@/components/home/CustomerReviews";
 import { FinalCta } from "@/components/home/FinalCta";
 import { getHomeData } from "@/lib/home";
 import { buildMetadata } from "@/lib/seo";
+import { DIWALI_CAMPAIGN, isCampaignActive } from "@/lib/config/campaign";
 
 export const metadata: Metadata = buildMetadata({
   title: "KeebForge — Mechanical Keyboard & Mouse Repair in India",
@@ -18,10 +19,11 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function HomePage() {
   const { products, work, reviews } = await getHomeData();
+  const showDiwali = isCampaignActive() && DIWALI_CAMPAIGN.heroAnimationEnabled;
 
   return (
     <main className="hp-root">
-      <HomeHero />
+      <HomeHero showDiwali={showDiwali} />
       <ServicesTicker />
       <WorkshopPin />
       {products.length > 0 && <FeaturedBuild products={products} />}

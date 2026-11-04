@@ -12,9 +12,11 @@ import { RouteProgress } from "@/components/ui/RouteProgress";
 export function SiteChrome({
   children,
   footer,
+  banner,
 }: {
   children: React.ReactNode;
   footer: React.ReactNode;
+  banner?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isAuth = pathname.startsWith("/auth");
@@ -27,6 +29,17 @@ export function SiteChrome({
       <RouteProgress />
       <ShowOnSite>
         <SiteHeader />
+      </ShowOnSite>
+      <ShowOnSite
+        exclude={[
+          "/account",
+          "/shop/checkout",
+          "/checkout",
+          "/mods/checkout",
+          "/order",
+        ]}
+      >
+        {banner}
       </ShowOnSite>
       <main className="page-main">{children}</main>
       <ShowOnSite exclude={["/mods/checkout", "/shop/checkout"]}>
